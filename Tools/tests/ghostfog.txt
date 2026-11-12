@@ -1,0 +1,22 @@
+# Early test from the brief: does the ghost wash out when the void is fog-coloured?
+# ghost 2 = brief-01 ghost (lit frame, fog included, added at 35 %), ghost 1 = flat base-colour capture + landing preview.
+skipfilm
+look A
+goto 0
+ghost 2
+wait 2.5
+snap gf_shot0_old_ghost
+ghost 1
+wait 1.5
+snap gf_shot0_new_ghost
+ghost 0
+wait 1.0
+snap gf_shot0_no_ghost
+goto 1
+ghost 2
+wait 2.0
+snap gf_shot1_old_ghost
+ghost 1
+wait 1.5
+snap gf_shot1_new_ghost
+quit

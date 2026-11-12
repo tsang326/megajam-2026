@@ -1,0 +1,44 @@
+# Look-dev: the same shot (CAM 04, THE WRECK) with the lamp on, in the three looks, plus what the ghost costs.
+# About 10 s of frame time per look; FRAMETIME lines land in run.log.
+skipfilm
+goto 3
+givepart
+freeze 1
+mtime 1.2
+tpn -0.25 0.05
+move 1 0 0.3
+lamp 1
+ghost 0
+look A
+wait 4.0
+stat
+wait 10.0
+snap look_A
+stat
+look B
+wait 4.0
+stat
+wait 10.0
+snap look_B
+stat
+look C
+wait 4.0
+stat
+wait 10.0
+snap look_C
+stat
+# ghost cost, in look A
+look A
+ghost 1
+wait 3.0
+stat
+wait 8.0
+snap look_A_with_ghost
+stat
+lamp 0
+ghost 0
+wait 2.0
+stat
+wait 6.0
+stat
+quit

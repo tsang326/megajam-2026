@@ -1,0 +1,91 @@
+{
+  "_comment": "Deep Cut slice layout. Screen units: x,y in [-1,1] of a fixed 16:9 frame; the picture is |y| <= 0.75. Rocks are rectangles [x0,y0,x1,y1] at the shot's ref depth. Check every change with Tools/cutmap.py.",
+  "fov": 60,
+  "exposure": 2.5,
+  "heroRadius": 36,
+  "startDepth": 900,
+  "crewTotal": 7,
+  "ghost": 0.55,
+  "ghostTint": [1.0, 0.72, 0.40],
+  "restore": [-0.2, -0.15],
+  "restoreTol": 0.13,
+  "lampRadius": 0.40,
+  "look": "A",
+  "looks": {
+    "A": {
+      "fogDensity": 0.40, "fogColor": [0.04, 0.30, 0.26], "volumetric": true, "volScatter": 1.5, "volExtinction": 1.0, "volEmissive": 0.3,
+      "keyIntensity": 8.0, "keyColor": [0.55, 1.0, 0.85], "fillIntensity": 5.0, "fillColor": [0.30, 0.70, 0.80],
+      "lampIntensity": 40000, "glowIntensity": 5000, "shafts": true, "toon": false,
+      "vignette": 0.6, "grain": 0.25, "darkFactor": 0.03, "backdrop": [0.0, 0.03, 0.035]
+    },
+    "B": {
+      "fogDensity": 0.12, "fogColor": [0.004, 0.03, 0.11], "volumetric": false,
+      "keyIntensity": 5.0, "keyColor": [0.50, 0.70, 1.0], "fillIntensity": 1.2, "fillColor": [0.20, 0.35, 0.80],
+      "lampIntensity": 90000, "glowIntensity": 9000, "shafts": false, "toon": false,
+      "vignette": 0.5, "grain": 0.0, "darkFactor": 0.03, "backdrop": [0.002, 0.012, 0.05]
+    },
+    "C": {
+      "fogDensity": 0.25, "fogColor": [0.03, 0.28, 0.30], "volumetric": false,
+      "keyIntensity": 0.0, "fillIntensity": 0.0,
+      "lampIntensity": 30000, "glowIntensity": 3000, "shafts": false, "toon": true,
+      "vignette": 0.2, "grain": 0.0, "darkFactor": 0.05, "backdrop": [0.02, 0.20, 0.22]
+    }
+  },
+  "shots": [
+    {
+      "name": "DROP ZONE", "hint": "Line up with the ghost. Press C to cut.",
+      "cam": {"pos": [-900, 0, 0], "look": [0, 0, 0]}, "depth": [800, 1000], "ref": 900, "start": [-0.45, 0.10],
+      "rocks": [
+        {"r": [-1.1, -1.0, 1.1, -0.52]},
+        {"r": [-1.1, -0.52, -0.80, 0.05]},
+        {"r": [0.55, 0.50, 1.1, 1.0]}
+      ]
+    },
+    {
+      "name": "THE SHELF", "hint": "Rock blocks the cut. Find the open water.",
+      "cam": {"pos": [-850, -250, 120], "look": [0, 0, 0]}, "depth": [800, 1000], "ref": 900, "start": [-0.45, 0.0],
+      "rocks": [
+        {"r": [0.45, -1.0, 1.1, 0.12]},
+        {"r": [-1.1, -1.0, 0.45, -0.55]},
+        {"r": [-1.1, 0.42, -0.45, 1.0]}
+      ]
+    },
+    {
+      "name": "THE CHIMNEY", "hint": "A plate drifts across the next shot. Cut when the ring is green.",
+      "cam": {"pos": [-800, 450, -250], "look": [0, 0, 0]}, "depth": [1000, 1200], "ref": 1000, "start": [0.74, 0.40],
+      "rocks": [
+        {"r": [-1.1, -1.0, 0.50, 1.0]}
+      ]
+    },
+    {
+      "name": "THE WRECK", "hint": "Something is shining. Swim to it.",
+      "cam": {"pos": [-900, 150, 200], "look": [0, 0, 0]}, "depth": [800, 1100], "ref": 1000, "start": [0.25, 0.20],
+      "part": [-0.60, 0.30],
+      "rocks": [
+        {"r": [-1.1, -1.0, 1.1, -0.50]},
+        {"r": [0.42, 0.08, 1.1, 1.0]},
+        {"r": [1.0, -0.48, 1.6, 0.06], "plate": true, "move": [-0.52, 0.0], "period": 6}
+      ]
+    },
+    {
+      "name": "THE DARK", "hint": "A crew robot is stuck. Swim to it.", "dark": true,
+      "cam": {"pos": [-700, -600, 50], "look": [0, 0, 0]}, "depth": [800, 1100], "ref": 1000, "start": [-0.30, 0.12],
+      "crew": [-0.66, -0.23],
+      "rocks": [
+        {"r": [-1.1, -1.0, -0.80, 1.0]},
+        {"r": [-0.10, -1.0, 1.1, 1.0]},
+        {"r": [-0.80, 0.34, -0.10, 1.0]},
+        {"r": [-0.80, -1.0, -0.10, -0.38]},
+        {"r": [-0.80, -0.07, -0.50, 0.0], "plate": true}
+      ]
+    },
+    {
+      "name": "OPEN WATER", "hint": "",
+      "cam": {"pos": [-850, 100, -280], "look": [0, 0, 0]}, "depth": [800, 1100], "ref": 1000, "start": [-0.40, 0.0],
+      "rocks": [
+        {"r": [-1.1, -1.0, 1.1, -0.55]},
+        {"r": [0.60, -0.55, 1.1, 0.20]}
+      ]
+    }
+  ]
+}

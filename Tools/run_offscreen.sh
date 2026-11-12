@@ -1,6 +1,6 @@
 #!/bin/sh
-# Runs one match-cut test script offscreen, at background priority, without opening a window.
-#   Tools/run_offscreen.sh Tools/tests/pairs.txt Saved/MatchCut/pairs [ResX ResY]
+# Runs one test script offscreen, at background priority, without opening a window.
+#   Tools/run_offscreen.sh Tools/tests/slice.txt Saved/DeepCut/slice [ResX ResY]
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$1"; OUT="$2"; RX="${3:-1920}"; RY="${4:-1080}"

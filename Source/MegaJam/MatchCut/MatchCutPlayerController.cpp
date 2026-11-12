@@ -1,14 +1,13 @@
-// Match-cut movement prototype (brief 01).
+// Deep Cut slice: keyboard/gamepad polling. The robot itself is moved by the game mode.
 
 #include "MatchCutPlayerController.h"
 #include "MatchCutGameMode.h"
-#include "GameFramework/Character.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "InputCoreTypes.h"
 
 AMatchCutPlayerController::AMatchCutPlayerController()
 {
-	// The shot cameras are the view target; never fall back to the pawn's follow camera.
+	// The shot cameras are the view target; never fall back to a pawn.
 	bAutoManageActiveCameraTarget = false;
 }
 
@@ -27,60 +26,34 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 		UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
 		return;
 	}
-
-	ACharacter* Char = Cast<ACharacter>(GetPawn());
-
-	// movement, relative to the current shot camera (control rotation is set to the camera yaw on every shot change)
-	FVector2D Move = GM->GetScriptMove();
-	if (GM->AcceptsPlayerInput())
+	if (GM->IsScriptActive())
 	{
-		Move.X += (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left) ? 1.f : 0.f);
-		Move.Y += (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down) ? 1.f : 0.f);
-
-		const float PadX = GetInputAnalogKeyState(EKeys::Gamepad_LeftX);
-		const float PadY = GetInputAnalogKeyState(EKeys::Gamepad_LeftY);
-		if (FMath::Abs(PadX) > 0.2f) { Move.X += PadX; }
-		if (FMath::Abs(PadY) > 0.2f) { Move.Y += PadY; }
-
-		if (Char)
-		{
-			if (WasInputKeyJustPressed(EKeys::SpaceBar) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Bottom))
-			{
-				Char->Jump();
-			}
-			if (WasInputKeyJustReleased(EKeys::SpaceBar) || WasInputKeyJustReleased(EKeys::Gamepad_FaceButton_Bottom))
-			{
-				Char->StopJumping();
-			}
-		}
-
-		if (WasInputKeyJustPressed(EKeys::C) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Right) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Left))
-		{
-			GM->TryCut();
-		}
-		if (WasInputKeyJustPressed(EKeys::R) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Top))
-		{
-			GM->Retake();
-		}
-	}
-	else if (GM->IsWrapped())
-	{
-		if (WasInputKeyJustPressed(EKeys::R) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Top))
-		{
-			GM->RestartAll();
-		}
+		return;
 	}
 
-	if (Char && !Move.IsNearlyZero())
+	// x = screen right, y = screen up
+	FVector2D Move(0.0, 0.0);
+	Move.X += (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left) ? 1.f : 0.f);
+	Move.Y += (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down) ? 1.f : 0.f);
+	const float PadX = GetInputAnalogKeyState(EKeys::Gamepad_LeftX);
+	const float PadY = GetInputAnalogKeyState(EKeys::Gamepad_LeftY);
+	if (FMath::Abs(PadX) > 0.2f) { Move.X += PadX; }
+	if (FMath::Abs(PadY) > 0.2f) { Move.Y += PadY; }
+	GM->SetMoveInput(Move);
+
+	const bool bCut = WasInputKeyJustPressed(EKeys::C) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Right) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Left);
+	const bool bLamp = WasInputKeyJustPressed(EKeys::F) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Bottom);
+	const bool bRetake = WasInputKeyJustPressed(EKeys::R) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Top);
+	const bool bOther = WasInputKeyJustPressed(EKeys::SpaceBar) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::LeftMouseButton)
+		|| WasInputKeyJustPressed(EKeys::W) || WasInputKeyJustPressed(EKeys::A) || WasInputKeyJustPressed(EKeys::S) || WasInputKeyJustPressed(EKeys::D)
+		|| WasInputKeyJustPressed(EKeys::Up) || WasInputKeyJustPressed(EKeys::Down) || WasInputKeyJustPressed(EKeys::Left) || WasInputKeyJustPressed(EKeys::Right)
+		|| WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
+
+	if (bCut || bLamp || bRetake || bOther)
 	{
-		if (Move.SizeSquared() > 1.f)
-		{
-			Move.Normalize();
-		}
-		const FRotator YawRot(0.0, GetControlRotation().Yaw, 0.0);
-		const FVector Fwd = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
-		const FVector Right = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
-		Char->AddMovementInput(Fwd, Move.Y);
-		Char->AddMovementInput(Right, Move.X);
+		GM->PressAnyKey(); // skips the opening film once it has been seen
 	}
+	if (bCut) { GM->PressCut(); }
+	if (bLamp) { GM->PressLamp(); }
+	if (bRetake) { GM->PressRetake(); }
 }
