@@ -102,4 +102,4 @@ or `Tools/play.sh [ResX ResY]`. This opens a window. WASD/arrows move, Space jum
 - Frame time at normal priority, and anything on Windows.
 - The fall-sends-you-back path (edge case 2) and the "no room to stand" and "out of frame" NG reasons: code exists, no test hits them.
 - Whether it is fun. That was never something a script could answer.
-- The fresh-context review asked for in the brief: see the DEVLOG entry for whether it ran and what it found.
+- **The fresh-context review asked for in the brief did not happen.** A separate reviewer was started and stopped on a usage limit before returning anything. In its place I re-checked my own report: the letterbox table, the frame-time table and the 1.40–2.36 px range were re-read from the logs and match, and the before/after captures of all four pairs were looked at again. That is the author checking the author, so treat it as weaker than an independent pass.

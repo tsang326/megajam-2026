@@ -16,6 +16,7 @@ Solo developer + AI agents (Claude Code). Times are Vietnam time (UTC+7).
   - Found and fixed: a moving platform could slide out from under the character on a long frame right after a cut; falling respawned past the obstacle.
   - Found, not fixed: the ghost capture roughly triples frame time in the test runs; designing shots by eye was not workable, so a small offline solver (`Tools/cutmap.py`) was written; a packaged build would not ship the JSON layout.
   - Not done: no human has played it. Keyboard input is untested. Report: `docs/prototype-report.md`.
+  - The independent review of the report was started but cut off by a usage limit; the report's numbers were re-checked against the logs by the same session that wrote them.
 
 ## Declared before the jam
 - Tool setup only: an empty UE smoke-test project and an Unreal MCP test project (no game content), a tools/perks list, and a shelved concept note (*Lost Property*) that this game does not use.
