@@ -76,7 +76,28 @@ Look C needed a fix during the run: with the lights off its emissive bands were 
 
 ## Packaging
 
-PACKAGING_RESULT_PLACEHOLDER
+`Tools/package_mac.sh` (RunUAT BuildCookRun, Mac, Development) ends with `BUILD SUCCESSFUL`. Output: `Saved/Package/Mac/MegaJam.app`, 890 MB.
+
+The packaged app was started offscreen at background priority. Its output is kept in `Saved/DeepCut/packaged/stdout_noscript.txt`:
+
+```
+LogMatchCut: Display: Layout loaded from ../../../MegaJam/Content/Data/deepcut.json: 6 shots, 3 looks, fov 60.0
+LogMatchCut: Display: FILM start length=25.5s skippable=0
+LogMatchCut: Display: FILM end -> drop into shot 0
+LogMatchCut: Display: DROP done: playing
+```
+
+So the packaged build starts by itself in the opening film, reads the layout from inside the package, plays the film and hands control to the player in shot 1. A second start logged `intro seen before: 1`, so the first-view flag survives between runs.
+
+Not proven in the packaged build: nothing past shot 1, and there is no picture from it. The test-script runner could not open a script file there (`Cannot read script`, two folders tried), so no cut was made and no capture was taken. Nobody has looked at the packaged game's screen.
+
+It took three packages to get there. The first two did not start:
+
+1. **The first package (finished about 22:04) was only a shell.** The script had no `-package` step, and on Mac the archive step then copies a bare `MegaJam.app` holding the executable and nothing else: no `Contents/UE`, so no game data and no engine libraries. It died at launch in dyld (`Library not loaded: @rpath/libtbb.12.dylib`, and `libmetalirconverter.dylib` after that). This is the build that crashed when it was opened by hand. It was a finished build, not one caught half way. Fix: `-package` added to `Tools/package_mac.sh`. The archive now carries `Contents/UE`, with both libraries put there by the engine's own staging (no manual copy).
+2. **The second package started and quit at once.** On this Mac (macOS 27.2.1) UE 5.8 logs `To use SM6 on this system, please ensure you are running Mac OS 15. Falling back to SM5`, and the template's config cooked Metal SM6 shaders only. The editor hides this because it compiles SM5 shaders on demand. Fix: `Config/DefaultEngine.ini` now targets both `SF_METAL_SM5` and `SF_METAL_SM6`.
+3. **The third package runs**, as above.
+
+Every look-dev and slice capture in this report was rendered with Metal SM5 in the editor binary, not in the package.
 
 Windows steps: `docs/packaging-windows.md` (none of them run).
 

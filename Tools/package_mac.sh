@@ -4,5 +4,5 @@
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 exec taskpolicy -b "/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/RunUAT.sh" BuildCookRun \
   -project="$ROOT/MegaJam.uproject" -noP4 -platform=Mac -clientconfig=Development \
-  -build -nocompileeditor -cook -stage -pak -archive -archivedirectory="$ROOT/Saved/Package" \
+  -build -nocompileeditor -cook -iterate -stage -pak -package -archive -archivedirectory="$ROOT/Saved/Package" \
   -unattended -utf8output -nosplash
