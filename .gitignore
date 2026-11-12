@@ -1,0 +1,19 @@
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+.vs/
+.vscode/
+.idea/
+*.xcworkspace
+*.xcodeproj
+*.sln
+*.code-workspace
+Dist*/
+.DS_Store
+# Claude files are never committed
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
