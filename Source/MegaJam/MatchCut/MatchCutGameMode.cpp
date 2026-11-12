@@ -247,6 +247,10 @@ void AMatchCutGameMode::SpawnLights()
 	{
 		LC->SetMobility(EComponentMobility::Movable);
 		LC->SetIntensity(6.f);
+		if (UDirectionalLightComponent* DLC = Cast<UDirectionalLightComponent>(LC))
+		{
+			DLC->SetForwardShadingPriority(1); // two directional lights: say which one is the main one
+		}
 	}
 
 	ADirectionalLight* Fill = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 5000), FRotator(-25.0, 200.0, 0.0));
@@ -267,6 +271,9 @@ void AMatchCutGameMode::StartPlay()
 		UE_LOG(LogMatchCut, Error, TEXT("Match-cut prototype could not start (missing template asset or layout)."));
 		return;
 	}
+
+	// engine debug text ("Preparing shaders", light warnings) would sit on top of the test captures
+	GAreScreenMessagesEnabled = false;
 
 	SpawnLights();
 	for (FMatchCutShot& Shot : Shots)
@@ -414,7 +421,11 @@ bool AMatchCutGameMode::TryCut()
 	Rot.Yaw += DeltaYaw;
 
 	Hero->SetActorLocationAndRotation(NewLoc, Rot, false, nullptr, ETeleportType::TeleportPhysics);
-	CMC->SetMovementMode(MOVE_Falling);
+	// Stand on the surface right away. Leaving the hero falling for the last 2 units lets a moving
+	// platform slide out from under them during one long frame (seen at ~5 fps in the offscreen runs).
+	CMC->SetMovementMode(MOVE_Walking);
+	Hero->SetBase(Hit.GetComponent());
+	CMC->bForceNextFloorCheck = true;
 	CMC->Velocity = Vel;
 
 	FVector2D After;
@@ -427,8 +438,7 @@ bool AMatchCutGameMode::TryCut()
 	CutFlash = 0.5f;
 	Take = 1;
 	SetShot(Next, false);
-	LogProjectionCheck(TEXT("after"));
-	return true;
+	return true; // the view target changes next frame; scripts log "proj" after a short wait
 }
 
 void AMatchCutGameMode::LogProjectionCheck(const TCHAR* Label) const
@@ -568,7 +578,10 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 
 	TickScript(DeltaSeconds);
 
-	ShotClock += DeltaSeconds;
+	if (!bClockFrozen)
+	{
+		ShotClock += DeltaSeconds;
+	}
 	UpdateMovers();
 
 	// frame time, skipping the first second after each shot change (hitches from first-use shaders)
@@ -611,7 +624,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 	}
 
 	// standing on the goal mark
-	if (const UPrimitiveComponent* Base = Hero->GetMovementBase())
+	if (const UPrimitiveComponent* Base = Cast<UPrimitiveComponent>(Hero->GetMovementBaseObject()))
 	{
 		if (Base->GetOwner() && Base->GetOwner()->ActorHasTag(GoalTag) && Hero->GetCharacterMovement()->IsMovingOnGround())
 		{
@@ -627,7 +640,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 // One command per line:
 //   goto N | tp X Y Z (shot-local feet) | wait S | snap NAME | cut | retake | restart
 //   move RIGHT FORWARD SECONDS | jump | mtime T (set the mover clock) | proj LABEL | quit
-//   walkto X Y (walk to a shot-local spot) | waitclock T PERIOD (wait until the mover clock, modulo PERIOD, reaches T)
+//   freeze 1|0 (stop/resume the mover clock) | walkto X Y (walk to a shot-local spot) | waitclock T PERIOD (wait until the mover clock, modulo PERIOD, reaches T)
 // ---------------------------------------------------------------------------------------------
 
 void AMatchCutGameMode::LoadScript()
@@ -769,6 +782,10 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 	{
 		ShotClock = Num(1);
 		UpdateMovers();
+	}
+	else if (Cmd == TEXT("freeze"))
+	{
+		bClockFrozen = Num(1) > 0.f; // hold the movers still so a capture and the cut after it see the same thing
 	}
 	else if (Cmd == TEXT("proj"))
 	{

@@ -142,6 +142,7 @@ private:
 	FString NGReason;
 	float CutFlash = 0.f;
 	float ShotClock = 0.f;
+	bool bClockFrozen = false;
 	float Fov = 60.f;
 	float GhostOpacity = 0.35f;
 	float ExposureEV = 2.5f;
