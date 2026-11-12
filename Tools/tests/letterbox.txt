@@ -1,0 +1,12 @@
+# Run at several window sizes; the PROJ lines and the captures must agree.
+goto 0
+tp 125 250 0
+wait 1.5
+proj lb_before
+snap lb_a_before
+cut
+wait 0.05
+proj lb_after
+snap lb_b_after
+wait 1.0
+quit

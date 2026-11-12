@@ -18,13 +18,15 @@ public class MegaJam : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"Json"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"MegaJam",
+			"MegaJam/MatchCut",
 			"MegaJam/Variant_Platforming",
 			"MegaJam/Variant_Platforming/Animation",
 			"MegaJam/Variant_Combat",

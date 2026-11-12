@@ -1,0 +1,87 @@
+# One failed and one successful cut for every shot pair. Positions come from Tools/cutmap.py.
+# pair 1: SOUNDSTAGE -> LEDGE
+goto 0
+wait 1.5
+snap p1_a_start
+cut
+wait 0.3
+snap p1_b_fail_void
+wait 1.2
+tp -250 -300 0
+wait 0.5
+cut
+wait 0.3
+snap p1_c_fail_untagged
+wait 1.2
+tp 125 250 0
+wait 0.6
+proj p1_before
+snap p1_d_before_ok
+cut
+wait 0.05
+snap p1_e_after_ok
+wait 1.0
+# pair 2: LEDGE -> ONE MARK
+goto 1
+wait 1.0
+snap p2_a_start
+cut
+wait 0.3
+snap p2_b_fail_void
+wait 1.2
+tp 25 350 0
+wait 0.6
+snap p2_c_before_ok
+cut
+wait 0.05
+snap p2_d_after_ok
+wait 1.0
+# pair 3: ONE MARK -> CRANE (timing)
+goto 2
+tp 355 60 0
+mtime 0
+wait 0.4
+snap p3_a_before_fail
+mtime 0
+cut
+wait 0.3
+snap p3_b_fail_timing
+wait 1.2
+tp 355 85 0
+wait 0.5
+mtime 3.7
+snap p3_c_before_ok
+cut
+wait 0.05
+snap p3_d_after_ok
+wait 1.5
+snap p3_e_riding
+# pair 4: CRANE -> FINALE
+goto 3
+tp -96 260 0
+wait 0.6
+snap p4_a_before_wall
+cut
+wait 0.3
+snap p4_b_fail_wall
+wait 1.2
+tp -300 300 0
+wait 0.6
+snap p4_c_before_pit
+cut
+wait 0.05
+snap p4_d_after_pit_useless
+wait 1.0
+retake
+wait 0.5
+tp 10 260 0
+wait 0.6
+snap p4_e_before_ok
+cut
+wait 0.05
+snap p4_f_after_ok
+wait 0.8
+walkto -60 -110
+wait 0.5
+snap p4_g_wrap
+quit

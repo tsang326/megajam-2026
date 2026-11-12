@@ -1,0 +1,34 @@
+# Whole sequence with walking only (no teleports): shot 1 -> 2 -> 3 -> 4 -> 5 -> wrap.
+goto 0
+wait 1.0
+snap run_0_start
+# camera-relative input: hold "right" for 1 s, the hero must move screen-right
+move 1 0 1.0
+wait 0.3
+snap run_0_moved_right
+walkto 125 250
+wait 0.3
+cut
+wait 0.3
+snap run_1_ledge
+walkto 25 350
+wait 0.3
+cut
+wait 0.3
+snap run_2_mark
+walkto 355 85
+waitclock 3.9 6
+cut
+wait 0.3
+snap run_3_crane
+wait 2.5
+walkto -100 450
+walkto 10 260
+wait 0.3
+cut
+wait 0.3
+snap run_4_finale
+walkto -60 -110
+wait 0.5
+snap run_5_wrap
+quit
