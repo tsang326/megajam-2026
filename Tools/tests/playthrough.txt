@@ -21,7 +21,8 @@ waitclock 3.9 6
 cut
 wait 0.3
 snap run_3_crane
-wait 2.5
+# ride the crane back; step off only while it is next to the fixed floor
+waitclock 5.6 6
 walkto -100 450
 walkto 10 260
 wait 0.3

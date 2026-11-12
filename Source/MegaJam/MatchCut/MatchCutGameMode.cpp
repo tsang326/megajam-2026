@@ -496,7 +496,7 @@ void AMatchCutGameMode::SetShot(int32 Index, bool bRespawn)
 	{
 		USceneCaptureComponent2D* Cap = GhostCapture->GetCaptureComponent2D();
 		const bool bHasNext = Cur + 1 < Shots.Num();
-		Cap->bCaptureEveryFrame = bHasNext;
+		Cap->bCaptureEveryFrame = bHasNext && bGhostEnabled;
 		if (bHasNext)
 		{
 			GhostCapture->SetActorLocationAndRotation(Shots[Cur + 1].CamPos, Shots[Cur + 1].CamRot);
@@ -606,7 +606,17 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 		{
 			State = EMatchCutState::Playing;
 			++Take;
-			RespawnAtStart();
+			if (bFellThisTake && Cur > 0)
+			{
+				// Falling after a cut sends you back to redo the cut. Respawning on this shot's own
+				// start mark would turn a fall into a shortcut past whatever the landing demanded.
+				SetShot(Cur - 1, true);
+			}
+			else
+			{
+				RespawnAtStart();
+			}
+			bFellThisTake = false;
 		}
 		return;
 	}
@@ -620,6 +630,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 	{
 		UE_LOG(LogMatchCut, Display, TEXT("FELL in shot %d"), Cur);
 		FailTake(TEXT("fell out of the shot"));
+		bFellThisTake = true;
 		return;
 	}
 
@@ -640,7 +651,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 // One command per line:
 //   goto N | tp X Y Z (shot-local feet) | wait S | snap NAME | cut | retake | restart
 //   move RIGHT FORWARD SECONDS | jump | mtime T (set the mover clock) | proj LABEL | quit
-//   freeze 1|0 (stop/resume the mover clock) | walkto X Y (walk to a shot-local spot) | waitclock T PERIOD (wait until the mover clock, modulo PERIOD, reaches T)
+//   freeze 1|0 (stop/resume the mover clock) | ghost 1|0 (ghost overlay on/off) | walkto X Y (walk to a shot-local spot) | waitclock T PERIOD (wait until the mover clock, modulo PERIOD, reaches T)
 // ---------------------------------------------------------------------------------------------
 
 void AMatchCutGameMode::LoadScript()
@@ -782,6 +793,11 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 	{
 		ShotClock = Num(1);
 		UpdateMovers();
+	}
+	else if (Cmd == TEXT("ghost"))
+	{
+		bGhostEnabled = Num(1) > 0.f; // measure what the ghost capture costs
+		SetShot(Cur, false);
 	}
 	else if (Cmd == TEXT("freeze"))
 	{

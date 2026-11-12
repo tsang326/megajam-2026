@@ -3,6 +3,7 @@
 goto 0
 wait 1.5
 snap p1_a_start
+wait 1.0
 cut
 wait 0.05
 snap p1_b_fail_void
@@ -25,6 +26,7 @@ wait 1.0
 goto 1
 wait 1.0
 snap p2_a_start
+wait 1.0
 cut
 wait 0.05
 snap p2_b_fail_void
@@ -43,6 +45,7 @@ freeze 1
 mtime 0
 wait 0.4
 snap p3_a_before_fail
+wait 1.0
 cut
 wait 0.05
 snap p3_b_fail_timing
@@ -62,6 +65,7 @@ goto 3
 tp -96 260 0
 wait 0.6
 snap p4_a_before_wall
+wait 1.0
 cut
 wait 0.05
 snap p4_b_fail_wall

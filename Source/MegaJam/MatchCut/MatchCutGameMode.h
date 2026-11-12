@@ -91,7 +91,7 @@ public:
 	const FString& GetShotHint() const;
 	const FString& GetNGReason() const { return NGReason; }
 	float GetFlash() const { return CutFlash; }
-	UTextureRenderTarget2D* GetGhostTarget() const { return (Cur + 1 < Shots.Num()) ? GhostTarget : nullptr; }
+	UTextureRenderTarget2D* GetGhostTarget() const { return (bGhostEnabled && Cur + 1 < Shots.Num()) ? GhostTarget : nullptr; }
 	float GetGhostOpacity() const { return GhostOpacity; }
 
 	/** Screen position in [-1,1]^2 of a world point seen by a shot camera (16:9, independent of the window). */
@@ -143,6 +143,8 @@ private:
 	float CutFlash = 0.f;
 	float ShotClock = 0.f;
 	bool bClockFrozen = false;
+	bool bFellThisTake = false;
+	bool bGhostEnabled = true;
 	float Fov = 60.f;
 	float GhostOpacity = 0.35f;
 	float ExposureEV = 2.5f;
