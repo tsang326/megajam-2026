@@ -13,13 +13,13 @@ One scripted run (`Tools/tests/slice.txt`, 40 captures) goes from the opening fi
 | Opening film, first view, 25.5 s, a key press does not skip it | `FILM start length=25.5s skippable=0` | `f01_launch`, `f03_gap1`, `f05_unit7`, `f07_end` |
 | Film drops the player into shot 1, the reel strip slides to the top bar | `FILM end -> drop into shot 0`, `DROP done: playing` | `g00_drop`, `g01_shot0_start_green` |
 | Cut a (plain). A press in the red gives a line of text, no failed take | `CUT 0->1 NG reason="ROCK IN THE WAY" ... first=1`, then `CUT 0->1 OK` | `g03_shot0_soft_fail` |
-| Cut b (one open spot). Failed take, then success | `CUT 1->2 NG reason="ROCK IN THE WAY"`, `CUT 1->2 OK` | `g06_shot1_take2_rock`, `g07_shot1_one_spot_green` |
+| Cut b (one open spot). Failed take, then success | `CUT 1->2 NG reason="ROCK IN THE WAY"`, `CUT 1->2 OK` | `g06_shot1_take2_rock` (taken just after the clapper card: TAKE 2 in the top bar, red ring), `g07_shot1_one_spot_green` |
 | Cut c (timing, a plate drifts across the next shot) | `CUT 2->3 NG reason="ROCK IN THE WAY"`, `CUT 2->3 OK` | `g09_shot2_plate_red`, `g10_shot2_take2_timing`, `g11_shot2_plate_clear_green` |
 | Next shot is dark and there is no lamp yet | `CUT 3->4 NG reason="TOO DARK"` | `g13_shot3_too_dark` |
 | The part | `PART picked up in shot 3: lamp granted, restore-by-cut armed` | `g15_part_found_restore_ghost` |
 | Restore-by-cut, failed then lined up | `RESTORE NG reason="NOT LINED UP" ... off=448px`, `RESTORE OK ... off=35px` | `g17_restore_take2`, `g18_restore_lined_up` |
 | Flashback, 12 s, fills gap 1 in the reel | `FLASHBACK start (removed scene 1, 12s)`, `FLASHBACK end: gap 1 filled` | `g20_flashback_b`, thumbnail in the reel in `g23` |
-| Cut d (dark shot, lamp on). Failed take on rock, then success | `CUT 3->4 NG reason="ROCK IN THE WAY" ... lamp=1`, `CUT 3->4 OK ... lamp=1` | `g23_lamp_on_pocket_green`, `g25_dark_take2_rock`, `g27_shot4_dark_lamp` |
+| Cut d (dark shot, lamp on). Failed take on rock, then success | `CUT 3->4 NG reason="ROCK IN THE WAY" ... lamp=1`, `CUT 3->4 OK ... lamp=1` | `g23_lamp_on_pocket_green` (the pocket is green, the ring is not yet), `g25_dark_take2_rock`, `g27_shot4_dark_lamp` |
 | Rescue, the crew robot follows | `RESCUE crew robot freed in shot 4 (lamp=1): CREW 1/7` | `g29_rescue`, `g30_crew_follows` |
 | Last cut and end card | `CUT 4->5 OK`, `END CARD scenes=1/3 crew=1/7` | `g32_end_card` |
 
@@ -70,7 +70,7 @@ Same shot (CAM 04, lamp on, ghost off), about 10 s each, `Tools/tests/lookdev.tx
 | C, flat toon bands | `Saved/DeepCut/lookdev/look_C.png` | 20.65 ms | 459 |
 | A with the ghost on | `Saved/DeepCut/lookdev/look_A_with_ghost.png` | 74.51 ms | 110 (8 s) |
 
-Do not rank the looks on these numbers. The runs are at background priority (`taskpolicy -b`) on a Mac that was in use (load average around 14), every window has hitches up to the 400 ms clamp, and the same setting measured twice differs more than the looks do: an earlier run gave A 27.95, B 24.98, C 47.84, and in this run look A without the ghost measured 22.07 ms and then 43.83 ms a few seconds later. What can be said: none of the three looks is clearly more expensive than the others here, and the ghost capture is probably still the largest single cost (also seen in brief 01). A clean number needs an idle machine at normal priority, and the Windows PC is the one that matters.
+Do not rank the looks on these numbers. The runs are at background priority (`taskpolicy -b`) on a Mac that was in use (load average around 14), every 10 s window in the table has a hitch at the 400 ms clamp, and the same setting measured twice differs more than the looks do: an earlier run gave A 27.95, B 24.98, C 47.84, and in this run look A with ghost and lamp off measured 22.07 ms and then 43.83 ms a few seconds later. What can be said: none of the three looks is clearly more expensive than the others here, and the ghost capture is probably still the largest single cost (also seen in brief 01). A clean number needs an idle machine at normal priority, and the Windows PC is the one that matters.
 
 Look C needed a fix during the run: with the lights off its emissive bands were about three times too dark for the fixed exposure, so the first capture was silhouettes. The bands are now multiplied by 3.
 
@@ -78,7 +78,7 @@ Look C needed a fix during the run: with the lights off its emissive bands were 
 
 `Tools/package_mac.sh` (RunUAT BuildCookRun, Mac, Development) ends with `BUILD SUCCESSFUL`. Output: `Saved/Package/Mac/MegaJam.app`, 890 MB.
 
-The packaged app was started offscreen at background priority. Its output is kept in `Saved/DeepCut/packaged/stdout_noscript.txt`:
+The packaged app was started offscreen at background priority, with a test-script argument that it failed to load (see below). Lines from its output, `Saved/DeepCut/packaged/stdout_noscript.txt` (not consecutive in the file):
 
 ```
 LogMatchCut: Display: Layout loaded from ../../../MegaJam/Content/Data/deepcut.json: 6 shots, 3 looks, fov 60.0
@@ -87,9 +87,9 @@ LogMatchCut: Display: FILM end -> drop into shot 0
 LogMatchCut: Display: DROP done: playing
 ```
 
-So the packaged build starts by itself in the opening film, reads the layout from inside the package, plays the film and hands control to the player in shot 1. A second start logged `intro seen before: 1`, so the first-view flag survives between runs.
+So the packaged build starts by itself in the opening film, reads the layout from inside the package, plays the film and hands control to the player in shot 1. A second start (`stdout_second_run.txt`, script in another folder, also not loaded) logged `intro seen before: 1` and `skippable=1`, so the first-view flag survives between runs.
 
-Not proven in the packaged build: nothing past shot 1, and there is no picture from it. The test-script runner could not open a script file there (`Cannot read script`, two folders tried), so no cut was made and no capture was taken. Nobody has looked at the packaged game's screen.
+Not proven in the packaged build: nothing past shot 1, and there is no picture from it. The test-script runner could not open a script file there (`Cannot read script`, one folder per run), so no cut was made and no capture was taken. Nobody has looked at the packaged game's screen.
 
 It took three packages to get there. The first two did not start:
 
@@ -127,7 +127,7 @@ Cutting
 - `C: CUT`
 - `ROCK IN THE WAY`, `TOO DARK`, `TOO DARK - F: LAMP`, `NO WATER THERE`, `OUT OF FRAME`, `NOT LINED UP`, `NO NEXT SHOT`
 - `CUT`
-- Hints: `Rock blocks the cut. Find the open water.` / `A plate drifts across the next shot. Cut when the ring is green.` / `Something is shining. Swim to it.` / `A crew robot is stuck. Swim to it.`
+- Hints (shot 1's hint in the JSON repeats the first line above; the last shot has none): `Rock blocks the cut. Find the open water.` / `A plate drifts across the next shot. Cut when the ring is green.` / `Something is shining. Swim to it.` / `A crew robot is stuck. Swim to it.`
 
 Part, restore, rescue
 - `HEADLAMP FOUND`
@@ -135,7 +135,7 @@ Part, restore, rescue
 - `A removed scene. Line up with the frame. Press C.`
 - `MATCH`
 - `RECOVERED FOOTAGE`
-- `SCENE 1/3` (HUD literal, under the flashback), `TC 03:23:29:10` (HUD literal, flashback timecode)
+- `SCENE 1/3` (HUD literal, under the flashback), `TC ` followed by a running timecode (HUD literal)
 - `SCENE RESTORED  1/3`
 - `The next shot is dark. Turn on the lamp (F) and look for the signal.`
 - `CREW SIGNAL`
