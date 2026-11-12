@@ -16,13 +16,13 @@
       "fogDensity": 0.40, "fogColor": [0.04, 0.30, 0.26], "volumetric": true, "volScatter": 1.5, "volExtinction": 1.0, "volEmissive": 0.3,
       "keyIntensity": 8.0, "keyColor": [0.55, 1.0, 0.85], "fillIntensity": 5.0, "fillColor": [0.30, 0.70, 0.80],
       "lampIntensity": 40000, "glowIntensity": 5000, "shafts": true, "toon": false,
-      "vignette": 0.6, "grain": 0.25, "darkFactor": 0.03, "backdrop": [0.0, 0.03, 0.035]
+      "vignette": 0.6, "grain": 0.25, "darkFactor": 0.03, "ambient": 0.10, "backdrop": [0.0, 0.03, 0.035]
     },
     "B": {
-      "fogDensity": 0.12, "fogColor": [0.004, 0.03, 0.11], "volumetric": false,
-      "keyIntensity": 5.0, "keyColor": [0.50, 0.70, 1.0], "fillIntensity": 1.2, "fillColor": [0.20, 0.35, 0.80],
+      "fogDensity": 0.12, "fogColor": [0.01, 0.06, 0.20], "volumetric": false,
+      "keyIntensity": 9.0, "keyColor": [0.50, 0.70, 1.0], "fillIntensity": 4.0, "fillColor": [0.20, 0.35, 0.80],
       "lampIntensity": 90000, "glowIntensity": 9000, "shafts": false, "toon": false,
-      "vignette": 0.5, "grain": 0.0, "darkFactor": 0.03, "backdrop": [0.002, 0.012, 0.05]
+      "vignette": 0.5, "grain": 0.0, "darkFactor": 0.03, "ambient": 0.14, "backdrop": [0.002, 0.012, 0.05]
     },
     "C": {
       "fogDensity": 0.25, "fogColor": [0.03, 0.28, 0.30], "volumetric": false,

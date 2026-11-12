@@ -116,7 +116,7 @@ cut
 wait 0.3
 snap g25_dark_take2_rock
 waitstate Playing
-swimto -0.45 0.05
+swimto -0.30 0.03
 wait 0.5
 snap g26_before_dark_cut
 cut

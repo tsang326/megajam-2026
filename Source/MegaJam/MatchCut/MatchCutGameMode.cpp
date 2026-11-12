@@ -221,6 +221,7 @@ bool AMatchCutGameMode::LoadLayout()
 			ReadFloat(L, TEXT("vignette"), Out.Vignette);
 			ReadFloat(L, TEXT("grain"), Out.Grain);
 			ReadFloat(L, TEXT("darkFactor"), Out.DarkFactor);
+			ReadFloat(L, TEXT("ambient"), Out.Ambient);
 			Out.Backdrop = ReadColor(L, TEXT("backdrop"), Out.Backdrop);
 		}
 	}
@@ -331,7 +332,7 @@ void AMatchCutGameMode::SetPaintEmissive(int32 Paint, const FLinearColor& Emissi
 		Paints[Paint].Emissive = Emissive;
 		if (UMaterialInstanceDynamic* MID = Paints[Paint].MID.Get())
 		{
-			MID->SetVectorParameterValue(TEXT("Emissive"), Emissive);
+			MID->SetVectorParameterValue(TEXT("Emissive"), Emissive + Paints[Paint].Color * AmbientNow);
 		}
 	}
 }
@@ -723,7 +724,7 @@ void AMatchCutGameMode::ApplyLook(const FString& Name)
 		{
 			UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Parent, C);
 			MID->SetVectorParameterValue(TEXT("Color"), P.Color);
-			MID->SetVectorParameterValue(TEXT("Emissive"), P.Emissive);
+			MID->SetVectorParameterValue(TEXT("Emissive"), P.Emissive + P.Color * AmbientNow);
 			C->SetMaterial(0, MID);
 			P.MID = MID;
 		}
@@ -781,7 +782,19 @@ void AMatchCutGameMode::ApplyLighting()
 	{
 		bDark = Shots[Cur].bDark;
 	}
-	const float K = bDark ? Look.DarkFactor : 1.f;
+	float K = bDark ? Look.DarkFactor : 1.f;
+	if (State == EDCState::Flashback)
+	{
+		K = FMath::Max(K, 0.30f); // old footage: dim, but the robots must read
+	}
+	AmbientNow = Look.bToon ? 0.f : Look.Ambient * K;
+	for (FDCPaint& P : Paints)
+	{
+		if (UMaterialInstanceDynamic* MID = P.MID.Get())
+		{
+			MID->SetVectorParameterValue(TEXT("Emissive"), P.Emissive + P.Color * AmbientNow);
+		}
+	}
 	if (KeyLight)
 	{
 		ULightComponent* LC = KeyLight->GetLightComponent();
@@ -809,7 +822,8 @@ void AMatchCutGameMode::ApplyLighting()
 	}
 	if (Look.bToon)
 	{
-		const float Glow = bDark ? FMath::Max(Look.DarkFactor, 0.03f) : 1.f;
+		// the toon bands are emissive, so they need the brightness the lights would have given (exposure is fixed)
+		const float Glow = (bDark ? FMath::Max(Look.DarkFactor, 0.03f) : 1.f) * 3.0f;
 		for (FDCPaint& P : Paints)
 		{
 			if (UMaterialInstanceDynamic* MID = P.MID.Get())

@@ -403,8 +403,10 @@ void AMatchCutHUD::DrawFilm(AMatchCutGameMode* GM)
 		Text(DCText::FilmSkip, 1860.f, 56.f, 1.3f, Dim, 2);
 	}
 	// play symbol and timecode, like a film player
-	Rect(300.f, 995.f, 8.f, 34.f, White);
-	Rect(316.f, 995.f, 8.f, 34.f, White);
+	for (int32 Row = 0; Row < 34; ++Row) // play triangle
+	{
+		Rect(300.f, 995.f + Row, 26.f * (1.f - FMath::Abs(Row - 16.5f) / 17.f), 1.f, White);
+	}
 	Text(Timecode(T, 0), 60.f, 1000.f, 1.6f, White);
 	Text(Timecode(GM->FilmLength, 0), 1860.f, 1000.f, 1.6f, Dim, 2);
 }

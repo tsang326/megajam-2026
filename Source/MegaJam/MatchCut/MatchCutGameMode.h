@@ -77,6 +77,7 @@ struct FDCLook
 	float Vignette = 0.4f;
 	float Grain = 0.f;
 	float DarkFactor = 0.04f;
+	float Ambient = 0.f; // share of a surface's own colour it shows without any light (lifts the shadow sides)
 	FLinearColor Backdrop = FLinearColor(0.01f, 0.05f, 0.06f);
 };
 
@@ -351,6 +352,7 @@ private:
 	float ScriptMoveLeft = 0.f;
 	FString ScriptOutDir;
 	bool bScriptSwimming = false;
+	float AmbientNow = 0.f;
 	bool bScriptHold = false; // after swimto: keep station on the target until the next cut or move
 	FVector2D ScriptSwimTarget = FVector2D::ZeroVector;
 	float ScriptSwimTime = 0.f;
