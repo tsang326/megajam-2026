@@ -66,3 +66,4 @@ Solo developer + AI agents (Claude Code). Times are Vietnam time (UTC+7).
 - Stage 1: the body that carries the warm glow in THE DARK is no longer shown, only its light.
 - Checked offscreen with the editor build: `stage2` alone and `full12` (stage 1, C, stage 2) both reach `END CARD stage=2 scenes=2/3 crew=2/7`. 99 captures in `docs/captures/stage2/`. Report: `docs/stage2-report.md`.
 - Not done: no human has played stage 2; the clip was looked at as stills, not in motion; sound checked by log only. Missing sounds (a predator sting, diver breathing) use stand-ins from the 13 existing sounds.
+- Packaged Mac Development build made again; `full12` runs in it from the design-file card to the stage 2 end card (99 captures, 13 of 13 sounds load). `route_yellow` still passes in the editor build. `-MCShot=6` starts at stage 2 and plays the official record first.

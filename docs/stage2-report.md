@@ -43,6 +43,18 @@ Five shots (6 to 10). One scripted run (`Content/Data/tests/stage2.txt`) solves 
 | Shot 10 THE LIFT: crew unit dropped into the lift. End card for stage 2. | `RESCUE crew robot crew2 is in the lift: CREW 2/7`, `END CARD stage=2 scenes=2/3 crew=2/7` | `t6b_crew_over_lift`, `t6c_crew_safe`, `t6d_end_card_stage2` |
 | Stage 1, then C on its end card, then stage 2, in one run | `STAGE 2 starts at shot 6` | `s5e_end_card_c_next_stage` |
 
+Runs made on 2026-11-13, all offscreen:
+
+| Run | Build | Result |
+|---|---|---|
+| `stage2` | editor | `END CARD stage=2 scenes=2/3 crew=2/7`, 49 captures |
+| `full12` (stage 1, C, stage 2) | editor | `END CARD stage=1 scenes=1/3 crew=1/7`, `STAGE 2 starts at shot 6`, `END CARD stage=2 scenes=2/3 crew=2/7`, 99 captures (`docs/captures/stage2/`) |
+| `full12` | packaged Mac Development | same three lines, 13 of 13 sounds loaded, 99 captures (8 of them in `docs/captures/stage2_packaged/`) |
+| `route_yellow` | editor | `END CARD stage=1 scenes=1/3 crew=0/7` |
+| `start_stage2` with `-MCShot=6` | editor | the official record plays, then THE TRENCH |
+
+In the editor `full12` run the lamp was still on from stage 1 when stage 2 began, so the `TOO DARK` failed take did not happen there; the script now turns the lamp off first, and the packaged run shows that failed take.
+
 ## The puzzles and how a newcomer learns each one
 
 1. **THE TRENCH - restore (known from stage 1).** The official record has just ended with "Some seconds are missing". The hint points at the part. Picking it up shows the amber MATCH ring with a still of the missing frame inside it; the hint line is the one from stage 1.
