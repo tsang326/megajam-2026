@@ -1,0 +1,196 @@
+# Stage 1 from the opening film to the end card, by the crew route, with one failed take per cut type.
+# Editor:   rm -f Saved/DeepCut/intro_seen.txt; Tools/run_offscreen.sh stage1 Saved/DeepCut/stage1
+# Packaged: Tools/run_packaged.sh stage1 Saved/DeepCut/stage1_pkg
+# --- opening film (first view: "anykey" must not skip it)
+wait 1.5
+snap f01_launch
+anykey
+filmtime 6.5
+wait 0.7
+snap f02_descent
+filmtime 9.8
+wait 0.7
+snap f03_gap1
+filmtime 13.5
+wait 0.7
+snap f04_seafloor
+filmtime 20.5
+wait 0.7
+snap f05_unit7
+filmtime 25.9
+wait 0.5
+snap f06_end
+waitstate Drop
+wait 0.8
+snap g00_drop
+waitstate Playing
+wait 1.2
+# --- shot 0 DROP ZONE: valve puzzle, first cut cannot fail
+snap s0a_before_no_marks
+cut
+wait 0.4
+snap s0b_cut_before_solved_soft
+swimto 180 -40 1050
+wait 0.3
+snap s0c_at_valve_prompt
+use
+wait 0.35
+snap s0d_marks_reveal
+wait 1.6
+snap s0e_marks_shown
+cut
+wait 0.4
+snap s0f_cut_off_mark_soft
+swimn -0.433 0.0615
+wait 0.4
+snap s0g_on_mark
+cut
+wait 0.15
+snap s1a_after_cut_no_marks
+# --- shot 1 THE SHELF: grab the plate (gate), carry it across the cut (B puzzle 1)
+wait 0.8
+cut
+wait 0.4
+snap s1b_cut_before_solved
+swimto 400 -100 1050
+wait 0.3
+snap s1c_at_plate_prompt
+use
+wait 0.35
+snap s1d_marks_reveal
+wait 1.5
+# failed take, mark cut: not on a mark
+cut
+wait 0.3
+snap s1e_FAIL_not_on_mark
+waitstate Playing
+wait 0.6
+# wrong way first: keep holding the plate and cut. It comes along but lands outside the vent.
+swimn -0.268 -0.280
+wait 0.5
+snap s1f_plate_held_comes_not_fits
+cut
+wait 0.6
+snap s2a_vent_plate_missed
+move 1 0 0 2.5
+snap s2b_current_pushes_back
+retake
+wait 0.8
+snap s1g_back_one_shot
+# right way: drop the plate where the vent is in the next shot, stay close, cut
+swimto 400 -100 1050
+use
+swimto -100 -140 1050
+swimto 36 -140 1050
+wait 0.7
+use
+wait 0.3
+snap s1h_plate_dropped_on_vent_frame
+swimn -0.268 -0.280
+wait 0.5
+snap s1i_on_mark_plate_fits
+cut
+wait 0.5
+snap s2c_vent_current_stopped
+# --- shot 2 THE VENT: wide shot on a rail, valve at the far end, mark with a depth
+wait 1.0
+swimto 600 -40 1150
+snap s2d_rail_midway
+swimto 1180 -20 1200
+wait 0.3
+snap s2e_at_valve
+use
+wait 0.35
+snap s2f_marks_reveal
+wait 1.5
+# failed take, mark cut: right place on screen, wrong depth
+swimto 1144 41 1100
+wait 0.4
+snap s2g_on_mark_too_close
+cut
+wait 0.3
+snap s2h_FAIL_too_close
+waitstate Playing
+wait 0.5
+swimto 700 -20 1250
+swimto 1200 50 1350
+wait 0.5
+snap s2i_on_mark_depth_ok
+cut
+wait 0.5
+snap s3a_wreck
+# --- shot 3 THE WRECK: part, restore-by-cut, then two cameras
+swimto -300 30 1150
+wait 0.6
+snap s3b_part_found_restore_frame
+cut
+wait 0.3
+snap s3c_FAIL_restore_not_lined_up
+waitstate Playing
+wait 0.5
+swimn -0.2 -0.15
+wait 0.4
+snap s3d_restore_lined_up
+cut
+wait 1.5
+snap s3e_flashback_1
+wait 4.0
+snap s3f_flashback_2
+waitstate Playing
+wait 0.4
+snap s3g_scene_restored_marks_reveal
+wait 1.6
+snap s3h_two_cameras_lamp_off
+# failed take, dark camera: on the blue mark with the lamp off
+swimn -0.52 0.336 1100
+wait 0.4
+snap s3i_on_dark_mark_lamp_off
+cut
+wait 0.3
+snap s3j_FAIL_too_dark
+waitstate Playing
+wait 0.5
+# take the power cell along (B puzzle 2: it has to come through two cuts)
+swimto 380 -130 1250
+wait 0.3
+snap s3k_at_cell_prompt
+use
+wait 0.5
+lamp 1
+swimto 0 100 1150
+swimn -0.52 0.336 1100
+wait 0.6
+snap s3l_blue_mark_lamp_on_cell_comes
+cut
+wait 0.6
+snap s4a_dark_lamp_on
+# --- shot 4 THE DARK: rescue
+lamp 0
+wait 0.4
+snap s4b_dark_lamp_off
+lamp 1
+swimto 0 190 1100
+swimto 230 190 1150
+swimto 330 -110 1200
+wait 0.5
+snap s4c_crew_found_marks_reveal
+wait 1.5
+swimto 300 60 1150
+wait 0.5
+snap s4d_on_mark
+cut
+wait 0.6
+snap s5a_dock
+# --- shot 5 THE DOCK: plug the cell in
+swimto -150 -40 1250
+swimto -260 -40 1250
+wait 0.7
+snap s5b_at_dock_with_cell
+use
+wait 0.5
+snap s5c_power_on
+waitstate EndCard
+wait 1.2
+snap s5d_end_card
+stat
+quit

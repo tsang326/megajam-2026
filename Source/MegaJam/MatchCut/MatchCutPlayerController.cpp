@@ -31,10 +31,12 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 		return;
 	}
 
-	// x = screen right, y = screen up
-	FVector2D Move(0.0, 0.0);
+	// x = screen right, y = screen up, z = away from the camera
+	FVector Move(0.0, 0.0, 0.0);
 	Move.X += (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left) ? 1.f : 0.f);
 	Move.Y += (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down) ? 1.f : 0.f);
+	Move.Z += (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift) || IsInputKeyDown(EKeys::Gamepad_RightShoulder) ? 1.f : 0.f)
+		- (IsInputKeyDown(EKeys::SpaceBar) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder) ? 1.f : 0.f);
 	const float PadX = GetInputAnalogKeyState(EKeys::Gamepad_LeftX);
 	const float PadY = GetInputAnalogKeyState(EKeys::Gamepad_LeftY);
 	if (FMath::Abs(PadX) > 0.2f) { Move.X += PadX; }
@@ -43,17 +45,19 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 
 	const bool bCut = WasInputKeyJustPressed(EKeys::C) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Right) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Left);
 	const bool bLamp = WasInputKeyJustPressed(EKeys::F) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Bottom);
+	const bool bUse = WasInputKeyJustPressed(EKeys::E) || WasInputKeyJustPressed(EKeys::Gamepad_RightTrigger);
 	const bool bRetake = WasInputKeyJustPressed(EKeys::R) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Top);
 	const bool bOther = WasInputKeyJustPressed(EKeys::SpaceBar) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::LeftMouseButton)
 		|| WasInputKeyJustPressed(EKeys::W) || WasInputKeyJustPressed(EKeys::A) || WasInputKeyJustPressed(EKeys::S) || WasInputKeyJustPressed(EKeys::D)
 		|| WasInputKeyJustPressed(EKeys::Up) || WasInputKeyJustPressed(EKeys::Down) || WasInputKeyJustPressed(EKeys::Left) || WasInputKeyJustPressed(EKeys::Right)
 		|| WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
 
-	if (bCut || bLamp || bRetake || bOther)
+	if (bCut || bLamp || bRetake || bUse || bOther)
 	{
 		GM->PressAnyKey(); // skips the opening film once it has been seen
 	}
 	if (bCut) { GM->PressCut(); }
 	if (bLamp) { GM->PressLamp(); }
+	if (bUse) { GM->PressUse(); }
 	if (bRetake) { GM->PressRetake(); }
 }

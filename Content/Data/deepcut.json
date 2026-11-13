@@ -1,91 +1,931 @@
 {
-  "_comment": "Deep Cut slice layout. Screen units: x,y in [-1,1] of a fixed 16:9 frame; the picture is |y| <= 0.75. Rocks are rectangles [x0,y0,x1,y1] at the shot's ref depth. Check every change with Tools/cutmap.py.",
-  "fov": 60,
-  "exposure": 2.5,
-  "heroRadius": 36,
-  "startDepth": 900,
-  "crewTotal": 7,
-  "ghost": 0.55,
-  "ghostTint": [1.0, 0.72, 0.40],
-  "restore": [-0.2, -0.15],
-  "restoreTol": 0.13,
-  "lampRadius": 0.40,
-  "look": "A",
-  "looks": {
-    "A": {
-      "fogDensity": 0.40, "fogColor": [0.04, 0.30, 0.26], "volumetric": true, "volScatter": 1.5, "volExtinction": 1.0, "volEmissive": 0.3,
-      "keyIntensity": 8.0, "keyColor": [0.55, 1.0, 0.85], "fillIntensity": 5.0, "fillColor": [0.30, 0.70, 0.80],
-      "lampIntensity": 40000, "glowIntensity": 5000, "shafts": true, "toon": false,
-      "vignette": 0.6, "grain": 0.25, "darkFactor": 0.03, "ambient": 0.10, "backdrop": [0.0, 0.03, 0.035]
-    },
-    "B": {
-      "fogDensity": 0.12, "fogColor": [0.01, 0.06, 0.20], "volumetric": false,
-      "keyIntensity": 9.0, "keyColor": [0.50, 0.70, 1.0], "fillIntensity": 4.0, "fillColor": [0.20, 0.35, 0.80],
-      "lampIntensity": 90000, "glowIntensity": 9000, "shafts": false, "toon": false,
-      "vignette": 0.5, "grain": 0.0, "darkFactor": 0.03, "ambient": 0.14, "backdrop": [0.002, 0.012, 0.05]
-    },
-    "C": {
-      "fogDensity": 0.25, "fogColor": [0.03, 0.28, 0.30], "volumetric": false,
-      "keyIntensity": 0.0, "fillIntensity": 0.0,
-      "lampIntensity": 30000, "glowIntensity": 3000, "shafts": false, "toon": true,
-      "vignette": 0.2, "grain": 0.0, "darkFactor": 0.05, "backdrop": [0.02, 0.20, 0.22]
-    }
+ "_comment": "Deep Cut stage 1 layout (brief 03). Shot space: x right, y up, z distance from the shot's camera, in cm. A point is seen at screen ((x - truck)/(z tanH), y/(z tanV)). solids: p centre, s [width,height,depth], r [pitch,yaw,roll]. exits: marks are points in the TARGET shot. Preview one shot with Tools/preview_shot.sh N; draw the map with Tools/shotmap.py.",
+ "fov": 60,
+ "exposure": 2.5,
+ "heroRadius": 36,
+ "crewTotal": 7,
+ "ghost": 0.55,
+ "ghostTint": [
+  1.0,
+  0.72,
+  0.4
+ ],
+ "restoreTol": 0.13,
+ "lampRadius": 0.4,
+ "markRadius": 0.085,
+ "markDepthTol": 160,
+ "carryRadius": 280,
+ "socketRadius": 0.075,
+ "reachRadius": 120,
+ "spacing": 50000,
+ "look": "A",
+ "looks": {
+  "A": {
+   "fogDensity": 0.4,
+   "fogColor": [
+    0.04,
+    0.3,
+    0.26
+   ],
+   "volumetric": true,
+   "volScatter": 1.5,
+   "volExtinction": 1.0,
+   "volEmissive": 0.3,
+   "keyIntensity": 8.0,
+   "keyColor": [
+    0.55,
+    1.0,
+    0.85
+   ],
+   "fillIntensity": 5.0,
+   "fillColor": [
+    0.3,
+    0.7,
+    0.8
+   ],
+   "lampIntensity": 40000,
+   "glowIntensity": 5000,
+   "shafts": true,
+   "toon": false,
+   "vignette": 0.6,
+   "grain": 0.25,
+   "darkFactor": 0.03,
+   "ambient": 0.1,
+   "backdrop": [
+    0.0,
+    0.03,
+    0.035
+   ]
   },
-  "shots": [
+  "B": {
+   "fogDensity": 0.12,
+   "fogColor": [
+    0.01,
+    0.06,
+    0.2
+   ],
+   "volumetric": false,
+   "keyIntensity": 9.0,
+   "keyColor": [
+    0.5,
+    0.7,
+    1.0
+   ],
+   "fillIntensity": 4.0,
+   "fillColor": [
+    0.2,
+    0.35,
+    0.8
+   ],
+   "lampIntensity": 90000,
+   "glowIntensity": 9000,
+   "shafts": false,
+   "toon": false,
+   "vignette": 0.5,
+   "grain": 0.0,
+   "darkFactor": 0.03,
+   "ambient": 0.14,
+   "backdrop": [
+    0.002,
+    0.012,
+    0.05
+   ]
+  },
+  "C": {
+   "fogDensity": 0.25,
+   "fogColor": [
+    0.03,
+    0.28,
+    0.3
+   ],
+   "volumetric": false,
+   "keyIntensity": 0.0,
+   "fillIntensity": 0.0,
+   "lampIntensity": 30000,
+   "glowIntensity": 3000,
+   "shafts": false,
+   "toon": true,
+   "vignette": 0.2,
+   "grain": 0.0,
+   "darkFactor": 0.05,
+   "backdrop": [
+    0.02,
+    0.2,
+    0.22
+   ]
+  }
+ },
+ "shots": [
+  {
+   "id": "drop",
+   "name": "DROP ZONE",
+   "gate": "switch",
+   "hint": "Swim to the red valve. Press E.",
+   "hintSolved": "Swim onto the tape mark. Press C to cut.",
+   "cam": {
+    "pos": [
+     -900,
+     0,
+     0
+    ],
+    "look": [
+     0,
+     0,
+     0
+    ]
+   },
+   "start": [
+    -300,
+    60,
+    950
+   ],
+   "volMin": [
+    -700,
+    -330,
+    800
+   ],
+   "volMax": [
+    700,
+    330,
+    1300
+   ],
+   "switch": [
+    250,
+    -40,
+    1050
+   ],
+   "solids": [
     {
-      "name": "DROP ZONE", "hint": "Line up with the ghost. Press C to cut.",
-      "cam": {"pos": [-900, 0, 0], "look": [0, 0, 0]}, "depth": [800, 1000], "ref": 900, "start": [-0.45, 0.10],
-      "rocks": [
-        {"r": [-1.1, -1.0, 1.1, -0.52]},
-        {"r": [-1.1, -0.52, -0.80, 0.05]},
-        {"r": [0.55, 0.50, 1.1, 1.0]}
-      ]
+     "p": [
+      0,
+      -430,
+      1300
+     ],
+     "s": [
+      4400,
+      300,
+      2600
+     ]
     },
     {
-      "name": "THE SHELF", "hint": "Rock blocks the cut. Find the open water.",
-      "cam": {"pos": [-850, -250, 120], "look": [0, 0, 0]}, "depth": [800, 1000], "ref": 900, "start": [-0.45, 0.0],
-      "rocks": [
-        {"r": [0.45, -1.0, 1.1, 0.12]},
-        {"r": [-1.1, -1.0, 0.45, -0.55]},
-        {"r": [-1.1, 0.42, -0.45, 1.0]}
-      ]
+     "p": [
+      -680,
+      -40,
+      1300
+     ],
+     "s": [
+      240,
+      560,
+      300
+     ],
+     "r": [
+      0,
+      20,
+      6
+     ]
     },
     {
-      "name": "THE CHIMNEY", "hint": "A plate drifts across the next shot. Cut when the ring is green.",
-      "cam": {"pos": [-800, 450, -250], "look": [0, 0, 0]}, "depth": [1000, 1200], "ref": 1000, "start": [0.74, 0.40],
-      "rocks": [
-        {"r": [-1.1, -1.0, 0.50, 1.0]}
-      ]
+     "p": [
+      560,
+      340,
+      1250
+     ],
+     "s": [
+      640,
+      220,
+      520
+     ],
+     "r": [
+      0,
+      0,
+      -8
+     ]
     },
     {
-      "name": "THE WRECK", "hint": "Something is shining. Swim to it.",
-      "cam": {"pos": [-900, 150, 200], "look": [0, 0, 0]}, "depth": [800, 1100], "ref": 1000, "start": [0.25, 0.20],
-      "part": [-0.60, 0.30],
-      "rocks": [
-        {"r": [-1.1, -1.0, 1.1, -0.50]},
-        {"r": [0.42, 0.08, 1.1, 1.0]},
-        {"r": [1.0, -0.48, 1.6, 0.06], "plate": true, "move": [-0.52, 0.0], "period": 6}
-      ]
+     "p": [
+      250,
+      -185,
+      1090
+     ],
+     "s": [
+      70,
+      210,
+      70
+     ],
+     "kind": "metal"
     },
     {
-      "name": "THE DARK", "hint": "A crew robot is stuck. Swim to it.", "dark": true,
-      "cam": {"pos": [-700, -600, 50], "look": [0, 0, 0]}, "depth": [800, 1100], "ref": 1000, "start": [-0.30, 0.12],
-      "crew": [-0.66, -0.23],
-      "rocks": [
-        {"r": [-1.1, -1.0, -0.80, 1.0]},
-        {"r": [-0.10, -1.0, 1.1, 1.0]},
-        {"r": [-0.80, 0.34, -0.10, 1.0]},
-        {"r": [-0.80, -1.0, -0.10, -0.38]},
-        {"r": [-0.80, -0.07, -0.50, 0.0], "plate": true}
-      ]
-    },
-    {
-      "name": "OPEN WATER", "hint": "",
-      "cam": {"pos": [-850, 100, -280], "look": [0, 0, 0]}, "depth": [800, 1100], "ref": 1000, "start": [-0.40, 0.0],
-      "rocks": [
-        {"r": [-1.1, -1.0, 1.1, -0.55]},
-        {"r": [0.60, -0.55, 1.1, 0.20]}
-      ]
+     "p": [
+      520,
+      -210,
+      1500
+     ],
+     "s": [
+      380,
+      200,
+      300
+     ],
+     "r": [
+      0,
+      35,
+      0
+     ]
     }
-  ]
+   ],
+   "exits": [
+    {
+     "to": "shelf",
+     "color": "yellow",
+     "anyDepth": true,
+     "marks": [
+      [
+       -250,
+       20,
+       1000
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "shelf",
+   "name": "THE SHELF",
+   "gate": "grab",
+   "hint": "Pick up the loose plate. Swim to it and press E.",
+   "hintSolved": "Near things come with you. Drop the plate on the VENT frame. Then cut.",
+   "cam": {
+    "pos": [
+     -900,
+     0,
+     0
+    ],
+    "look": [
+     0,
+     0,
+     0
+    ]
+   },
+   "start": [
+    -250,
+    20,
+    1000
+   ],
+   "volMin": [
+    -650,
+    -330,
+    800
+   ],
+   "volMax": [
+    700,
+    330,
+    1300
+   ],
+   "solids": [
+    {
+     "p": [
+      0,
+      -430,
+      1300
+     ],
+     "s": [
+      4400,
+      300,
+      2600
+     ]
+    },
+    {
+     "p": [
+      480,
+      -235,
+      1080
+     ],
+     "s": [
+      420,
+      90,
+      420
+     ]
+    },
+    {
+     "p": [
+      -780,
+      20,
+      1350
+     ],
+     "s": [
+      220,
+      720,
+      400
+     ],
+     "r": [
+      0,
+      -15,
+      0
+     ]
+    },
+    {
+     "p": [
+      100,
+      345,
+      1300
+     ],
+     "s": [
+      900,
+      200,
+      500
+     ],
+     "r": [
+      0,
+      0,
+      5
+     ]
+    },
+    {
+     "p": [
+      640,
+      60,
+      1480
+     ],
+     "s": [
+      260,
+      520,
+      220
+     ],
+     "r": [
+      0,
+      25,
+      -6
+     ]
+    }
+   ],
+   "props": [
+    {
+     "id": "plate",
+     "kind": "plate",
+     "p": [
+      450,
+      -165,
+      1050
+     ]
+    }
+   ],
+   "exits": [
+    {
+     "to": "vent",
+     "color": "yellow",
+     "anyDepth": true,
+     "marks": [
+      [
+       -170,
+       -100,
+       1100
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vent",
+   "name": "THE VENT",
+   "gate": "switch",
+   "hint": "The current is too strong. No plate on the vent? R: back one shot.",
+   "hintSolved": "Make your ring the same size as the mark. SPACE closer, SHIFT farther.",
+   "cam": {
+    "pos": [
+     -900,
+     0,
+     0
+    ],
+    "look": [
+     0,
+     0,
+     0
+    ]
+   },
+   "start": [
+    -170,
+    -100,
+    1100
+   ],
+   "volMin": [
+    -600,
+    -330,
+    800
+   ],
+   "volMax": [
+    1500,
+    330,
+    1500
+   ],
+   "rail": [
+    0,
+    900,
+    0
+   ],
+   "switch": [
+    1250,
+    -20,
+    1200
+   ],
+   "solids": [
+    {
+     "p": [
+      700,
+      -430,
+      1300
+     ],
+     "s": [
+      6000,
+      300,
+      2600
+     ]
+    },
+    {
+     "p": [
+      -760,
+      0,
+      1400
+     ],
+     "s": [
+      240,
+      700,
+      500
+     ],
+     "r": [
+      0,
+      -10,
+      0
+     ]
+    },
+    {
+     "p": [
+      620,
+      -90,
+      1560
+     ],
+     "s": [
+      200,
+      480,
+      200
+     ],
+     "r": [
+      0,
+      20,
+      4
+     ]
+    },
+    {
+     "p": [
+      760,
+      350,
+      1050
+     ],
+     "s": [
+      560,
+      200,
+      360
+     ],
+     "r": [
+      0,
+      0,
+      -6
+     ]
+    },
+    {
+     "p": [
+      1250,
+      -175,
+      1240
+     ],
+     "s": [
+      70,
+      230,
+      70
+     ],
+     "kind": "metal"
+    },
+    {
+     "p": [
+      1680,
+      0,
+      1400
+     ],
+     "s": [
+      260,
+      760,
+      700
+     ],
+     "r": [
+      0,
+      12,
+      0
+     ]
+    }
+   ],
+   "sockets": [
+    {
+     "id": "vent",
+     "label": "VENT",
+     "accepts": "plate",
+     "p": [
+      40,
+      -230,
+      1150
+     ]
+    }
+   ],
+   "currents": [
+    {
+     "p": [
+      30,
+      50,
+      1150
+     ],
+     "s": [
+      260,
+      600,
+      900
+     ],
+     "force": [
+      -2600,
+      900,
+      0
+     ],
+     "offBy": "vent"
+    }
+   ],
+   "exits": [
+    {
+     "to": "wreck",
+     "color": "yellow",
+     "marks": [
+      [
+       300,
+       50,
+       1350
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "wreck",
+   "name": "THE WRECK",
+   "gate": "restore",
+   "hint": "Something is shining in the wreck. Swim to it.",
+   "hintSolved": "Two cameras. Yellow: the dock. Blue: a crew signal in the dark (F: lamp).",
+   "cam": {
+    "pos": [
+     -900,
+     0,
+     0
+    ],
+    "look": [
+     0,
+     0,
+     0
+    ]
+   },
+   "start": [
+    300,
+    50,
+    1350
+   ],
+   "volMin": [
+    -750,
+    -330,
+    800
+   ],
+   "volMax": [
+    750,
+    330,
+    1500
+   ],
+   "part": [
+    -350,
+    30,
+    1150
+   ],
+   "solids": [
+    {
+     "p": [
+      0,
+      -430,
+      1300
+     ],
+     "s": [
+      4400,
+      300,
+      2600
+     ]
+    },
+    {
+     "p": [
+      150,
+      60,
+      1800
+     ],
+     "s": [
+      1300,
+      560,
+      260
+     ],
+     "kind": "hull",
+     "r": [
+      0,
+      14,
+      8
+     ]
+    },
+    {
+     "p": [
+      -60,
+      -235,
+      1020
+     ],
+     "s": [
+      220,
+      110,
+      220
+     ],
+     "kind": "hull",
+     "r": [
+      0,
+      30,
+      0
+     ]
+    },
+    {
+     "p": [
+      700,
+      250,
+      1300
+     ],
+     "s": [
+      300,
+      420,
+      400
+     ],
+     "kind": "hull",
+     "r": [
+      0,
+      -20,
+      25
+     ]
+    }
+   ],
+   "props": [
+    {
+     "id": "cell",
+     "kind": "cell",
+     "p": [
+      430,
+      -190,
+      1250
+     ]
+    }
+   ],
+   "exits": [
+    {
+     "to": "dock",
+     "color": "yellow",
+     "marks": [
+      [
+       300,
+       -50,
+       1150
+      ]
+     ]
+    },
+    {
+     "to": "dark",
+     "color": "blue",
+     "marks": [
+      [
+       -330,
+       120,
+       1100
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dark",
+   "name": "THE DARK",
+   "gate": "crew",
+   "dark": true,
+   "hint": "Find the crew robot. Swim to it.",
+   "hintSolved": "Crew robot is with you. Swim onto the tape mark. Press C.",
+   "cam": {
+    "pos": [
+     -900,
+     0,
+     0
+    ],
+    "look": [
+     0,
+     0,
+     0
+    ]
+   },
+   "start": [
+    -330,
+    120,
+    1100
+   ],
+   "volMin": [
+    -700,
+    -330,
+    800
+   ],
+   "volMax": [
+    700,
+    330,
+    1400
+   ],
+   "crew": [
+    380,
+    -150,
+    1200
+   ],
+   "solids": [
+    {
+     "p": [
+      0,
+      -430,
+      1300
+     ],
+     "s": [
+      4400,
+      300,
+      2600
+     ]
+    },
+    {
+     "p": [
+      20,
+      -90,
+      1180
+     ],
+     "s": [
+      170,
+      440,
+      220
+     ],
+     "kind": "dark",
+     "r": [
+      0,
+      15,
+      0
+     ]
+    },
+    {
+     "p": [
+      -200,
+      350,
+      1200
+     ],
+     "s": [
+      900,
+      200,
+      500
+     ],
+     "kind": "dark"
+    },
+    {
+     "p": [
+      640,
+      120,
+      1350
+     ],
+     "s": [
+      240,
+      300,
+      300
+     ],
+     "kind": "dark",
+     "r": [
+      0,
+      0,
+      20
+     ]
+    }
+   ],
+   "exits": [
+    {
+     "to": "dock",
+     "color": "yellow",
+     "marks": [
+      [
+       300,
+       60,
+       1150
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dock",
+   "name": "THE DOCK",
+   "hint": "Put the power cell in the dock. No cell? R: back one shot.",
+   "cam": {
+    "pos": [
+     -900,
+     0,
+     0
+    ],
+    "look": [
+     0,
+     0,
+     0
+    ]
+   },
+   "start": [
+    300,
+    -50,
+    1150
+   ],
+   "volMin": [
+    -700,
+    -330,
+    800
+   ],
+   "volMax": [
+    700,
+    330,
+    1400
+   ],
+   "solids": [
+    {
+     "p": [
+      0,
+      -430,
+      1300
+     ],
+     "s": [
+      4400,
+      300,
+      2600
+     ]
+    },
+    {
+     "p": [
+      -300,
+      40,
+      1500
+     ],
+     "s": [
+      700,
+      640,
+      160
+     ],
+     "kind": "hull"
+    },
+    {
+     "p": [
+      -300,
+      -225,
+      1260
+     ],
+     "s": [
+      260,
+      110,
+      200
+     ],
+     "kind": "metal"
+    },
+    {
+     "p": [
+      620,
+      300,
+      1300
+     ],
+     "s": [
+      400,
+      260,
+      400
+     ],
+     "r": [
+      0,
+      0,
+      -10
+     ]
+    }
+   ],
+   "sockets": [
+    {
+     "id": "dock",
+     "label": "DOCK",
+     "accepts": "cell",
+     "ends": true,
+     "p": [
+      -300,
+      -110,
+      1250
+     ]
+    }
+   ]
+  }
+ ]
 }

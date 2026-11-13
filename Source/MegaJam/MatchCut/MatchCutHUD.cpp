@@ -1,4 +1,4 @@
-// Deep Cut slice: HUD. Layout space is 1920x1080; the picture is y 135..945, the two bars belong to the HUD.
+// Deep Cut: HUD. Layout space is 1920x1080; the picture is y 135..945, the two bars belong to the HUD.
 
 #include "MatchCutHUD.h"
 #include "MatchCutGameMode.h"
@@ -8,8 +8,15 @@
 #include "Engine/Font.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "CanvasItem.h"
+#include "Fonts/CompositeFont.h"
+#include "Fonts/FontMeasure.h"
+#include "Fonts/SlateFontInfo.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Misc/Paths.h"
+#include "Rendering/SlateRenderer.h"
+#include "TextureResource.h"
 
-namespace
+namespace DCHud
 {
 	const float BarH = 135.f;
 	const float PicTop = 135.f;
@@ -32,10 +39,61 @@ namespace
 	}
 }
 
+using namespace DCHud;
+
+void AMatchCutHUD::LoadFonts()
+{
+	// two OFL fonts shipped as loose files in Content/Data/Fonts (see ASSETS.md); the engine font is the fallback
+	bFontsTried = true;
+	RuntimeFont = NewObject<UFont>(this);
+	RuntimeFont->FontCacheType = EFontCacheType::Runtime;
+	const FString Dir = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Data/Fonts"));
+	const FString Mono = Dir / TEXT("IBMPlexMono-Regular.ttf");
+	const FString Title = Dir / TEXT("BigShoulders-Bold.ttf");
+	if (!FSlateApplication::IsInitialized())
+	{
+		return;
+	}
+	if (FPaths::FileExists(Mono))
+	{
+		MonoFont = MakeShared<FStandaloneCompositeFont>(NAME_None, Mono, EFontHinting::Default, EFontLoadingPolicy::LazyLoad);
+	}
+	if (FPaths::FileExists(Title))
+	{
+		TitleFont = MakeShared<FStandaloneCompositeFont>(NAME_None, Title, EFontHinting::Default, EFontLoadingPolicy::LazyLoad);
+	}
+	UE_LOG(LogMatchCut, Display, TEXT("HUD fonts: mono=%d title=%d (%s)"), MonoFont.IsValid() ? 1 : 0, TitleFont.IsValid() ? 1 : 0, *Dir);
+}
+
 void AMatchCutHUD::Text(const FString& Str, float X, float Y, float Scale, const FLinearColor& Color, int32 Align)
 {
+	if (!Canvas || Str.IsEmpty())
+	{
+		return;
+	}
+	if (!bFontsTried)
+	{
+		LoadFonts();
+	}
+	const bool bTitle = Scale >= 2.5f && TitleFont.IsValid();
+	const TSharedPtr<const FCompositeFont>& Face = bTitle ? TitleFont : MonoFont;
+	if (Face.IsValid() && RuntimeFont && FSlateApplication::IsInitialized())
+	{
+		// rasterised at the size it is drawn at, so it stays sharp at any resolution
+		const float Size = FMath::Max(6.f, Scale * K * (bTitle ? 12.5f : 10.0f));
+		const FSlateFontInfo Info(Face, Size);
+		const FVector2D Extent = FSlateApplication::Get().GetRenderer()->GetFontMeasureService()->Measure(Str, Info);
+		float Px = X * K;
+		if (Align == 1) { Px -= Extent.X * 0.5f; }
+		if (Align == 2) { Px -= Extent.X; }
+		FCanvasTextItem Item(FVector2D(FMath::RoundToFloat(Px), FMath::RoundToFloat(Y * K)), FText::FromString(Str), RuntimeFont, Color);
+		Item.SlateFontInfo = Info;
+		Item.EnableShadow(FLinearColor(0.f, 0.f, 0.f, Color.A));
+		Canvas->DrawItem(Item);
+		return;
+	}
 	UFont* Font = GEngine ? GEngine->GetLargeFont() : nullptr;
-	if (!Font || !Canvas || Str.IsEmpty())
+	if (!Font)
 	{
 		return;
 	}
@@ -48,6 +106,61 @@ void AMatchCutHUD::Text(const FString& Str, float X, float Y, float Scale, const
 	Item.Scale = FVector2D(Scale * K, Scale * K);
 	Item.EnableShadow(FLinearColor(0.f, 0.f, 0.f, Color.A));
 	Canvas->DrawItem(Item);
+}
+
+void AMatchCutHUD::Quad(const FVector2D& C, float AngleDeg, float HalfLen, float HalfWidth, const FLinearColor& Color)
+{
+	const float A = FMath::DegreesToRadians(AngleDeg);
+	const FVector2D D(FMath::Cos(A), FMath::Sin(A)), N(-D.Y, D.X);
+	const FVector2D P0 = (C - D * HalfLen - N * HalfWidth) * K, P1 = (C + D * HalfLen - N * HalfWidth) * K;
+	const FVector2D P2 = (C + D * HalfLen + N * HalfWidth) * K, P3 = (C - D * HalfLen + N * HalfWidth) * K;
+	TArray<FCanvasUVTri> Tris;
+	FCanvasUVTri T;
+	T.V0_Color = T.V1_Color = T.V2_Color = Color;
+	T.V0_UV = T.V1_UV = T.V2_UV = FVector2D(0.5, 0.5);
+	T.V0_Pos = P0; T.V1_Pos = P1; T.V2_Pos = P2;
+	Tris.Add(T);
+	T.V0_Pos = P0; T.V1_Pos = P2; T.V2_Pos = P3;
+	Tris.Add(T);
+	FCanvasTriangleItem Item(Tris, GWhiteTexture);
+	Item.BlendMode = SE_BLEND_Translucent;
+	Canvas->DrawItem(Item);
+}
+
+void AMatchCutHUD::Tape(const FVector2D& C, int32 Shape, float Size, const FLinearColor& Color, float Tilt)
+{
+	// a film-set floor mark: two strips of tape. Shape 0 = X, 1 = T.
+	const float W = Size * 0.17f;
+	const FLinearColor Shadow(0.f, 0.f, 0.f, 0.45f * Color.A);
+	const FLinearColor Hi(FMath::Min(Color.R * 1.25f + 0.1f, 1.f), FMath::Min(Color.G * 1.25f + 0.1f, 1.f), FMath::Min(Color.B * 1.25f + 0.1f, 1.f), Color.A * 0.55f);
+	for (int32 Pass = 0; Pass < 3; ++Pass)
+	{
+		const FVector2D O = C + (Pass == 0 ? FVector2D(3.0, 4.0) : FVector2D::ZeroVector);
+		const FLinearColor Col = Pass == 0 ? Shadow : (Pass == 1 ? Color : Hi);
+		const float Wd = Pass == 2 ? W * 0.25f : W;
+		const FVector2D Lift = Pass == 2 ? FVector2D(0.0, -W * 0.45) : FVector2D::ZeroVector;
+		if (Shape == 1)
+		{
+			Quad(O + Lift + FVector2D(0.0, -Size * 0.55), Tilt, Size, Wd, Col);
+			Quad(O + (Pass == 2 ? FVector2D(-W * 0.45, 0.0) : FVector2D::ZeroVector) + FVector2D(0.0, Size * 0.2), 90.f + Tilt, Size * 0.75f, Wd, Col);
+		}
+		else
+		{
+			Quad(O + Lift, 45.f + Tilt, Size, Wd, Col);
+			Quad(O + Lift, -45.f + Tilt * 0.4f, Size, Wd, Col);
+		}
+	}
+}
+
+void AMatchCutHUD::Brackets(float X, float Y, float R, const FLinearColor& Color, float Thick)
+{
+	const float L = R * 0.45f;
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const float Sx = (i & 1) ? 1.f : -1.f, Sy = (i & 2) ? 1.f : -1.f;
+		Line(X + Sx * R, Y + Sy * R, X + Sx * (R - L), Y + Sy * R, Color, Thick);
+		Line(X + Sx * R, Y + Sy * R, X + Sx * R, Y + Sy * (R - L), Color, Thick);
+	}
 }
 
 void AMatchCutHUD::Rect(float X, float Y, float W, float H, const FLinearColor& Color)
@@ -102,20 +215,12 @@ void AMatchCutHUD::DrawGhost(AMatchCutGameMode* GM)
 		return;
 	}
 	const bool bRestore = GM->InRestore();
-	if (!bRestore && !GM->Shots.IsValidIndex(GM->Cur + 1))
+	const FDCShot& Shot = GM->Shots[GM->Cur];
+	if (!bRestore && !Shot.Exits.IsValidIndex(GM->GhostExit))
 	{
 		return;
 	}
 	const float Time = GM->PlayClock;
-
-	if (GM->GhostMode == 2)
-	{
-		// brief-01 ghost: the lit next frame added at 35 %
-		FCanvasTileItem Tile(FVector2D::ZeroVector, Ghost->GetResource(), FVector2D(Canvas->ClipX, Canvas->ClipY), FLinearColor(0.35f, 0.35f, 0.35f, 1.f));
-		Tile.BlendMode = SE_BLEND_Additive;
-		Canvas->DrawItem(Tile);
-		return;
-	}
 
 	// a hint first (strong, breathing), a quiet guide once the first cut is done
 	float A = GM->GhostOpacity;
@@ -123,10 +228,18 @@ void AMatchCutHUD::DrawGhost(AMatchCutGameMode* GM)
 	{
 		A *= 1.25f + 0.45f * FMath::Sin(Time * 4.f);
 	}
+	else if (!Shot.bGateOpen)
+	{
+		A *= 0.6f; // the next shot stays faint until this one is solved
+	}
+	if (Shot.bDark)
+	{
+		A *= 0.35f; // on a dark picture the same ghost would glare
+	}
 	FLinearColor Tint = GM->GhostTint * A;
 	Tint.A = 1.f;
 
-	if (!bRestore && GM->NextIsDark())
+	if (!bRestore && GM->Shots[Shot.Exits[GM->GhostExit].To].bDark)
 	{
 		// a dark shot shows nothing; the lamp shows it inside its beam only
 		if (!GM->bLampOn)
@@ -162,67 +275,19 @@ void AMatchCutHUD::DrawGhost(AMatchCutGameMode* GM)
 	Canvas->DrawItem(Tile);
 }
 
-void AMatchCutHUD::DrawPreview(AMatchCutGameMode* GM)
+void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 {
 	const bool bRestore = GM->InRestore();
-	const bool bHasTarget = bRestore || GM->Shots.IsValidIndex(GM->Cur + 1);
-	if (!bHasTarget || GM->GhostMode != 1)
-	{
-		return;
-	}
+	const FDCShot& Shot = GM->Shots[GM->Cur];
 	const float Time = GM->PlayClock;
-	const bool bDarkNext = !bRestore && GM->NextIsDark();
 	const FVector2D HeroPx = NdcToPx(GM->HeroNdc);
-	const float LampPx = GM->LampRadius * 1080.f * 0.82f;
-
-	// where a cut would work: tinted, with a bright outline
-	if (GM->bMaskValid && !(bDarkNext && !GM->bLampOn))
-	{
-		const int32 W = AMatchCutGameMode::MaskW, H = AMatchCutGameMode::MaskH;
-		const float CW = 1920.f / W, CH = (PicBottom - PicTop) / H;
-		auto Valid = [&](int32 x, int32 y) -> bool
-		{
-			if (x < 0 || y < 0 || x >= W || y >= H || !GM->Mask[y * W + x])
-			{
-				return false;
-			}
-			if (bDarkNext)
-			{
-				const FVector2D P((x + 0.5f) * CW, PicTop + (y + 0.5f) * CH);
-				return FVector2D::Distance(P, HeroPx) < LampPx;
-			}
-			return true;
-		};
-		float FillA = GM->bFirstCutDone ? 0.07f : 0.11f + 0.05f * FMath::Sin(Time * 4.f);
-		const FLinearColor Fill(Green.R, Green.G, Green.B, FillA);
-		const FLinearColor Edge(Green.R, Green.G, Green.B, 0.75f);
-		for (int32 y = 0; y < H; ++y)
-		{
-			int32 Run = -1;
-			for (int32 x = 0; x <= W; ++x)
-			{
-				const bool bV = Valid(x, y);
-				if (bV && Run < 0) { Run = x; }
-				if (!bV && Run >= 0)
-				{
-					Rect(Run * CW, PicTop + y * CH, (x - Run) * CW, CH, Fill);
-					Run = -1;
-				}
-				if (bV)
-				{
-					const float X0 = x * CW, Y0 = PicTop + y * CH;
-					if (!Valid(x - 1, y) && x > 0) { Rect(X0, Y0, 3.f, CH, Edge); }
-					if (!Valid(x + 1, y) && x < W - 1) { Rect(X0 + CW - 3.f, Y0, 3.f, CH, Edge); }
-					if (!Valid(x, y - 1) && y > 0) { Rect(X0, Y0, CW, 3.f, Edge); }
-					if (!Valid(x, y + 1) && y < H - 1) { Rect(X0, Y0 + CH - 3.f, CW, 3.f, Edge); }
-				}
-			}
-		}
-	}
+	const FDCCutEval& E = GM->CurEval;
+	const bool bPlaying = GM->State == EDCState::Playing;
+	auto RingPx = [GM](double Depth) { return (float)(GM->HeroRadius / (GM->TanH * FMath::Max(Depth, 100.0)) * 960.0 * 1.32); };
 
 	if (bRestore)
 	{
-		// the mark to hit: Unit 7's place in the removed frame
+		// restore-by-cut keeps its own look: Unit 7's place in the removed frame, no tape
 		const FVector2D T = NdcToPx(GM->RestoreNdc);
 		const float R = GM->RestoreTol * 540.f + 44.f;
 		const float Pulse = 1.f + 0.08f * FMath::Sin(Time * 5.f);
@@ -232,32 +297,181 @@ void AMatchCutHUD::DrawPreview(AMatchCutGameMode* GM)
 		Line(T.X, T.Y - R - 26.f, T.X, T.Y - R + 6.f, Amber, 3.f);
 		Line(T.X, T.Y + R - 6.f, T.X, T.Y + R + 26.f, Amber, 3.f);
 		Text(DCText::RestoreMark, T.X, T.Y - R - 62.f, 1.4f, Amber, 1);
-	}
-	else if (GM->Cur + 1 == GM->CrewShot && !GM->bCrewRescued && GM->bHasPart)
-	{
-		// distress beacon of the trapped crew robot: visible in the dark, so the player knows where to point the lamp
-		const FVector2D B = NdcToPx(GM->Shots[GM->CrewShot].CrewNdc);
-		const float Blink = FMath::Fmod(Time, 1.2f);
-		if (Blink < 0.75f)
+		if (bPlaying)
 		{
-			Disc(B.X, B.Y, 7.f, Amber);
-			Ring(B.X, B.Y, 12.f + 40.f * Blink, FLinearColor(Amber.R, Amber.G, Amber.B, 0.8f - Blink), 2.5f);
+			const FLinearColor Col = E.bOk ? Green : Red;
+			const float HR = RingPx(GM->HeroS.Z);
+			Disc(HeroPx.X, HeroPx.Y, HR, FLinearColor(Col.R, Col.G, Col.B, 0.16f));
+			Ring(HeroPx.X, HeroPx.Y, HR, Col, 4.f);
+			Text(E.bOk ? DCText::RingOk : E.Reason, HeroPx.X, HeroPx.Y + HR + 10.f, 1.25f, Col, 1);
 		}
-		Text(DCText::CrewSignal, B.X, B.Y + 30.f, 1.0f, Amber, 1);
+		return;
 	}
 
-	if (GM->State != EDCState::Playing)
+	// sockets of this shot that still want something
+	for (const FDCSocket& S : GM->Sockets)
+	{
+		if (S.Shot == GM->Cur && !S.bFilled)
+		{
+			const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, S.S, false));
+			const float R = 60.f * 900.f / (float)FMath::Max(S.S.Z, 100.0);
+			Brackets(P.X, P.Y, R * (1.f + 0.06f * FMath::Sin(Time * 4.f)), Amber, 3.f);
+			Text(S.Label, P.X, P.Y - R - 34.f, 1.1f, Amber, 1);
+		}
+	}
+
+	const int32 ExitIndex = Shot.Exits.IsValidIndex(E.Exit) ? E.Exit : (Shot.Exits.Num() > 0 ? 0 : INDEX_NONE);
+	if (ExitIndex != INDEX_NONE && GM->GhostMode != 0)
+	{
+		const FDCExit& Active = Shot.Exits[ExitIndex];
+		const bool bTargetSeen = !GM->Shots[Active.To].bDark || GM->bLampOn;
+
+		// where things of the next shot are: its sockets, and the crew signal
+		for (const FDCSocket& S : GM->Sockets)
+		{
+			const FVector2D N = GM->ViewNdc(Active.To, S.S, true);
+			if (S.Shot == Active.To && !S.bFilled && GM->MarkVisible(Active, N))
+			{
+				const FVector2D P = NdcToPx(N);
+				const float R = 60.f * 900.f / (float)FMath::Max(S.S.Z, 100.0);
+				Brackets(P.X, P.Y, R, FLinearColor(Amber.R, Amber.G, Amber.B, 0.75f), 2.f);
+				Text(S.Label, P.X, P.Y - R - 34.f, 1.0f, FLinearColor(Amber.R, Amber.G, Amber.B, 0.75f), 1);
+			}
+		}
+		for (const FDCExit& Exit : Shot.Exits)
+		{
+			if (Exit.To == GM->CrewShot && !GM->bCrewRescued && Shot.bGateOpen)
+			{
+				// distress beacon of the trapped crew robot: seen even in the dark, so the player knows where to point the lamp
+				const FVector2D B = NdcToPx(GM->ViewNdc(Exit.To, GM->Shots[Exit.To].CrewS, true));
+				const float Blink = FMath::Fmod(Time, 1.2f);
+				if (Blink < 0.75f)
+				{
+					Disc(B.X, B.Y, 7.f, Amber);
+					Ring(B.X, B.Y, 12.f + 40.f * Blink, FLinearColor(Amber.R, Amber.G, Amber.B, 0.8f - Blink), 2.5f);
+				}
+				Text(DCText::CrewSignal, B.X, B.Y + 30.f, 1.0f, Amber, 1);
+			}
+		}
+
+		// tape marks: only once this shot is solved
+		if (Shot.bGateOpen)
+		{
+			const float Reveal = FMath::Clamp(GM->RevealTime / 1.2f, 0.f, 1.f); // 1 just revealed .. 0 settled
+			for (int32 e = 0; e < Shot.Exits.Num(); ++e)
+			{
+				const FDCExit& Exit = Shot.Exits[e];
+				for (int32 m = 0; m < Exit.Marks.Num(); ++m)
+				{
+					const FVector2D N = GM->ViewNdc(Exit.To, Exit.Marks[m], true);
+					if (!GM->MarkVisible(Exit, N))
+					{
+						continue;
+					}
+					const FVector2D P = NdcToPx(N);
+					const bool bMine = e == E.Exit && m == E.Mark;
+					const float Size = FMath::Clamp(62.f * 900.f / (float)FMath::Max(Exit.Marks[m].Z, 100.0), 26.f, 120.f) * (1.f + 0.9f * Reveal * Reveal);
+					FLinearColor Col = Exit.Color;
+					Col.A = (1.f - 0.5f * Reveal) * (bMine || Shot.Exits.Num() == 1 ? 1.f : 0.8f);
+					Tape(P, Exit.Shape, Size, Col, ((m * 37 + e * 11) % 13) - 6.f);
+					// capture radius, and the size the robot's ring must have at this mark's depth
+					const float Cap = GM->MarkRadius * 1080.f;
+					Ring(P.X, P.Y, Cap, FLinearColor(Exit.Color.R, Exit.Color.G, Exit.Color.B, bMine && E.DistPx <= Cap ? 0.75f : 0.22f), 2.f);
+					if (!Exit.bAnyDepth)
+					{
+						Ring(P.X, P.Y, RingPx(Exit.Marks[m].Z), FLinearColor(1.f, 1.f, 1.f, 0.55f), 2.f);
+					}
+					if (Shot.Exits.Num() > 1)
+					{
+						Text(FString::Printf(DCTEXT_MARK_CAM, Exit.To + 1), P.X, P.Y + Size + 12.f, 1.1f, Exit.Color, 1);
+					}
+					if (Reveal > 0.f)
+					{
+						// focus pull: brackets close in on the new mark
+						Brackets(P.X, P.Y, Size * 1.2f + 260.f * Reveal * Reveal, FLinearColor(1.f, 1.f, 1.f, 0.9f * (1.f - Reveal * 0.5f)), 3.f);
+					}
+				}
+			}
+			if (Reveal > 0.f)
+			{
+				Text(DCText::MarksUp, 960.f, PicTop + 120.f, 2.0f, FLinearColor(1.f, 1.f, 1.f, FMath::Min(1.f, Reveal * 2.f)), 1);
+			}
+		}
+
+		// loose things: what a cut would do with each of them
+		if (bPlaying)
+		{
+			bool bAnyLoose = false;
+			for (const FDCProp& Prop : GM->Props)
+			{
+				if (Prop.Shot != GM->Cur || Prop.bLocked)
+				{
+					continue;
+				}
+				bAnyLoose = true;
+				if (!Shot.bGateOpen)
+				{
+					continue;
+				}
+				const int32 R = GM->PropAfterCut(Prop, Active);
+				const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, Prop.S, false));
+				const float Rad = 62.f * 900.f / (float)FMath::Max(Prop.S.Z, 100.0);
+				const FLinearColor Col = R == 2 ? Green : (R == 1 ? Active.Color : FLinearColor(Dim.R, Dim.G, Dim.B, 0.7f));
+				Ring(P.X, P.Y, Rad, Col, R == 0 ? 2.f : 3.5f);
+				Text(R == 2 ? DCText::PropLands : (R == 1 ? DCText::PropComes : DCText::PropStays), P.X, P.Y + Rad + 6.f, 1.0f, Col, 1);
+			}
+			if (bAnyLoose && Shot.bGateOpen)
+			{
+				// the carry radius: what is inside this circle comes through the cut
+				const float CR = (float)(GM->CarryRadius / (GM->TanH * FMath::Max(GM->HeroS.Z, 100.0)) * 960.0);
+				const int32 N = 48;
+				for (int32 i = 0; i < N; i += 2)
+				{
+					const float A0 = 2.f * UE_PI * i / N + Time * 0.2f, A1 = 2.f * UE_PI * (i + 1) / N + Time * 0.2f;
+					Line(HeroPx.X + CR * FMath::Cos(A0), HeroPx.Y + CR * FMath::Sin(A0), HeroPx.X + CR * FMath::Cos(A1), HeroPx.Y + CR * FMath::Sin(A1), FLinearColor(1.f, 1.f, 1.f, 0.28f), 2.f);
+				}
+			}
+		}
+		(void)bTargetSeen;
+	}
+
+	if (!bPlaying)
 	{
 		return;
 	}
 
+	// what E would do, at the thing itself
+	FVector UseS;
+	const FString Use = GM->UsePrompt(UseS);
+	if (!Use.IsEmpty())
+	{
+		const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, UseS, false));
+		Rect(P.X - 74.f, P.Y - 108.f, 148.f, 34.f, FLinearColor(0.f, 0.f, 0.f, 0.6f));
+		Text(Use, P.X, P.Y - 104.f, 1.35f, White, 1);
+	}
+	else if (Shot.bHasSwitch && !Shot.Switch.bOn)
+	{
+		// the valve asks to be looked at
+		const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, Shot.Switch.S, false));
+		const float Ph = FMath::Fmod(Time, 1.4f) / 1.4f;
+		Ring(P.X, P.Y, 46.f + 50.f * Ph, FLinearColor(1.f, 1.f, 1.f, 0.6f * (1.f - Ph)), 2.5f);
+	}
+
 	// the landing: where the robot would be after the cut. Same place, same size; green = C works, red = why not.
-	const FDCCutEval& E = GM->CurEval;
+	if (Shot.Exits.Num() == 0)
+	{
+		return;
+	}
+	const float HR = RingPx(GM->HeroS.Z);
+	if (!Shot.bGateOpen)
+	{
+		Ring(HeroPx.X, HeroPx.Y, HR, FLinearColor(Dim.R, Dim.G, Dim.B, 0.45f), 2.f);
+		return;
+	}
 	const FLinearColor Col = E.bOk ? Green : Red;
-	const float R = GM->HeroRadius / (GM->TanH * FMath::Max(E.Depth, 100.0)) * 960.f * 1.32f;
-	Disc(HeroPx.X, HeroPx.Y, R, FLinearColor(Col.R, Col.G, Col.B, 0.16f));
-	Ring(HeroPx.X, HeroPx.Y, R, Col, 4.f);
-	const float LabelY = HeroPx.Y + R + 10.f < PicBottom - 40.f ? HeroPx.Y + R + 10.f : HeroPx.Y - R - 36.f;
+	Disc(HeroPx.X, HeroPx.Y, HR, FLinearColor(Col.R, Col.G, Col.B, 0.16f));
+	Ring(HeroPx.X, HeroPx.Y, HR, Col, 4.f);
+	const float LabelY = HeroPx.Y + HR + 10.f < PicBottom - 40.f ? HeroPx.Y + HR + 10.f : HeroPx.Y - HR - 36.f;
 	Text(E.bOk ? DCText::RingOk : E.Reason, HeroPx.X, LabelY, 1.25f, Col, 1);
 }
 
@@ -334,10 +548,10 @@ void AMatchCutHUD::DrawBars(AMatchCutGameMode* GM, float ReelY)
 		{
 			Playhead = GM->FilmTime;
 		}
-		else if (GM->Reel.Num() > 2)
+		else if (const FDCReelSeg* First = GM->Reel.FindByPredicate([](const FDCReelSeg& S) { return S.Gap == 0; }))
 		{
 			// during play the head waits at the first hole in the film
-			const FDCReelSeg& G = GM->Reel[2];
+			const FDCReelSeg& G = *First;
 			Playhead = GM->State == EDCState::Flashback ? FMath::Lerp(G.T0, G.T1, FMath::Clamp(GM->StateTime / GM->FlashLength, 0.f, 1.f)) : (GM->bGapFilled[0] ? G.T1 : G.T0);
 		}
 		DrawReel(GM, ReelY, Playhead);
@@ -480,7 +694,7 @@ void AMatchCutHUD::DrawHUD()
 	if (bPlayLike)
 	{
 		DrawGhost(GM);
-		DrawPreview(GM);
+		DrawMarks(GM);
 	}
 	if (GM->CutFlash > 0.f)
 	{
@@ -529,40 +743,34 @@ void AMatchCutHUD::DrawHUD()
 		Text(GM->Shots[GM->Cur].Name, 60.f, 1040.f, 1.1f, Dim);
 		Text(Timecode(Time, 1), 1860.f, 985.f, 1.6f, White, 2);
 
-		FString Hint = GM->Shots[GM->Cur].Hint;
+		const FDCShot& Shot = GM->Shots[GM->Cur];
+		FString Hint = Shot.bGateOpen && !Shot.HintSolved.IsEmpty() ? Shot.HintSolved : Shot.Hint;
 		FLinearColor HintCol = White;
-		float HintScale = 1.9f;
+		float HintScale = 1.7f;
 		if (GM->State == EDCState::TakeCard || GM->State == EDCState::EndCard || GM->State == EDCState::Drop)
 		{
 			Hint.Empty();
 		}
 		else if (GM->SoftFailTime > 0.f)
 		{
-			Hint = DCText::SoftFail;
+			Hint = Shot.bGateOpen ? DCText::SoftFail : DCText::SoftFailNoMark;
 			HintCol = Amber;
-			HintScale = 2.3f;
 		}
 		else if (GM->BannerTime > 0.f && !GM->Banner2.IsEmpty())
 		{
 			Hint = GM->Banner2;
 			HintCol = Amber;
 		}
-		else if (!GM->bFirstCutDone)
-		{
-			Hint = DCText::Tutorial;
-			HintScale = 2.3f;
-			HintCol = FLinearColor(1.f, 1.f, 1.f, 0.8f + 0.2f * FMath::Sin(Time * 4.f));
-		}
 		else if (GM->InRestore())
 		{
 			Hint = DCText::RestoreHint;
 			HintCol = Amber;
 		}
-		else if (GM->Cur == GM->PartShot && GM->bHasPart)
+		else if (!GM->bFirstCutDone)
 		{
-			Hint = DCText::DarkHint;
+			HintCol = FLinearColor(1.f, 1.f, 1.f, 0.8f + 0.2f * FMath::Sin(Time * 4.f));
 		}
 		Text(Hint, 960.f, 962.f, HintScale, HintCol, 1);
-		Text(GM->bHasPart ? DCText::ControlsLamp : DCText::Controls, 960.f, 1036.f, 1.15f, Dim, 1);
+		Text(GM->bHasPart ? DCText::ControlsLamp : DCText::Controls, 960.f, 1040.f, 1.0f, Dim, 1);
 	}
 }

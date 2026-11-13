@@ -1,118 +1,33 @@
-// Deep Cut - underwater vertical slice (brief 02). Built on the brief-01 match-cut prototype.
+// Deep Cut - stage 1 (brief 03). One class, split over several files so each concern can change alone:
+//   MatchCutGameMode.cpp  state machine, tick, input, shot changes, retake history
+//   DCLayout.cpp          reads Content/Data/deepcut.json and film.json
+//   DCWorld.cpp           spawns shots, robots, props, lights; looks
+//   DCCutRule.cpp         shot maths, collision, movement, the cut and what comes through it
+//   DCPuzzles.cpp         gates, valves, props, sockets, currents, part, rescue
+//   DCFilm.cpp            opening film and flashback, played from key poses
+//   MatchCutScript.cpp    test-script runner
+// Sound is its own class (DCAudio), drawing is the HUD (MatchCutHUD).
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "DeepCutTypes.h"
 #include "MatchCutGameMode.generated.h"
 
-class ACameraActor;
 class AStaticMeshActor;
 class ASceneCapture2D;
 class ADirectionalLight;
 class AExponentialHeightFog;
 class UTextureRenderTarget2D;
 class UStaticMesh;
-class UStaticMeshComponent;
 class UMaterialInterface;
-class UMaterialInstanceDynamic;
 class USpotLightComponent;
 class UPointLightComponent;
-class USceneComponent;
+class UDCAudio;
+class FJsonObject;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMatchCut, Log, All);
-
-/** A rock: a box facing the shot camera that spans the whole swim slab. The rectangle is in screen units at the shot's reference depth. */
-struct FDCRock
-{
-	FVector4 Rect = FVector4(0, 0, 0, 0); // x0, y0, x1, y1 in [-1,1] screen units
-	bool bMoves = false;
-	bool bPlate = false;
-	FVector2D MoveTo = FVector2D::ZeroVector; // screen units
-	float Period = 6.f;
-	TWeakObjectPtr<AActor> Actor;
-	FVector BaseLoc = FVector::ZeroVector;
-	FVector MoveWorld = FVector::ZeroVector;
-};
-
-/** One shot: a fixed survey camera and a thin slab of water facing it. */
-struct FDCShot
-{
-	FString Name;
-	FString Hint;
-	FVector Origin = FVector::ZeroVector;
-	FVector CamPos = FVector::ZeroVector;
-	FRotator CamRot = FRotator::ZeroRotator;
-	double DepthMin = 800.0;
-	double DepthMax = 1000.0;
-	double Ref = 900.0;
-	FVector4 Swim = FVector4(-0.95, -0.68, 0.95, 0.68); // where the robot may be, screen units
-	FVector2D Start = FVector2D::ZeroVector;
-	bool bDark = false;
-	bool bHasPart = false;
-	FVector2D PartNdc = FVector2D::ZeroVector;
-	bool bHasCrew = false;
-	FVector2D CrewNdc = FVector2D::ZeroVector;
-	TWeakObjectPtr<ACameraActor> Camera;
-	TArray<FDCRock> Rocks;
-};
-
-/** One of the three look-dev looks. All numbers come from the JSON so they can be tuned without a rebuild. */
-struct FDCLook
-{
-	float FogDensity = 0.3f;
-	FLinearColor FogColor = FLinearColor(0.02f, 0.15f, 0.14f);
-	bool bVolumetric = false;
-	float VolScatter = 1.f;
-	float VolExtinction = 1.f;
-	float VolEmissive = 1.f;
-	float KeyIntensity = 6.f;
-	FLinearColor KeyColor = FLinearColor(0.7f, 1.f, 0.95f);
-	float FillIntensity = 2.f;
-	FLinearColor FillColor = FLinearColor(0.4f, 0.7f, 0.8f);
-	float LampIntensity = 30000.f;
-	float GlowIntensity = 4000.f;
-	bool bToon = false;
-	bool bShafts = false;
-	float Vignette = 0.4f;
-	float Grain = 0.f;
-	float DarkFactor = 0.04f;
-	float Ambient = 0.f; // share of a surface's own colour it shows without any light (lifts the shadow sides)
-	FLinearColor Backdrop = FLinearColor(0.01f, 0.05f, 0.06f);
-};
-
-struct FDCPaint
-{
-	TWeakObjectPtr<UStaticMeshComponent> Comp;
-	FLinearColor Color = FLinearColor::White;
-	FLinearColor Emissive = FLinearColor::Black;
-	TWeakObjectPtr<UMaterialInstanceDynamic> MID;
-};
-
-/** A robot made of engine shapes. */
-struct FDCRobot
-{
-	TWeakObjectPtr<AActor> Actor;
-	int32 EyePaint = INDEX_NONE;
-};
-
-struct FDCCutEval
-{
-	bool bOk = false;
-	const TCHAR* Reason = TEXT("");
-	FVector Target = FVector::ZeroVector;
-	double Depth = 0.0;
-};
-
-/** A stretch of the film timeline: a shot of the official film or a removed scene. */
-struct FDCReelSeg
-{
-	float T0 = 0.f;
-	float T1 = 0.f;
-	int32 Gap = INDEX_NONE; // gap index, or INDEX_NONE for a film shot
-	int32 Set = 0;          // which film set the camera looks at
-	const TCHAR* Caption = TEXT("");
-};
 
 UENUM()
 enum class EDCState : uint8
@@ -125,11 +40,6 @@ enum class EDCState : uint8
 	EndCard
 };
 
-/**
- * Runs the slice: opening film, six survey-camera shots loaded from Content/Data/deepcut.json,
- * the underwater cut rule with its preview, the lamp part, restore-by-cut, one rescue, the end card,
- * three looks, and the script runner used for offscreen verification.
- */
 UCLASS()
 class AMatchCutGameMode : public AGameModeBase
 {
@@ -143,10 +53,11 @@ public:
 	virtual void StartPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
-	// input from the player controller
-	void SetMoveInput(const FVector2D& In) { MoveInput = In; }
+	// input from the player controller. In.X = right, In.Y = up, In.Z = away from the camera
+	void SetMoveInput(const FVector& In) { MoveInput = In; }
 	void PressCut();
 	void PressLamp();
+	void PressUse();
 	void PressRetake();
 	void PressAnyKey();
 	bool IsScriptActive() const { return bScriptActive; }
@@ -154,8 +65,6 @@ public:
 	/** The cut. Returns true when the take succeeded. */
 	bool TryCut();
 
-	static const int32 MaskW = 76;
-	static const int32 MaskH = 28;
 	static const int32 NumGaps = 3;
 
 protected:
@@ -187,66 +96,100 @@ protected:
 	TObjectPtr<AExponentialHeightFog> Fog;
 	UPROPERTY()
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> BackdropMIDs;
+	UPROPERTY()
+	TObjectPtr<UDCAudio> Audio;
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> GhostHidden;
 
 private:
-	// setup
+	// ---- DCLayout.cpp
 	bool LoadLayout();
+	bool LoadFilm();
+	void ReadSolids(const TSharedPtr<FJsonObject>& Obj, TArray<FDCSolid>& Out) const;
+	int32 FindShot(const FString& Id) const;
+
+	// ---- DCWorld.cpp
 	void SpawnWorld();
 	void SpawnShot(FDCShot& Shot, int32 Index);
+	void SpawnSolid(FDCSolid& Solid, const FVector& CamPos, const FRotator& CamRot, bool bInGhost);
 	void SpawnFilmSets();
 	ACameraActor* SpawnCamera(const FVector& Pos, const FRotator& Rot);
-	AActor* SpawnBox(const FVector& Center, const FRotator& Rot, const FVector& Size, const FLinearColor& Color, bool bCollide, bool bHideFromGhost);
+	AActor* SpawnBox(const FVector& Center, const FRotator& Rot, const FVector& Size, const FLinearColor& Color, bool bHideFromGhost);
+	AActor* SpawnGroup(const FVector& Loc);
 	FDCRobot SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered);
 	UStaticMeshComponent* AddPart(AActor* Owner, UStaticMesh* Mesh, const FVector& Loc, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, const FLinearColor& Emissive);
 	int32 AddPaint(UStaticMeshComponent* Comp, const FLinearColor& Color, const FLinearColor& Emissive);
 	void SetPaintEmissive(int32 Paint, const FLinearColor& Emissive);
 	void ApplyLook(const FString& Name);
 	void ApplyLighting();
+	void PlaceRobot(const FDCRobot& Robot, const FVector& Loc, const FVector2D& Heading, const FRotator& CamRot, float Roll = 0.f);
 
-	// shot maths (screen units are [-1,1]^2 of a fixed 16:9 frame; the window never enters)
-	FVector CamPoint(const FVector& Pos, const FRotator& Rot, const FVector2D& Ndc, double Depth) const;
-	FVector ShotPoint(int32 Shot, const FVector2D& Ndc, double Depth) const { return CamPoint(Shots[Shot].CamPos, Shots[Shot].CamRot, Ndc, Depth); }
-	void ProjectToShot(int32 Shot, const FVector& World, FVector2D& OutNdc, double& OutDepth) const;
-	FBox2D RockRect(const FDCShot& Shot, const FDCRock& Rock) const;
-	bool Blocked(int32 ShotIndex, const FVector2D& Ndc, double Depth) const;
-	FDCCutEval EvalCut(const FVector2D& Ndc, double Depth, bool bApplyLamp) const;
+	// ---- DCCutRule.cpp
+	FVector ShotToWorld(int32 Shot, const FVector& S) const;
+	FVector WorldToShot(int32 Shot, const FVector& W) const;
+	/** Screen position of a shot-space point. bEntry: with the camera where it stands when the shot starts. */
+	FVector2D ViewNdc(int32 Shot, const FVector& S, bool bEntry) const;
+	FVector NdcToShot(int32 Shot, const FVector2D& Ndc, double Depth, bool bEntry) const;
+	bool Blocked(int32 Shot, const FVector& S, double Radius) const;
+	bool PushOut(int32 Shot, FVector& S, double Radius, FVector* VelS) const;
+	FDCCutEval EvalCut() const;
+	bool MarkVisible(const FDCExit& Exit, const FVector2D& MarkNdc) const;
+	int32 ActiveExit() const { return CurEval.Exit; }
+	/** Where a prop of the current shot would be after a cut through Exit: 0 stays, 1 comes along, 2 comes along and lands in a socket. */
+	int32 PropAfterCut(const FDCProp& Prop, const FDCExit& Exit, FVector* OutS = nullptr, int32* OutSocket = nullptr) const;
+	void MoveHero(const FVector& Delta);
+	void TickMovement(float Dt);
+	void UpdateRail(float Dt, bool bSnap);
 	bool InRestore() const { return bHasPart && !bGapFilled[0] && Cur == PartShot; }
-	bool NextIsDark() const { return Shots.IsValidIndex(Cur + 1) && Shots[Cur + 1].bDark; }
+	bool ShotIsLit(int32 Shot) const { return !Shots[Shot].bDark; }
 
-	// flow
-	void SetShot(int32 Index, bool bRespawn);
+	// ---- DCPuzzles.cpp
+	void TickPuzzles(float Dt);
+	void UpdateGate(int32 Shot, bool bQuiet);
+	void RevealMarks(int32 Shot);
+	void FillSocket(int32 Socket, int32 Prop, bool bQuiet);
+	void CheckSockets(int32 Shot);
+	void UpdateProps(float Dt);
+	void UpdateCurrents(float Dt);
+	int32 PropInReach() const;
+	bool SwitchInReach() const;
+	FString UsePrompt(FVector& OutS) const;
+	void TakeSnap(FDCSnap& Out) const;
+	void RestoreSnap(const FDCSnap& Snap);
+
+	// ---- MatchCutGameMode.cpp
+	void EnterShot(int32 Index, const FVector& HeroAtS, bool bPushHistory);
 	void PointGhost();
-	void RespawnAtStart();
 	void FailTake(const TCHAR* Reason);
+	void RestartAll();
+	void ShowBanner(const FString& Line1, const FString& Line2, float Seconds);
+	void SetView(ACameraActor* Cam);
+	void TickDrop(float Dt);
+	void TickPlaying(float Dt);
+	void UpdateHeroActor(float Dt);
+	void UpdateMusic();
+	void ReportFrameTime();
+	const TCHAR* StateName() const;
+
+	// ---- DCFilm.cpp
 	void StartFilm();
 	void EndFilm();
 	void StartFlashback();
 	void EndFlashback();
-	void RestartAll();
-	void ShowBanner(const FString& Line1, const FString& Line2, float Seconds);
-	void SetView(ACameraActor* Cam);
-
 	void TickFilm(float Dt);
-	void TickDrop(float Dt);
-	void TickPlaying(float Dt);
 	void TickFlashback(float Dt);
-	void MoveHero(const FVector2D& Delta);
-	void UpdateHeroActor(float Dt);
-	void UpdateMovers();
-	void UpdateMask();
-	void PoseFilm(int32 Set, float T);
-	void PoseFlashback(float T);
-	void PlaceRobot(const FDCRobot& Robot, const FVector& Loc, const FVector2D& Heading, const FRotator& CamRot, float Roll = 0.f);
-	void ReportFrameTime();
+	void PoseClip(const FString& ClipName, float T);
+	FDCRobot* FilmActor(const FString& Name);
 
-	// script runner
+	// ---- MatchCutScript.cpp
 	void LoadScript();
 	void TickScript(float DeltaSeconds);
 	bool RunScriptLine(const FString& Line);
-	const TCHAR* StateName() const;
 
 	// ---- data
 	TArray<FDCShot> Shots;
+	TArray<FDCProp> Props;
+	TArray<FDCSocket> Sockets;
 	TMap<FString, FDCLook> Looks;
 	FDCLook Look;
 	FString LookName = TEXT("A");
@@ -257,13 +200,17 @@ private:
 	FLinearColor GhostTint = FLinearColor(1.f, 0.75f, 0.45f);
 	float ExposureEV = 2.5f;
 	float HeroRadius = 36.f;
-	double StartDepth = 900.0;
 	int32 CrewTotal = 7;
 	int32 PartShot = INDEX_NONE;
 	int32 CrewShot = INDEX_NONE;
-	FVector2D RestoreNdc = FVector2D(-0.15, -0.1);
-	float RestoreTol = 0.11f;
-	float LampRadius = 0.42f; // reveal circle, in frame-height units
+	FVector2D RestoreNdc = FVector2D(-0.2, -0.15);
+	float RestoreTol = 0.13f;
+	float LampRadius = 0.40f;   // reveal circle, in frame-height units
+	float MarkRadius = 0.085f;  // capture radius of a tape mark, in frame-height units
+	float MarkDepthTol = 160.f; // cm
+	float CarryRadius = 340.f;  // cm
+	float SocketRadius = 0.075f; // frame-height units: how close a prop must land to a socket
+	float ReachRadius = 120.f;  // cm: how close to press E
 
 	// ---- state
 	EDCState State = EDCState::Film;
@@ -272,9 +219,7 @@ private:
 	int32 Take = 1;
 	const TCHAR* TakeReason = TEXT("");
 	float CutFlash = 0.f;
-	float ShotClock = 0.f;
-	float PlayClock = 0.f; // running timecode
-	bool bClockFrozen = false;
+	float PlayClock = 0.f;
 	bool bFirstCutDone = false;
 	float SoftFailTime = 0.f;
 	bool bHasPart = false;
@@ -288,49 +233,49 @@ private:
 	FString Banner2;
 	float BannerTime = 0.f;
 	float PartPulse = 0.f;
+	float RevealTime = 0.f; // counts down after marks appear (drives the focus brackets)
+	float ThrustTimer = 0.f;
+	bool bWasMoving = false;
+	bool bDepthUsed = false;
+	TArray<FDCSnap> History;
+	TArray<int32> Visited;
 
 	// hero
 	FDCRobot Hero;
 	FDCRobot Crew;
 	FDCRobot PartActor;
-	FVector HeroPos = FVector::ZeroVector;
-	double HeroDepth = 900.0;
-	FVector2D Vel2D = FVector2D::ZeroVector;
+	FVector HeroS = FVector(0.0, 0.0, 900.0); // shot space of the current shot
+	FVector VelS = FVector::ZeroVector;
+	FVector HeroPos = FVector::ZeroVector;    // world
 	FVector2D Heading = FVector2D(1.0, 0.0);
-	FVector2D MoveInput = FVector2D::ZeroVector;
+	FVector MoveInput = FVector::ZeroVector;
 	FVector CrewPos = FVector::ZeroVector;
 	FDCCutEval CurEval;
 	FVector2D HeroNdc = FVector2D::ZeroVector;
+	int32 GhostExit = 0;
 	TWeakObjectPtr<USpotLightComponent> LampSpot;
 	TWeakObjectPtr<UPointLightComponent> LampGlow;
 
-	// preview mask of the next shot
-	TArray<uint8> Mask;
-	float MaskTimer = 0.f;
-	bool bMaskValid = false;
-
 	// ghost
-	int32 GhostMode = 1; // 0 off, 1 flat base-colour capture, 2 brief-01 style lit capture (with fog)
+	int32 GhostMode = 1; // 0 off, 1 flat base-colour capture
 	float GhostTimer = 0.f;
-	TArray<TObjectPtr<AActor>> GhostHidden;
 
 	// paints, looks
 	TArray<FDCPaint> Paints;
 	TArray<TWeakObjectPtr<AActor>> ShaftSlats;
 	TArray<TWeakObjectPtr<ACameraActor>> AllCameras;
+	float AmbientNow = 0.f;
 
 	// film and flashback
+	TMap<FString, FDCClip> Clips;
+	TMap<FString, FDCFilmSet> FilmSets;
+	TMap<FString, FDCRobot> FilmActors;
+	TMap<FString, TArray<FDCSolid>> FilmSetSolids;
 	TArray<FDCReelSeg> Reel;
+	FString FlashClip = TEXT("removed1");
 	float FilmLength = 0.f;
 	float FilmTime = 0.f;
-	FVector FilmOrigin[4];
-	TWeakObjectPtr<ACameraActor> FilmCam[4];
-	TArray<FDCRobot> FilmRobots;
-	TWeakObjectPtr<AActor> FilmCable;
-	FVector FlashOrigin = FVector::ZeroVector;
 	TWeakObjectPtr<ACameraActor> FlashCam;
-	FDCRobot FlashUnit7;
-	TArray<FDCRobot> FlashCrew;
 	TWeakObjectPtr<USpotLightComponent> FlashLamp;
 	float FlashLength = 12.f;
 	bool bThumbTaken = false;
@@ -348,15 +293,12 @@ private:
 	TArray<FString> ScriptLines;
 	int32 ScriptPc = 0;
 	float ScriptWait = 0.f;
-	FVector2D ScriptMove = FVector2D::ZeroVector;
+	FVector ScriptMove = FVector::ZeroVector;
 	float ScriptMoveLeft = 0.f;
 	FString ScriptOutDir;
 	bool bScriptSwimming = false;
-	float AmbientNow = 0.f;
-	bool bScriptHold = false; // after swimto: keep station on the target until the next cut or move
-	FVector2D ScriptSwimTarget = FVector2D::ZeroVector;
+	bool bScriptHold = false;
+	FVector ScriptSwimTarget = FVector::ZeroVector; // shot space
 	float ScriptSwimTime = 0.f;
-	float ScriptClockTarget = -1.f;
-	float ScriptClockPeriod = 1.f;
 	FString ScriptWaitState;
 };

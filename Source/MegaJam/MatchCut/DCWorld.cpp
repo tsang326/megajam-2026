@@ -1,0 +1,660 @@
+// Deep Cut: spawns the stage from the loaded data. Greybox: everything is made of engine shapes.
+
+#include "MatchCutGameMode.h"
+
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Components/PointLightComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/DirectionalLight.h"
+#include "Engine/ExponentialHeightFog.h"
+#include "Engine/SceneCapture2D.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Engine/World.h"
+#include "Materials/MaterialInstanceDynamic.h"
+
+namespace DCColor
+{
+	const FLinearColor Rock(0.30f, 0.28f, 0.25f);
+	const FLinearColor RockDark(0.20f, 0.20f, 0.19f);
+	const FLinearColor Plate(0.50f, 0.26f, 0.10f);
+	const FLinearColor Hull(0.26f, 0.30f, 0.33f);
+	const FLinearColor Decor(0.10f, 0.12f, 0.13f);
+	const FLinearColor Hero(0.36f, 0.45f, 0.42f);
+	const FLinearColor Crew(0.85f, 0.60f, 0.08f);
+	const FLinearColor Unit7(0.80f, 0.78f, 0.72f);
+	const FLinearColor DarkMetal(0.06f, 0.06f, 0.07f);
+	const FLinearColor EyeCyan(0.2f, 3.0f, 3.5f);
+	const FLinearColor EyeWarm(4.0f, 2.6f, 0.6f);
+	const FLinearColor ValveRed(0.75f, 0.10f, 0.06f);
+
+	FLinearColor ForKind(FName Kind)
+	{
+		if (Kind == TEXT("plate")) { return Plate; }
+		if (Kind == TEXT("hull")) { return Hull; }
+		if (Kind == TEXT("metal")) { return DarkMetal; }
+		if (Kind == TEXT("dark")) { return RockDark; }
+		return Rock;
+	}
+}
+
+namespace
+{
+	void SetupLook(FPostProcessSettings& PP, float EV, float Vignette, float Grain)
+	{
+		// fixed exposure so every shot looks the same; no Lumen (must stay cheap on integrated GPUs)
+		PP.bOverride_AutoExposureMinBrightness = true;
+		PP.bOverride_AutoExposureMaxBrightness = true;
+		PP.AutoExposureMinBrightness = EV;
+		PP.AutoExposureMaxBrightness = EV;
+		PP.bOverride_AutoExposureBias = true;
+		PP.AutoExposureBias = 0.f;
+		PP.bOverride_DynamicGlobalIlluminationMethod = true;
+		PP.DynamicGlobalIlluminationMethod = EDynamicGlobalIlluminationMethod::None;
+		PP.bOverride_ReflectionMethod = true;
+		PP.ReflectionMethod = EReflectionMethod::None;
+		PP.bOverride_MotionBlurAmount = true;
+		PP.MotionBlurAmount = 0.f;
+		PP.bOverride_VignetteIntensity = true;
+		PP.VignetteIntensity = Vignette;
+		PP.bOverride_BloomIntensity = true;
+		PP.BloomIntensity = 0.35f;
+		PP.bOverride_FilmGrainIntensity = true;
+		PP.FilmGrainIntensity = Grain;
+	}
+}
+
+ACameraActor* AMatchCutGameMode::SpawnCamera(const FVector& Pos, const FRotator& Rot)
+{
+	ACameraActor* Cam = GetWorld()->SpawnActor<ACameraActor>(Pos, Rot);
+	UCameraComponent* CC = Cam->GetCameraComponent();
+	CC->SetFieldOfView(Fov);
+	CC->SetAspectRatio(DC::Aspect);
+	CC->SetConstraintAspectRatio(true); // 16:9 at any window size; the cut maths never reads the window
+	SetupLook(CC->PostProcessSettings, ExposureEV, 0.4f, 0.f);
+	CC->PostProcessBlendWeight = 1.f;
+	AllCameras.Add(Cam);
+	return Cam;
+}
+
+int32 AMatchCutGameMode::AddPaint(UStaticMeshComponent* Comp, const FLinearColor& Color, const FLinearColor& Emissive)
+{
+	FDCPaint& P = Paints.AddDefaulted_GetRef();
+	P.Comp = Comp;
+	P.Color = Color;
+	P.Emissive = Emissive;
+	return Paints.Num() - 1;
+}
+
+void AMatchCutGameMode::SetPaintEmissive(int32 Paint, const FLinearColor& Emissive)
+{
+	if (Paints.IsValidIndex(Paint))
+	{
+		Paints[Paint].Emissive = Emissive;
+		if (UMaterialInstanceDynamic* MID = Paints[Paint].MID.Get())
+		{
+			MID->SetVectorParameterValue(TEXT("Emissive"), Emissive + Paints[Paint].Color * AmbientNow);
+		}
+	}
+}
+
+AActor* AMatchCutGameMode::SpawnBox(const FVector& Center, const FRotator& Rot, const FVector& Size, const FLinearColor& Color, bool bHideFromGhost)
+{
+	AStaticMeshActor* Actor = GetWorld()->SpawnActor<AStaticMeshActor>(Center, Rot);
+	UStaticMeshComponent* SMC = Actor->GetStaticMeshComponent();
+	SMC->SetMobility(EComponentMobility::Movable);
+	SMC->SetStaticMesh(CubeMesh);
+	Actor->SetActorScale3D(Size / 100.0);
+	SMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	AddPaint(SMC, Color, FLinearColor::Black);
+	if (bHideFromGhost)
+	{
+		GhostHidden.Add(Actor);
+	}
+	return Actor;
+}
+
+AActor* AMatchCutGameMode::SpawnGroup(const FVector& Loc)
+{
+	AActor* A = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform(Loc));
+	USceneComponent* RootComp = NewObject<USceneComponent>(A);
+	RootComp->SetMobility(EComponentMobility::Movable);
+	A->SetRootComponent(RootComp);
+	RootComp->RegisterComponent();
+	A->SetActorLocation(Loc);
+	return A;
+}
+
+UStaticMeshComponent* AMatchCutGameMode::AddPart(AActor* Owner, UStaticMesh* Mesh, const FVector& Loc, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, const FLinearColor& Emissive)
+{
+	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
+	C->SetMobility(EComponentMobility::Movable);
+	C->SetStaticMesh(Mesh);
+	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	C->SetupAttachment(Owner->GetRootComponent());
+	C->RegisterComponent();
+	C->SetRelativeLocationAndRotation(Loc, Rot);
+	C->SetRelativeScale3D(Scale);
+	AddPaint(C, Color, Emissive);
+	return C;
+}
+
+FDCRobot AMatchCutGameMode::SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered)
+{
+	FDCRobot Robot;
+	AActor* A = SpawnGroup(Loc);
+	const FLinearColor DarkMetal = DCColor::DarkMetal;
+
+	// local frame: +X is forward. About 72 units across.
+	AddPart(A, SphereMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(0.80, 0.68, 0.68), Body, FLinearColor::Black);
+	AddPart(A, CylinderMesh, FVector(-6, 0, 0), FRotator(90, 0, 0), FVector(0.74, 0.74, 0.10), DarkMetal, FLinearColor::Black);
+	AddPart(A, SphereMesh, FVector(30, 0, 8), FRotator::ZeroRotator, FVector(0.26, 0.40, 0.22), Eye.GetClamped(0.f, 1.f), Eye);
+	Robot.EyePaint = Paints.Num() - 1;
+	AddPart(A, CylinderMesh, FVector(-36, 22, -8), FRotator(90, 0, 0), FVector(0.20, 0.20, 0.30), DarkMetal, FLinearColor::Black);
+	if (!bBattered)
+	{
+		AddPart(A, CylinderMesh, FVector(-36, -22, -8), FRotator(90, 0, 0), FVector(0.20, 0.20, 0.30), DarkMetal, FLinearColor::Black);
+	}
+	AddPart(A, CylinderMesh, FVector(-4, 0, 46), FRotator(bBattered ? 38.0 : 8.0, 0, 0), FVector(0.04, 0.04, 0.36), DarkMetal, FLinearColor::Black);
+	if (bBattered)
+	{
+		// a dented patch where a number plate used to be
+		AddPart(A, CubeMesh, FVector(2, 0, -24), FRotator(0, 0, 0), FVector(0.30, 0.66, 0.10), FLinearColor(0.16f, 0.18f, 0.17f), FLinearColor::Black);
+	}
+	Robot.Actor = A;
+	return Robot;
+}
+
+void AMatchCutGameMode::PlaceRobot(const FDCRobot& Robot, const FVector& Loc, const FVector2D& Head, const FRotator& CamRot, float Roll)
+{
+	AActor* A = Robot.Actor.Get();
+	if (!A)
+	{
+		return;
+	}
+	if (Robot.bPlain)
+	{
+		A->SetActorLocation(Loc);
+		return;
+	}
+	const FRotationMatrix M(CamRot);
+	const FVector R = M.GetUnitAxis(EAxis::Y);
+	const FVector U = M.GetUnitAxis(EAxis::Z);
+	// face left or right, tilt up or down at most ~50 degrees so "up" stays up
+	const double Side = Head.X >= 0.0 ? 1.0 : -1.0;
+	const double Tilt = FMath::Clamp(Head.Y, -0.75, 0.75);
+	const FVector X = (R * Side * FMath::Sqrt(1.0 - Tilt * Tilt) + U * Tilt).GetSafeNormal();
+	FRotator Rot = FRotationMatrix::MakeFromXZ(X, U).Rotator();
+	Rot.Roll += Roll;
+	A->SetActorLocationAndRotation(Loc, Rot);
+}
+
+void AMatchCutGameMode::SpawnSolid(FDCSolid& Solid, const FVector& CamPos, const FRotator& CamRot, bool bInGhost)
+{
+	const FRotationMatrix M(CamRot);
+	const FVector Center = CamPos + M.GetUnitAxis(EAxis::X) * Solid.C.Z + M.GetUnitAxis(EAxis::Y) * Solid.C.X + M.GetUnitAxis(EAxis::Z) * Solid.C.Y;
+	const FQuat Q = CamRot.Quaternion() * Solid.Rot.Quaternion();
+	// actor axes: X = away from the camera, Y = right, Z = up
+	const FVector Size(Solid.Size.Z, Solid.Size.X, Solid.Size.Y);
+	Solid.Actor = SpawnBox(Center, Q.Rotator(), Size, DCColor::ForKind(Solid.Kind), !bInGhost);
+	Solid.World = FTransform(Q, Center);
+	Solid.Half = Size * 0.5;
+	Solid.BaseLoc = Center;
+}
+
+void AMatchCutGameMode::SpawnShot(FDCShot& Shot, int32 Index)
+{
+	Shot.Camera = SpawnCamera(Shot.CamPos + Shot.AxR * Shot.Rail.Z, Shot.CamRot);
+	for (FDCSolid& Solid : Shot.Solids)
+	{
+		SpawnSolid(Solid, Shot.CamPos, Shot.CamRot, true);
+	}
+
+	// far backdrop and loose background rocks (no collision, never in the ghost)
+	FRandomStream Rand(Index * 7919 + 13);
+	const double Far = Shot.VolMax.Z;
+	AStaticMeshActor* Back = GetWorld()->SpawnActor<AStaticMeshActor>(Shot.CamPos + Shot.AxF * (Far + 5200.0), Shot.CamRot);
+	{
+		UStaticMeshComponent* SMC = Back->GetStaticMeshComponent();
+		SMC->SetMobility(EComponentMobility::Movable);
+		SMC->SetStaticMesh(CubeMesh);
+		SMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SMC->SetCastShadow(false);
+		Back->SetActorScale3D(FVector(0.2, 300.0, 140.0));
+		UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(UnlitMaterial, Back);
+		SMC->SetMaterial(0, MID);
+		BackdropMIDs.Add(MID);
+		GhostHidden.Add(Back);
+	}
+	const double Wide = 1.3 + (Shot.Rail.Y - Shot.Rail.X) / 1200.0;
+	for (int32 i = 0; i < 18; ++i)
+	{
+		const double D = Far + 900.0 + Rand.FRandRange(0.f, 2600.f);
+		const FVector S(Rand.FRandRange(-Wide, Wide) * TanH * D + 0.5 * (Shot.Rail.X + Shot.Rail.Y), Rand.FRandRange(-1.1f, 0.5f) * TanV * D, D);
+		const FVector Size(Rand.FRandRange(150.f, 520.f), Rand.FRandRange(150.f, 520.f), Rand.FRandRange(200.f, 900.f));
+		const FRotator Rot(Rand.FRandRange(-25.f, 25.f), Rand.FRandRange(0.f, 360.f), Rand.FRandRange(-25.f, 25.f));
+		AActor* Decor = SpawnBox(Shot.CamPos + Shot.AxF * S.Z + Shot.AxR * S.X + Shot.AxU * S.Y, Rot, Size, DCColor::Decor, true);
+		Cast<AStaticMeshActor>(Decor)->GetStaticMeshComponent()->SetCastShadow(false);
+	}
+
+	// slats high above the water: they only exist to cut the key light into shafts (look A)
+	const FVector Mid = Shot.CamPos + Shot.AxF * 1300.0 + Shot.AxR * (0.5 * (Shot.Rail.X + Shot.Rail.Y));
+	for (int32 i = 0; i < 11; ++i)
+	{
+		const FVector C = Mid + Shot.AxR * ((i - 5) * 230.0 + Rand.FRandRange(-40.f, 40.f)) + FVector(0, 0, 1100.0);
+		AActor* Slat = SpawnBox(C, FRotator(0.0, Shot.CamRot.Yaw, 0.0), FVector(2800.0, Rand.FRandRange(70.f, 130.f), 20.0), DCColor::Decor, true);
+		ShaftSlats.Add(Slat);
+	}
+
+	// the valve: a red wheel that faces the camera
+	if (Shot.bHasSwitch)
+	{
+		AActor* A = SpawnGroup(Shot.CamPos + Shot.AxF * Shot.Switch.S.Z + Shot.AxR * Shot.Switch.S.X + Shot.AxU * Shot.Switch.S.Y);
+		A->SetActorRotation(Shot.CamRot);
+		AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator(90, 0, 0), FVector(0.78, 0.78, 0.10), DCColor::ValveRed, DCColor::ValveRed * 0.6f);
+		AddPart(A, CubeMesh, FVector(-8, 0, 0), FRotator(0, 0, 0), FVector(0.10, 0.92, 0.12), DCColor::DarkMetal, FLinearColor::Black);
+		AddPart(A, CubeMesh, FVector(-8, 0, 0), FRotator(0, 0, 0), FVector(0.10, 0.12, 0.92), DCColor::DarkMetal, FLinearColor::Black);
+		AddPart(A, CylinderMesh, FVector(40, 0, 0), FRotator(90, 0, 0), FVector(0.16, 0.16, 0.9), DCColor::DarkMetal, FLinearColor::Black);
+		Shot.Switch.Actor = A;
+	}
+
+	// moving water: pale streaks that run through the box
+	for (FDCCurrent& C : Shot.Currents)
+	{
+		const FVector Dir = (Shot.AxF * C.Force.Z + Shot.AxR * C.Force.X + Shot.AxU * C.Force.Y).GetSafeNormal();
+		for (int32 i = 0; i < 16; ++i)
+		{
+			AActor* Streak = SpawnBox(Shot.CamPos, Dir.Rotation(), FVector(70.0, 5.0, 5.0), FLinearColor(0.6f, 0.9f, 0.9f), true);
+			Paints.Last().Emissive = FLinearColor(0.9f, 1.6f, 1.6f);
+			Cast<AStaticMeshActor>(Streak)->GetStaticMeshComponent()->SetCastShadow(false);
+			C.Streaks.Add(Streak);
+		}
+	}
+}
+
+void AMatchCutGameMode::SpawnFilmSets()
+{
+	// The official film and the removed scene are small sets far away from the stage, each shot by its own camera.
+	// Set space is the same as shot space: x right, y up, z away from the set's camera.
+	int32 k = 0;
+	for (auto& Pair : FilmSets)
+	{
+		FDCFilmSet& Set = Pair.Value;
+		Set.Origin = FVector(0.0, -200000.0 - 30000.0 * k++, 0.0);
+		Set.Camera = SpawnCamera(Set.Origin, FRotator::ZeroRotator);
+		AActor* Back = SpawnBox(Set.Origin + FVector(5900.0, 0, 0), FRotator::ZeroRotator, FVector(20.0, 20000.0, 12000.0), DCColor::Decor, true);
+		Cast<AStaticMeshActor>(Back)->GetStaticMeshComponent()->SetCastShadow(false);
+		if (TArray<FDCSolid>* Solids = FilmSetSolids.Find(Pair.Key))
+		{
+			for (FDCSolid& Solid : *Solids)
+			{
+				SpawnSolid(Solid, Set.Origin, FRotator::ZeroRotator, true);
+			}
+		}
+		if (Set.bOldFilm)
+		{
+			FlashCam = Set.Camera;
+			FPostProcessSettings& PP = Set.Camera->GetCameraComponent()->PostProcessSettings;
+			PP.bOverride_ColorSaturation = true;
+			PP.ColorSaturation = FVector4(0.18, 0.18, 0.18, 1.0);
+			PP.bOverride_ColorGain = true;
+			PP.ColorGain = FVector4(1.15, 1.02, 0.80, 1.0);
+			PP.bOverride_ColorContrast = true;
+			PP.ColorContrast = FVector4(1.15, 1.15, 1.15, 1.0);
+			PP.VignetteIntensity = 1.0f;
+			PP.FilmGrainIntensity = 1.0f;
+		}
+	}
+
+	// every actor a clip names is made now, so the look can paint it
+	for (const auto& Pair : Clips)
+	{
+		const FDCFilmSet* Set = FilmSets.Find(Pair.Value.Set);
+		const FVector Origin = Set ? Set->Origin : FVector::ZeroVector;
+		for (const FDCTrack& Track : Pair.Value.Tracks)
+		{
+			if (FilmActors.Contains(Track.Actor))
+			{
+				continue;
+			}
+			FDCRobot Robot;
+			if (Track.Actor.StartsWith(TEXT("cable")))
+			{
+				Robot.Actor = SpawnBox(Origin, FRotator::ZeroRotator, FVector(6.0, 6.0, 700.0), DCColor::DarkMetal, true);
+				Robot.bPlain = true;
+			}
+			else
+			{
+				const bool bUnit7 = Track.Actor.StartsWith(TEXT("unit7"));
+				Robot = SpawnRobot(Origin, bUnit7 ? DCColor::Unit7 : DCColor::Crew, DCColor::EyeWarm, false);
+				if (Track.Actor.EndsWith(TEXT("lamp")))
+				{
+					AActor* A = Robot.Actor.Get();
+					USpotLightComponent* L = NewObject<USpotLightComponent>(A);
+					L->SetMobility(EComponentMobility::Movable);
+					L->SetupAttachment(A->GetRootComponent());
+					L->RegisterComponent();
+					L->SetRelativeLocation(FVector(34.0, 0.0, 8.0));
+					L->SetIntensityUnits(ELightUnits::Unitless);
+					L->SetIntensity(60000.f);
+					L->SetLightColor(FLinearColor(1.f, 0.9f, 0.7f));
+					L->SetInnerConeAngle(16.f);
+					L->SetOuterConeAngle(34.f);
+					L->SetAttenuationRadius(2200.f);
+					L->SetVolumetricScatteringIntensity(4.f);
+					FlashLamp = L;
+					UPointLightComponent* G = NewObject<UPointLightComponent>(A);
+					G->SetMobility(EComponentMobility::Movable);
+					G->SetupAttachment(A->GetRootComponent());
+					G->RegisterComponent();
+					G->SetAbsolute(true, true, false);
+					G->SetIntensityUnits(ELightUnits::Unitless);
+					G->SetIntensity(9000.f);
+					G->SetLightColor(FLinearColor(1.f, 0.9f, 0.7f));
+					G->SetAttenuationRadius(900.f);
+					G->SetCastShadows(false);
+					G->SetWorldLocation(Origin + FVector(700.0, -110.0, 20.0));
+				}
+			}
+			if (AActor* A = Robot.Actor.Get())
+			{
+				A->SetActorHiddenInGame(true);
+			}
+			FilmActors.Add(Track.Actor, Robot);
+		}
+	}
+}
+
+void AMatchCutGameMode::SpawnWorld()
+{
+	UWorld* World = GetWorld();
+
+	KeyLight = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 5000), FRotator(-68.0, 25.0, 0.0));
+	if (UDirectionalLightComponent* DLC = Cast<UDirectionalLightComponent>(KeyLight->GetLightComponent()))
+	{
+		DLC->SetMobility(EComponentMobility::Movable);
+		DLC->SetForwardShadingPriority(1);
+		DLC->SetDynamicShadowDistanceMovableLight(9000.f);
+	}
+	FillLight = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 5000), FRotator(-12.0, 10.0, 0.0));
+	if (ULightComponent* LC = FillLight->GetLightComponent())
+	{
+		LC->SetMobility(EComponentMobility::Movable);
+		LC->SetCastShadows(false);
+	}
+	Fog = World->SpawnActor<AExponentialHeightFog>(FVector(0, 0, 0), FRotator::ZeroRotator);
+
+	for (int32 i = 0; i < Shots.Num(); ++i)
+	{
+		SpawnShot(Shots[i], i);
+	}
+	SpawnFilmSets();
+
+	// loose things
+	for (FDCProp& Prop : Props)
+	{
+		AActor* A = SpawnGroup(ShotToWorld(Prop.Shot, Prop.S));
+		A->SetActorRotation(Shots[Prop.Shot].CamRot);
+		if (Prop.Kind == TEXT("cell"))
+		{
+			AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(0.42, 0.42, 0.62), DCColor::DarkMetal, FLinearColor::Black);
+			AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(0.46, 0.46, 0.22), FLinearColor(0.2f, 1.f, 0.5f), FLinearColor(0.6f, 3.5f, 1.4f));
+		}
+		else
+		{
+			AddPart(A, CubeMesh, FVector(0, 0, 0), FRotator(0, 0, 0), FVector(1.3, 1.5, 0.16), DCColor::Plate, DCColor::Plate * 0.25f);
+			AddPart(A, CubeMesh, FVector(0, 0, 10), FRotator(0, 0, 0), FVector(0.2, 1.1, 0.08), DCColor::DarkMetal, FLinearColor::Black);
+		}
+		Prop.Actor = A;
+	}
+	for (FDCSocket& Socket : Sockets)
+	{
+		const FDCShot& Shot = Shots[Socket.Shot];
+		AActor* A = SpawnGroup(ShotToWorld(Socket.Shot, Socket.S));
+		A->SetActorRotation(Shot.CamRot);
+		if (Socket.Accepts == TEXT("cell"))
+		{
+			// a dock: a dark block with a light that turns green when the cell is in
+			AddPart(A, CubeMesh, FVector(30, 0, -60), FRotator::ZeroRotator, FVector(1.0, 1.3, 0.5), DCColor::DarkMetal, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(60, 0, 20), FRotator::ZeroRotator, FVector(0.3, 1.3, 1.2), DCColor::Hull, FLinearColor::Black);
+			AddPart(A, SphereMesh, FVector(40, 0, 70), FRotator::ZeroRotator, FVector(0.2, 0.2, 0.2), FLinearColor(1.f, 0.2f, 0.1f), FLinearColor(5.f, 0.6f, 0.3f));
+			Socket.Paint = Paints.Num() - 1;
+		}
+		else
+		{
+			// a vent: a long slot in the floor that runs away from the camera
+			AddPart(A, CubeMesh, FVector(0, 0, -24), FRotator::ZeroRotator, FVector(9.0, 1.9, 0.10), DCColor::DarkMetal, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(0, 0, -18), FRotator::ZeroRotator, FVector(8.6, 0.5, 0.06), FLinearColor(0.5f, 0.9f, 0.9f), FLinearColor(0.5f, 1.4f, 1.4f));
+			Socket.Paint = Paints.Num() - 1;
+		}
+		Socket.Actor = A;
+	}
+
+	// the player's robot: battered, one thruster missing, number plate scraped off
+	Hero = SpawnRobot(Shots[0].CamPos, DCColor::Hero, DCColor::EyeCyan, true);
+	if (AActor* A = Hero.Actor.Get())
+	{
+		USpotLightComponent* L = NewObject<USpotLightComponent>(A);
+		L->SetMobility(EComponentMobility::Movable);
+		L->SetupAttachment(A->GetRootComponent());
+		L->RegisterComponent();
+		L->SetRelativeLocation(FVector(36.0, 0.0, 8.0));
+		L->SetIntensityUnits(ELightUnits::Unitless);
+		L->SetLightColor(FLinearColor(1.f, 0.93f, 0.75f));
+		L->SetInnerConeAngle(14.f);
+		L->SetOuterConeAngle(30.f);
+		L->SetAttenuationRadius(2000.f);
+		L->SetVolumetricScatteringIntensity(3.f);
+		L->SetVisibility(false);
+		LampSpot = L;
+
+		// soft glow on the camera side of the robot so the faces we actually see get some of the lamp
+		UPointLightComponent* G = NewObject<UPointLightComponent>(A);
+		G->SetMobility(EComponentMobility::Movable);
+		G->SetupAttachment(A->GetRootComponent());
+		G->RegisterComponent();
+		G->SetAbsolute(false, true, false);
+		G->SetIntensityUnits(ELightUnits::Unitless);
+		G->SetLightColor(FLinearColor(1.f, 0.93f, 0.75f));
+		G->SetAttenuationRadius(800.f);
+		G->SetCastShadows(false);
+		G->SetVisibility(false);
+		LampGlow = G;
+	}
+
+	if (PartShot != INDEX_NONE)
+	{
+		// the part: Unit 7's headlamp
+		AActor* A = SpawnGroup(ShotToWorld(PartShot, Shots[PartShot].PartS));
+		AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator(90, 0, 0), FVector(0.30, 0.30, 0.34), DCColor::Unit7, FLinearColor::Black);
+		AddPart(A, SphereMesh, FVector(18, 0, 0), FRotator::ZeroRotator, FVector(0.26, 0.26, 0.26), FLinearColor(1.f, 0.85f, 0.4f), FLinearColor(6.f, 4.5f, 1.2f));
+		PartActor.EyePaint = Paints.Num() - 1;
+		PartActor.Actor = A;
+	}
+	if (CrewShot != INDEX_NONE)
+	{
+		CrewPos = ShotToWorld(CrewShot, Shots[CrewShot].CrewS);
+		Crew = SpawnRobot(CrewPos, DCColor::Crew, DCColor::EyeWarm, false);
+		PlaceRobot(Crew, CrewPos, FVector2D(1.0, -0.3), Shots[CrewShot].CamRot, 35.f);
+	}
+
+	// ghost of the next shot (or of the removed scene)
+	GhostTarget = NewObject<UTextureRenderTarget2D>(this);
+	GhostTarget->RenderTargetFormat = RTF_RGBA8_SRGB;
+	GhostTarget->ClearColor = FLinearColor::Black;
+	GhostTarget->InitAutoFormat(960, 540);
+	GhostTarget->UpdateResourceImmediate(true);
+
+	GhostCapture = World->SpawnActor<ASceneCapture2D>(FVector::ZeroVector, FRotator::ZeroRotator);
+	{
+		USceneCaptureComponent2D* Cap = GhostCapture->GetCaptureComponent2D();
+		Cap->TextureTarget = GhostTarget;
+		Cap->FOVAngle = Fov;
+		Cap->CaptureSource = ESceneCaptureSource::SCS_BaseColor; // flat colour: no lights, no fog, so the water cannot wash it out
+		Cap->bCaptureEveryFrame = false; // refreshed about 12 times a second from Tick
+		Cap->bCaptureOnMovement = false;
+		Cap->bAlwaysPersistRenderingState = true;
+		SetupLook(Cap->PostProcessSettings, ExposureEV, 0.f, 0.f);
+		Cap->PostProcessBlendWeight = 1.f;
+	}
+
+	ThumbTarget = NewObject<UTextureRenderTarget2D>(this);
+	ThumbTarget->RenderTargetFormat = RTF_RGBA8_SRGB;
+	ThumbTarget->ClearColor = FLinearColor::Black;
+	ThumbTarget->InitAutoFormat(256, 144);
+	ThumbTarget->UpdateResourceImmediate(true);
+	const FVector FlashPos = FlashCam.IsValid() ? FlashCam->GetActorLocation() : FVector::ZeroVector;
+	ThumbCapture = World->SpawnActor<ASceneCapture2D>(FlashPos, FRotator::ZeroRotator);
+	{
+		USceneCaptureComponent2D* Cap = ThumbCapture->GetCaptureComponent2D();
+		Cap->TextureTarget = ThumbTarget;
+		Cap->FOVAngle = Fov;
+		Cap->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+		Cap->bCaptureEveryFrame = false;
+		Cap->bCaptureOnMovement = false;
+		if (FlashCam.IsValid())
+		{
+			Cap->PostProcessSettings = FlashCam->GetCameraComponent()->PostProcessSettings;
+		}
+		Cap->PostProcessBlendWeight = 1.f;
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// looks
+// ---------------------------------------------------------------------------------------------
+
+void AMatchCutGameMode::ApplyLook(const FString& Name)
+{
+	if (const FDCLook* Found = Looks.Find(Name))
+	{
+		Look = *Found;
+		LookName = Name;
+	}
+	else
+	{
+		UE_LOG(LogMatchCut, Warning, TEXT("Look %s not found in the layout, keeping %s"), *Name, *LookName);
+	}
+
+	UMaterialInterface* Parent = Look.bToon ? ToonMaterial : LitMaterial;
+	for (FDCPaint& P : Paints)
+	{
+		if (UStaticMeshComponent* C = P.Comp.Get())
+		{
+			UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Parent, C);
+			MID->SetVectorParameterValue(TEXT("Color"), P.Color);
+			MID->SetVectorParameterValue(TEXT("Emissive"), P.Emissive + P.Color * AmbientNow);
+			C->SetMaterial(0, MID);
+			P.MID = MID;
+		}
+	}
+	for (UMaterialInstanceDynamic* MID : BackdropMIDs)
+	{
+		MID->SetVectorParameterValue(TEXT("Color"), Look.Backdrop);
+	}
+	for (const TWeakObjectPtr<AActor>& Slat : ShaftSlats)
+	{
+		if (AStaticMeshActor* A = Cast<AStaticMeshActor>(Slat.Get()))
+		{
+			A->GetStaticMeshComponent()->SetCastShadow(Look.bShafts);
+			A->SetActorHiddenInGame(!Look.bShafts);
+		}
+	}
+	for (const TWeakObjectPtr<ACameraActor>& Cam : AllCameras)
+	{
+		if (Cam.IsValid() && Cam.Get() != FlashCam.Get())
+		{
+			FPostProcessSettings& PP = Cam->GetCameraComponent()->PostProcessSettings;
+			PP.VignetteIntensity = Look.Vignette;
+			PP.FilmGrainIntensity = Look.Grain;
+		}
+	}
+	if (USpotLightComponent* L = LampSpot.Get())
+	{
+		L->SetIntensity(Look.LampIntensity);
+	}
+	if (UPointLightComponent* G = LampGlow.Get())
+	{
+		G->SetIntensity(Look.GlowIntensity);
+	}
+	if (Fog)
+	{
+		UExponentialHeightFogComponent* FC = Fog->GetComponent();
+		FC->SetFogDensity(Look.FogDensity);
+		FC->SetFogHeightFalloff(0.001f);
+		FC->SetFogMaxOpacity(1.f);
+		FC->SetStartDistance(0.f);
+		FC->SetVolumetricFog(Look.bVolumetric);
+		FC->SetVolumetricFogDistance(6000.f);
+		FC->SetVolumetricFogExtinctionScale(Look.VolExtinction);
+		FC->SetVolumetricFogScatteringDistribution(0.5f);
+	}
+	ApplyLighting();
+	UE_LOG(LogMatchCut, Display, TEXT("LOOK %s fog=%.2f volumetric=%d toon=%d shafts=%d"), *LookName, Look.FogDensity, Look.bVolumetric ? 1 : 0, Look.bToon ? 1 : 0, Look.bShafts ? 1 : 0);
+}
+
+void AMatchCutGameMode::ApplyLighting()
+{
+	// "dark" is global: only one place is on screen at a time, and the ghost capture does not use lights
+	bool bDark = State == EDCState::Flashback;
+	if ((State == EDCState::Playing || State == EDCState::TakeCard || State == EDCState::Drop || State == EDCState::EndCard) && Shots.IsValidIndex(Cur))
+	{
+		bDark = Shots[Cur].bDark;
+	}
+	float K = bDark ? Look.DarkFactor : 1.f;
+	if (State == EDCState::Flashback)
+	{
+		K = FMath::Max(K, 0.30f); // old footage: dim, but the robots must read
+	}
+	AmbientNow = Look.bToon ? 0.f : Look.Ambient * K;
+	for (FDCPaint& P : Paints)
+	{
+		if (UMaterialInstanceDynamic* MID = P.MID.Get())
+		{
+			MID->SetVectorParameterValue(TEXT("Emissive"), P.Emissive + P.Color * AmbientNow);
+		}
+	}
+	if (KeyLight)
+	{
+		ULightComponent* LC = KeyLight->GetLightComponent();
+		LC->SetIntensity((Look.bToon ? 0.f : Look.KeyIntensity) * K);
+		LC->SetLightColor(Look.KeyColor);
+		LC->SetVolumetricScatteringIntensity(Look.VolScatter);
+	}
+	if (FillLight)
+	{
+		ULightComponent* LC = FillLight->GetLightComponent();
+		LC->SetIntensity((Look.bToon ? 0.f : Look.FillIntensity) * K);
+		LC->SetLightColor(Look.FillColor);
+		LC->SetVolumetricScatteringIntensity(0.f);
+	}
+	if (Fog)
+	{
+		UExponentialHeightFogComponent* FC = Fog->GetComponent();
+		FC->SetFogInscatteringColor(Look.FogColor * K);
+		FC->SetVolumetricFogEmissive(Look.bVolumetric ? Look.FogColor * (Look.VolEmissive * K) : FLinearColor::Black);
+		FC->SetVolumetricFogAlbedo(FColor(140, 235, 215));
+	}
+	for (UMaterialInstanceDynamic* MID : BackdropMIDs)
+	{
+		MID->SetVectorParameterValue(TEXT("Color"), Look.Backdrop * K);
+	}
+	if (Look.bToon)
+	{
+		// the toon bands are emissive, so they need the brightness the lights would have given (exposure is fixed)
+		const float Glow = (bDark ? FMath::Max(Look.DarkFactor, 0.03f) : 1.f) * 3.0f;
+		for (FDCPaint& P : Paints)
+		{
+			if (UMaterialInstanceDynamic* MID = P.MID.Get())
+			{
+				MID->SetScalarParameterValue(TEXT("Glow"), Glow);
+			}
+		}
+	}
+}
