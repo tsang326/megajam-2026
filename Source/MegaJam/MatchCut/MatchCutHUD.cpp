@@ -3,6 +3,8 @@
 #include "MatchCutHUD.h"
 #include "MatchCutGameMode.h"
 #include "DC3D.h"
+#include "DCDoc.h"
+#include "DCDocText.h"
 #include "DeepCutText.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -1174,8 +1176,126 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 {
 	const FDC3D& W = *GM->World3D();
 	const float Time = GM->PlayClock;
+	if (!W.Doc)
+	{
+		return;
+	}
+	const FDCDoc& D = *W.Doc;
+	auto Pips = [this](float X, float Y, int32 Stars, float R)
+	{
+		for (int32 i = 0; i < 3; ++i)
+		{
+			if (i < Stars)
+			{
+				Disc(X + i * R * 2.8f, Y, R, Amber);
+			}
+			else
+			{
+				Ring(X + i * R * 2.8f, Y, R, FLinearColor(1.f, 1.f, 1.f, 0.35f), 1.5f);
+			}
+		}
+	};
+	int32 InFilm = 0;
+	for (int32 s = 0; s < DCSub::Num; ++s)
+	{
+		InFilm += D.Takes.IsValidIndex(D.Pick[s]) ? 1 : 0;
+	}
 
-	// corner brackets of the viewfinder
+	// ---------------- the finished film
+	if (D.State == EDCDocState::Film || D.State == EDCDocState::Rating)
+	{
+		Rect(0.f, 0.f, 1920.f, 104.f, FLinearColor::Black);
+		Rect(0.f, 976.f, 1920.f, 104.f, FLinearColor::Black);
+		if (D.State == EDCDocState::Rating)
+		{
+			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.f, 0.f, 0.f, FMath::Clamp(D.StateTime * 1.5f, 0.f, 0.9f)));
+			const int32 Stars = D.StarsTotal();
+			const float Part = (float)Stars / (3.f * DCSub::Num);
+			Text(DCDocText::FilmTitle, 960.f, 250.f, 6.f, White, 1);
+			Text(DCDocText::Rating[Part < 0.35f ? 0 : Part < 0.6f ? 1 : Part < 0.85f ? 2 : 3], 960.f, 440.f, 4.f, Amber, 1);
+			Text(FString::Printf(TEXT("%d / %d STARS"), Stars, 3 * DCSub::Num), 960.f, 560.f, 2.2f, White, 1);
+			for (int32 s = 0; s < DCSub::Num; ++s)
+			{
+				const float X = 960.f + (s - 2.5f) * 250.f;
+				Text(DCDocText::ShotCaption[s], X, 660.f, 1.2f, Dim, 1);
+				Pips(X - 28.f, 712.f, D.Takes.IsValidIndex(D.Pick[s]) ? D.Takes[D.Pick[s]].Stars : 0, 9.f);
+			}
+			Text(DCDocText::RatingKeys, 960.f, 880.f, 1.5f, Dim, 1);
+			return;
+		}
+		if (D.FilmPart == 0)
+		{
+			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor::Black);
+			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 1.2f, (4.f - D.FilmTime) * 2.f), 0.f, 1.f);
+			Text(DCDocText::FilmTitle, 960.f, 400.f, 9.f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+			Text(DCDocText::FilmSub, 960.f, 600.f, 2.f, FLinearColor(Amber.R, Amber.G, Amber.B, A), 1);
+		}
+		else if (D.FilmPart > InFilm)
+		{
+			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor::Black);
+			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 1.2f, (6.f - D.FilmTime) * 2.f), 0.f, 1.f);
+			Text(DCDocText::Credits1, 960.f, 450.f, 2.6f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+			Text(DCDocText::Credits2, 960.f, 560.f, 1.6f, FLinearColor(Dim.R, Dim.G, Dim.B, A), 1);
+		}
+		else if (D.Takes.IsValidIndex(D.PlayTake))
+		{
+			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 3.f, (2.2f - D.FilmTime) * 2.f), 0.f, 1.f);
+			Text(DCDocText::ShotCaption[D.Takes[D.PlayTake].Shot], 120.f, 880.f, 2.4f, FLinearColor(1.f, 1.f, 1.f, A));
+			Rect(120.f, 936.f, 90.f * A, 3.f, FLinearColor(Amber.R, Amber.G, Amber.B, A));
+			if (D.FilmTime < 0.12f)
+			{
+				Rect(0.f, 104.f, 1920.f, 872.f, FLinearColor(1.f, 1.f, 1.f, 0.35f)); // the splice
+			}
+		}
+		return;
+	}
+
+	// ---------------- the cutting room
+	if (D.State == EDCDocState::Edit)
+	{
+		Rect(0.f, 0.f, 1920.f, 96.f, FLinearColor::Black);
+		Rect(0.f, 850.f, 1920.f, 230.f, FLinearColor::Black);
+		Text(DCDocText::EditTitle, 60.f, 30.f, 2.2f, White);
+		Text(FString::Printf(TEXT("%d / %d STARS"), D.StarsTotal(), 3 * DCSub::Num), 1860.f, 34.f, 1.8f, Amber, 2);
+		for (int32 s = 0; s < DCSub::Num; ++s)
+		{
+			const float X = 60.f + s * 302.f;
+			const bool bSel = s == D.EditShot;
+			const bool bHas = D.Takes.IsValidIndex(D.Pick[s]);
+			Rect(X, 872.f, 290.f, 128.f, FLinearColor(1.f, 1.f, 1.f, bSel ? 0.10f : 0.04f));
+			Frame(X, 872.f, 290.f, 128.f, bSel ? Amber : FLinearColor(1.f, 1.f, 1.f, 0.25f), bSel ? 3.f : 1.5f);
+			// sprocket holes, as on a strip of film
+			for (int32 h = 0; h < 7; ++h)
+			{
+				Rect(X + 14.f + h * 40.f, 862.f, 18.f, 6.f, FLinearColor(1.f, 1.f, 1.f, 0.25f));
+				Rect(X + 14.f + h * 40.f, 1004.f, 18.f, 6.f, FLinearColor(1.f, 1.f, 1.f, 0.25f));
+			}
+			Text(FString::Printf(TEXT("%d  %s"), s + 1, DCDocText::ShotCaption[s]), X + 16.f, 884.f, 1.25f, bHas ? White : Dim);
+			if (bHas)
+			{
+				TArray<int32> Mine;
+				const int32 N = D.TakesOf(s, &Mine);
+				Pips(X + 28.f, 946.f, D.Takes[D.Pick[s]].Stars, 10.f);
+				Text(FString::Printf(TEXT("TAKE %d / %d"), Mine.Find(D.Pick[s]) + 1, N), X + 274.f, 962.f, 1.1f, Dim, 2);
+			}
+			else
+			{
+				Text(DCDocText::NoTake, X + 16.f, 940.f, 1.2f, Dim);
+			}
+		}
+		Text(DCDocText::EditKeys, 960.f, 1030.f, 1.4f, Dim, 1);
+		if (D.Takes.IsValidIndex(D.PlayTake))
+		{
+			Text(DCDocText::ShotTitle[D.Takes[D.PlayTake].Shot], 960.f, 790.f, 1.8f, White, 1);
+			const float P = D.PlayT / FMath::Max(0.1f, D.Takes[D.PlayTake].Len);
+			Rect(660.f, 836.f, 600.f, 3.f, FLinearColor(1.f, 1.f, 1.f, 0.2f));
+			Rect(660.f, 836.f, 600.f * P, 3.f, Amber);
+		}
+		return;
+	}
+
+	// ---------------- shooting
+	const float Aim = D.AimBlend;
 	const FLinearColor Edge(1.f, 1.f, 1.f, 0.35f);
 	const float M = 44.f, L = 54.f;
 	for (int32 i = 0; i < 4; ++i)
@@ -1185,33 +1305,133 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		Rect((i & 1) ? X - L : X, Y - 1.f, L, 3.f, Edge);
 		Rect(X - 1.f, (i & 2) ? Y - L : Y, 3.f, L, Edge);
 	}
-
-	if (FMath::Fmod(Time, 1.2f) < 0.8f)
+	if (D.bRecording)
 	{
-		Disc(84.f, 92.f, 9.f, Red);
+		Disc(84.f, 92.f, 10.f, Red);
+		Text(DCText::Rec, 104.f, 78.f, 1.5f, Red);
 	}
-	Text(DCText::Rec, 104.f, 78.f, 1.5f, White);
+	else
+	{
+		Text(TEXT("STBY"), 76.f, 78.f, 1.5f, Dim);
+	}
 	Text(Timecode(Time, 0), 190.f, 78.f, 1.5f, Dim);
-
-	// depth and heading, as the camera's own readout
 	const int32 Heading = ((int32)FMath::RoundToInt(W.Yaw) % 360 + 360) % 360;
 	Text(FString::Printf(TEXT("DEPTH %.1f m   HDG %03d"), 212.0 - W.Pos.Z / 100.0, Heading), 1836.f, 78.f, 1.5f, Dim, 2);
 
-	// speed: a short bar that fills as Unit 0 goes faster, bright while boosting
-	const float Speed = FMath::Clamp((float)W.Vel.Size() / 980.f, 0.f, 1.f);
-	Rect(84.f, 1000.f, 220.f, 4.f, FLinearColor(1.f, 1.f, 1.f, 0.18f));
-	Rect(84.f, 1000.f, 220.f * Speed, 4.f, Speed > 0.62f ? Amber : Green);
-
-	if (W.Rings.Num() > 0)
+	if (Aim > 0.5f)
 	{
-		const bool bAll = W.RingsDone >= W.Rings.Num();
-		Text(FString::Printf(TEXT("RINGS %d / %d"), W.RingsDone, W.Rings.Num()), 1836.f, 986.f, 1.5f, bAll || W.RingFlash > 0.f ? Green : Dim, 2);
+		const float A = (Aim - 0.5f) * 2.f;
+		// the viewfinder: thirds, a small cross, and a bracket on what the lens has found
+		const FLinearColor Thin(1.f, 1.f, 1.f, 0.13f * A);
+		Rect(640.f, 120.f, 1.5f, 840.f, Thin);
+		Rect(1280.f, 120.f, 1.5f, 840.f, Thin);
+		Rect(120.f, 360.f, 1680.f, 1.5f, Thin);
+		Rect(120.f, 720.f, 1680.f, 1.5f, Thin);
+		Rect(948.f, 539.f, 24.f, 2.f, FLinearColor(1.f, 1.f, 1.f, 0.5f * A));
+		Rect(959.f, 528.f, 2.f, 24.f, FLinearColor(1.f, 1.f, 1.f, 0.5f * A));
+		if (D.Lock != INDEX_NONE)
+		{
+			const FDCSeen& S = D.Seen[D.Lock];
+			const FLinearColor C = S.bAction && S.bWhole ? Green : S.bAction ? Amber : FLinearColor(1.f, 1.f, 1.f, 0.7f);
+			Brackets(960.f + (float)S.At.X * 960.f, 540.f - (float)S.At.Y * 540.f, FMath::Clamp(S.Size * 540.f * 1.15f, 34.f, 420.f), C, 2.5f);
+		}
+		const float Focal = 18.f / FMath::Tan(FMath::DegreesToRadians(W.ViewFov * 0.5f));
+		Text(FString::Printf(TEXT("%.0f mm     FOCUS %.1f m"), Focal, D.Focus / 100.f), 960.f, 1000.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, 0.8f * A), 1);
+		if (D.bRecording)
+		{
+			// the take: three seconds, and a light that says whether this is the moment
+			const float P = FMath::Clamp(D.RecTime / 3.f, 0.f, 1.f);
+			Rect(760.f, 84.f, 400.f, 6.f, FLinearColor(1.f, 1.f, 1.f, 0.2f));
+			Rect(760.f, 84.f, 400.f * P, 6.f, Red);
+			Frame(96.f, 110.f, 1728.f, 860.f, FLinearColor(Red.R, Red.G, Red.B, 0.55f), 2.f);
+		}
+	}
+	else
+	{
+		// swimming: how fast
+		const float Speed = FMath::Clamp((float)W.Vel.Size() / 980.f, 0.f, 1.f);
+		Rect(84.f, 1000.f, 220.f, 4.f, FLinearColor(1.f, 1.f, 1.f, 0.18f));
+		Rect(84.f, 1000.f, 220.f * Speed, 4.f, Speed > 0.62f ? Amber : Green);
 	}
 
-	// the controls: shown at the start, and again after ten seconds of doing nothing
-	const float Show = Time < 14.f ? 1.f : FMath::Clamp((W.IdleTime - 10.f) * 0.8f, 0.f, 1.f);
-	if (Show > 0.f)
+	// the shot list: in full for a few seconds at the start and after a take, otherwise six small marks
+	const float ListA = FMath::Clamp(D.ListTime, 0.f, 1.f);
+	if (ListA > 0.f)
 	{
-		Text(DCText::Controls3D, 960.f, 962.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, 0.85f * Show), 1);
+		Rect(64.f, 126.f, 560.f, 46.f + 36.f * DCSub::Num, FLinearColor(0.f, 0.f, 0.f, 0.45f * ListA));
+		Text(DCDocText::ShotList, 84.f, 134.f, 1.2f, FLinearColor(Amber.R, Amber.G, Amber.B, ListA));
+		for (int32 s = 0; s < DCSub::Num; ++s)
+		{
+			const float Y = 170.f + 36.f * s;
+			const bool bDone = D.Best[s] > 0;
+			Text(DCDocText::ShotTitle[s], 150.f, Y, 1.25f, FLinearColor(1.f, 1.f, 1.f, (bDone ? 0.45f : 0.95f) * ListA));
+			if (bDone)
+			{
+				Pips(92.f, Y + 14.f, D.Best[s], 6.f);
+			}
+			else
+			{
+				Frame(88.f, Y + 5.f, 44.f, 18.f, FLinearColor(1.f, 1.f, 1.f, 0.4f * ListA), 1.5f);
+			}
+		}
+	}
+	else
+	{
+		for (int32 s = 0; s < DCSub::Num; ++s)
+		{
+			const float X = 84.f + s * 58.f;
+			Frame(X, 132.f, 48.f, 20.f, FLinearColor(1.f, 1.f, 1.f, D.Best[s] > 0 ? 0.5f : 0.25f), 1.5f);
+			for (int32 i = 0; i < D.Best[s]; ++i)
+			{
+				Disc(X + 10.f + i * 14.f, 142.f, 4.5f, Amber);
+			}
+		}
+	}
+
+	// the verdict on the last take
+	if (D.ResultTime > 0.f)
+	{
+		const float A = FMath::Clamp(D.ResultTime, 0.f, 1.f);
+		Rect(660.f, 150.f, 600.f, 150.f, FLinearColor(0.f, 0.f, 0.f, 0.55f * A));
+		if (D.ResultStars > 0)
+		{
+			Pips(960.f - 50.f, 190.f, D.ResultStars, 18.f);
+			Text(DCDocText::ShotTitle[D.ResultShot], 960.f, 222.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+		}
+		else
+		{
+			Text(DCDocText::NoGood, 960.f, 168.f, 2.6f, FLinearColor(Red.R, Red.G, Red.B, A), 1);
+		}
+		Text(D.ResultReason, 960.f, 258.f, 1.5f, FLinearColor(Amber.R, Amber.G, Amber.B, A), 1);
+	}
+
+	// one line at a time: what the director says, else the control that is needed next
+	FString Line;
+	FLinearColor LineColor(1.f, 1.f, 1.f, 0.85f);
+	if (D.NoteTime > 0.f)
+	{
+		Line = D.Note;
+		LineColor = FLinearColor(Amber.R, Amber.G, Amber.B, FMath::Clamp(D.NoteTime, 0.f, 1.f));
+	}
+	else if (Time < 12.f)
+	{
+		Line = DCText::Controls3D;
+	}
+	else if (!D.bEverAimed)
+	{
+		Line = DCDocText::TeachAim;
+	}
+	else if (!D.bEverRecorded)
+	{
+		Line = Aim > 0.5f ? DCDocText::TeachRecord : TEXT("");
+	}
+	else if (W.IdleTime > 12.f && Aim < 0.5f)
+	{
+		Line = D.CanEnd() ? DCDocText::TeachEnd : DCText::Controls3D;
+		LineColor.A = FMath::Clamp((W.IdleTime - 12.f) * 0.8f, 0.f, 0.85f);
+	}
+	if (!Line.IsEmpty())
+	{
+		Text(Line, 960.f, Aim > 0.5f ? 920.f : 962.f, 1.5f, LineColor, 1);
 	}
 }

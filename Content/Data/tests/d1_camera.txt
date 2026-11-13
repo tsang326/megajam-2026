@@ -1,0 +1,98 @@
+# brief 07 checkpoint 1+2: the hand camera, takes and their score, every creature once
+wait 1.0
+stat4
+snap a01_start
+# the crewmate, at the dock
+near crew -520 330 60
+wait 2.0
+snap b01_crew
+aim 1
+zoom 50
+track crew 30
+wait 1.2
+snap b02_crew_viewfinder
+rec
+snap b03_crew_verdict
+stat4
+aim 0
+# the manta: wait for it over the wreck
+clock 36
+tp 3300 -1900 700 90 20
+aim 1
+zoom 55
+track manta 12
+wait 3.0
+snap c01_manta
+rec
+snap c02_manta_verdict
+stat4
+# a bad take: looking at nothing
+track none 0
+look3 -90 -10
+wait 0.6
+rec
+snap c03_nothing
+aim 0
+# jellyfish in the shaft
+near jelly 620 300 0
+wait 1.5
+snap d01_jelly_wide
+aim 1
+zoom 45
+track jelly 10
+wait 1.0
+rec
+snap d02_jelly_verdict
+aim 0
+# the shoal: swim into it with the camera up
+track none 0
+near shoal 1500 0 0
+wait 1.0
+snap e01_shoal_wide
+near shoal 1300 0 0
+aim 1
+zoom 70
+rec
+snap e02a_shoal_no_split
+key3 1 0 0 2.0
+rec 0
+key3 1 0 0 3.4
+snap e02_shoal_verdict
+aim 0
+stat4
+track none 0
+# the anglerfish, first without the lamp, then with
+tp 800 2390 250 0 0
+key3 1 0 0 3.5
+snap f01_trench_mouth
+tp 3200 2390 250 0 0
+wait 2.0
+snap f02_trench_dark
+aim 1
+zoom 50
+track angler 20
+wait 1.0
+rec
+snap f03_angler_no_lamp
+lamp 1
+wait 1.0
+snap f04_angler_lamp
+rec
+snap f05_angler_verdict
+aim 0
+# the giant overhead
+track none 0
+clock 62
+tp 0 200 500 160 60
+wait 1.0
+snap g01_giant_third_person
+aim 1
+zoom 60
+track giant 10
+wait 2.0
+rec
+snap g02_giant_verdict
+aim 0
+stat4
+stat
+quit

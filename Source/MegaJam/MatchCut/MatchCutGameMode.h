@@ -47,6 +47,7 @@ class AMatchCutGameMode : public AGameModeBase
 
 	friend class AMatchCutHUD;
 	friend struct FDC3D;
+	friend struct FDCDoc;
 
 public:
 	AMatchCutGameMode();

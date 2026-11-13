@@ -1,0 +1,41 @@
+# short checks: the shoal, the shaft, the trench with the lamp
+wait 1.0
+near shoal 1100 0 0
+wait 1.0
+snap a01_shoal_wide
+near shoal 420 0 0
+aim 1
+zoom 68
+wait 0.5
+snap a02_shoal_close
+key3 1 0 0 2.5
+wait 0.9
+rec
+snap a03_shoal_split
+aim 0
+near jelly 700 300 100
+wait 1.0
+snap b01_jelly
+tp 3200 2390 250 0 0
+wait 1.0
+stat4
+aim 1
+zoom 50
+track angler 20
+wait 1.5
+stat4
+snap c01_angler_dark
+lamp 1
+wait 1.0
+snap c02_angler_lamp
+aim 0
+wait 0.6
+snap c03_trench_lamp_third
+tp 3300 -1500 1300 90 -30
+wait 1.0
+snap d01_wreck_from_above
+tp 600 -3600 500 60 -10
+wait 1.0
+snap d02_vents
+stat
+quit

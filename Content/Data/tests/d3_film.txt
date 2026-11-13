@@ -1,0 +1,124 @@
+# brief 07 checkpoint 3: from the start of the dive to the finished film
+wait 1.0
+snap a01_start
+# crewmate
+near crew -520 330 60
+aim 1
+zoom 50
+track crew 8
+wait 1.5
+rec
+# a second, wider take of the same shot (to choose between in the cutting room)
+zoom 72
+wait 0.5
+rec
+snap a02_two_takes
+aim 0
+track none 0
+# enter before four shots: nothing happens
+enter
+wait 0.3
+stat4
+# headlamp: swim onto the wreck
+swim3 3300 -700 1000
+swim3 3300 -700 760
+wait 0.5
+snap b01_headlamp_found
+stat4
+# manta over the wreck
+clock 36
+tp 3300 -1900 700 90 20
+aim 1
+zoom 55
+track manta 8
+wait 3.0
+rec
+aim 0
+track none 0
+# jellyfish
+near jelly 620 300 0
+aim 1
+zoom 45
+track jelly 6
+wait 1.0
+rec
+snap c01_jelly
+aim 0
+track none 0
+# anglerfish, lamp from the wreck
+tp 3200 2390 250 0 0
+aim 1
+zoom 50
+track angler 6
+wait 1.5
+rec
+snap c02_angler
+aim 0
+track none 0
+stat4
+snap c03_four_shots
+# shoal
+near shoal 1300 0 0
+aim 1
+zoom 70
+key3 1 0 0 2.0
+rec 0
+key3 1 0 0 3.4
+wait 0.5
+snap c04_shoal
+aim 0
+# giant
+clock 62
+tp 0 200 500 160 60
+aim 1
+zoom 60
+track giant 8
+wait 2.0
+rec
+snap c05_all_shots
+aim 0
+track none 0
+stat4
+# the cutting room
+enter
+wait 1.5
+snap d01_edit
+nav 1 0
+wait 1.2
+snap d02_edit_next
+nav -1 0
+nav -1 0
+wait 0.5
+nav 0 1
+wait 1.0
+snap d03_edit_other_take
+stat4
+# the film
+enter
+wait 2.0
+snap e01_title
+wait 3.5
+snap e02_film_1
+wait 3.0
+snap e03_film_2
+wait 3.0
+snap e04_film_3
+wait 3.0
+snap e05_film_4
+wait 3.0
+snap e06_film_5
+wait 3.0
+snap e07_film_6
+wait 3.2
+snap e08_credits
+wait 6.0
+snap e09_rating
+stat4
+enter
+wait 1.0
+back
+wait 1.0
+snap f01_back_shooting
+stat4
+stat
+quit

@@ -12,6 +12,7 @@ class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class USpotLightComponent;
 class UStaticMeshComponent;
+struct FDCDoc;
 
 struct FDC3DRing
 {
@@ -57,6 +58,9 @@ struct FDC3D
 	float Pitch = -8.f;
 	float BoomFrac = 1.f;
 	float Fov = 72.f;
+	float ViewFov = 72.f; // what the lens shows: Fov, or the hand camera's zoom
+	float Dark = 0.f;     // 0..1: how far into the trench the lens is
+	FDCDoc* Doc = nullptr; // the documentary: creatures, takes, the film
 	FVector Pivot = FVector::ZeroVector;
 	FVector CamPos = FVector::ZeroVector;
 	TWeakObjectPtr<ACameraActor> Cam;

@@ -124,3 +124,14 @@ All three use rules the game already had (near things come through the cut, a th
 - `m1_swim` offscreen, alone: 29.9 ms average over 3037 frames (editor build, background priority, Mac in use).
 - 03:40: the hero is now a diver in a hard suit (new `ArtDrop/hero.glb`); imported with `DC_ART_ONLY=hero Tools/import_art.sh`. The robot model is no longer used.
 - Six creature models from the art drop imported (manta, anglerfish, jellyfish, turtle, eel, fish) for brief 07; not used yet.
+
+### 2026-11-14, ~06:30: the documentary: camera, takes, creatures, a new world (brief 07, checkpoints 1 and 2)
+
+- New `DCDoc.cpp`: camera mode (viewfinder, zoom, focus, depth of field), 3 second takes, a score of 0 to 3 stars with one named reason per take, six shots on a list.
+- The world is rebuilt in code from eight realistic scene models (boulder, arch, ledge, wreck, debris, vent, station, coral). The stylised props of the 2D game are no longer placed.
+- Six subjects driven by one clock (manta, shoal of 130 instanced fish, anglerfish, jellyfish, turtle, crewmate), so a take is stored as camera transforms plus a clock value and played back by drawing the world again.
+- The anglerfish sits on its own lighting channel in a roofed trench and is lit only by the headlamp, which is found on the wreck.
+- Lights: unitless inverse-square lights were far too weak at 10 m and more. The headlamp and the light shaft now use the plain falloff exponent.
+- Eight more creature models imported and set swimming or crawling as ambient life (30 creatures). Frame time went from about 30-35 ms to 48 ms with them; not acceptable yet.
+- Cutting room, title card, film playback and credits run in the `d3_film` script. The rating card was not reached in that run because the script outran the slow frames.
+- Rule for this repo from now on: scripts move files to `Saved/_trash/` and never delete.

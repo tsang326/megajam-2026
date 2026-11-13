@@ -3,6 +3,7 @@
 #include "MatchCutPlayerController.h"
 #include "MatchCutGameMode.h"
 #include "DC3D.h"
+#include "DCDoc.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "InputCoreTypes.h"
 
@@ -67,6 +68,26 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 		if (FMath::Abs(LookX) > 0.2f) { Rate.X += LookX; }
 		if (FMath::Abs(LookY) > 0.2f) { Rate.Y += LookY * (W->bInvertY ? -1.f : 1.f); }
 		W->LookRate = FVector2D(Rate.X * 120.0, Rate.Y * 85.0);
+		if (FDCDoc* D = W->Doc)
+		{
+			// brief 07: the hand camera. Mouse first; every action also has a key, for a trackpad.
+			D->bAimHeld = IsInputKeyDown(EKeys::RightMouseButton) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder);
+			if (WasInputKeyJustPressed(EKeys::C)) { D->bAimToggle = !D->bAimToggle; }
+			D->bRecordPressed |= WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::E) || WasInputKeyJustPressed(EKeys::Gamepad_RightShoulder);
+			D->bLampPressed |= WasInputKeyJustPressed(EKeys::F) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Top);
+			D->bEnterPressed |= WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
+			D->bBackPressed |= WasInputKeyJustPressed(EKeys::BackSpace) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Right);
+			if (WasInputKeyJustPressed(EKeys::MouseScrollUp)) { D->ZoomIn += 1.f; }
+			if (WasInputKeyJustPressed(EKeys::MouseScrollDown)) { D->ZoomIn -= 1.f; }
+			D->ZoomIn += (Down(EKeys::Two) + Down(EKeys::Gamepad_DPad_Up) - Down(EKeys::One) - Down(EKeys::Gamepad_DPad_Down)) * 7.f * DeltaTime;
+			if (D->State != EDCDocState::Shooting)
+			{
+				if (WasInputKeyJustPressed(EKeys::A) || WasInputKeyJustPressed(EKeys::Left) || WasInputKeyJustPressed(EKeys::Gamepad_DPad_Left)) { D->NavX = -1; }
+				if (WasInputKeyJustPressed(EKeys::D) || WasInputKeyJustPressed(EKeys::Right) || WasInputKeyJustPressed(EKeys::Gamepad_DPad_Right)) { D->NavX = 1; }
+				if (WasInputKeyJustPressed(EKeys::W) || WasInputKeyJustPressed(EKeys::Up)) { D->NavY = -1; }
+				if (WasInputKeyJustPressed(EKeys::S) || WasInputKeyJustPressed(EKeys::Down)) { D->NavY = 1; }
+			}
+		}
 		return;
 	}
 

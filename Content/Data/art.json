@@ -10,7 +10,7 @@
     126,
     190
    ],
-   "emissive": "wired into model.EmissiveTexture, switch on"
+   "emissive": "kept"
   }
  ],
  "plate": [
@@ -243,6 +243,230 @@
     89,
     190,
     62
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:boulder": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_boulder/scene_boulder/StaticMeshes/scene_boulder.scene_boulder",
+   "yaw": 0,
+   "file": "scene_boulder.glb",
+   "triangles": 7004,
+   "sizeCm": [
+    190,
+    159,
+    107
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:arch": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_arch/scene_arch/StaticMeshes/scene_arch.scene_arch",
+   "yaw": 0,
+   "file": "scene_arch.glb",
+   "triangles": 16716,
+   "sizeCm": [
+    190,
+    107,
+    97
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:ledge": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_ledge/scene_ledge/StaticMeshes/scene_ledge.scene_ledge",
+   "yaw": 0,
+   "file": "scene_ledge.glb",
+   "triangles": 8250,
+   "sizeCm": [
+    190,
+    124,
+    32
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:wreck": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_wreck/scene_wreck/StaticMeshes/scene_wreck.scene_wreck",
+   "yaw": 0,
+   "file": "scene_wreck.glb",
+   "triangles": 15290,
+   "sizeCm": [
+    112,
+    190,
+    109
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:debris": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_debris/scene_debris/StaticMeshes/scene_debris.scene_debris",
+   "yaw": 0,
+   "file": "scene_debris.glb",
+   "triangles": 14682,
+   "sizeCm": [
+    190,
+    182,
+    106
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:vent": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_vent/scene_vent/StaticMeshes/scene_vent.scene_vent",
+   "yaw": 0,
+   "file": "scene_vent.glb",
+   "triangles": 12594,
+   "sizeCm": [
+    110,
+    116,
+    191
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:station": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_station/scene_station/StaticMeshes/scene_station.scene_station",
+   "yaw": 0,
+   "file": "scene_station.glb",
+   "triangles": 13178,
+   "sizeCm": [
+    98,
+    190,
+    103
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:coral": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_coral/scene_coral/StaticMeshes/scene_coral.scene_coral",
+   "yaw": 0,
+   "file": "scene_coral.glb",
+   "triangles": 15980,
+   "sizeCm": [
+    143,
+    150,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:squid": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_squid/creature_squid/StaticMeshes/creature_squid.creature_squid",
+   "yaw": 0,
+   "file": "creature_squid.glb",
+   "triangles": 3828,
+   "sizeCm": [
+    137,
+    191,
+    93
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:nautilus": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_nautilus/creature_nautilus/StaticMeshes/creature_nautilus.creature_nautilus",
+   "yaw": 0,
+   "file": "creature_nautilus.glb",
+   "triangles": 7002,
+   "sizeCm": [
+    190,
+    144,
+    76
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:crab": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_crab/creature_crab/StaticMeshes/creature_crab.creature_crab",
+   "yaw": 0,
+   "file": "creature_crab.glb",
+   "triangles": 3524,
+   "sizeCm": [
+    190,
+    162,
+    41
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:lantern": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_lantern/creature_lantern/StaticMeshes/creature_lantern.creature_lantern",
+   "yaw": 0,
+   "file": "creature_lantern.glb",
+   "triangles": 6136,
+   "sizeCm": [
+    66,
+    190,
+    84
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:isopod": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_isopod/creature_isopod/StaticMeshes/creature_isopod.creature_isopod",
+   "yaw": 0,
+   "file": "creature_isopod.glb",
+   "triangles": 7742,
+   "sizeCm": [
+    150,
+    190,
+    53
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:whale": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_whale/creature_whale/StaticMeshes/creature_whale.creature_whale",
+   "yaw": 0,
+   "file": "creature_whale.glb",
+   "triangles": 2214,
+   "sizeCm": [
+    113,
+    190,
+    48
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:shark": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_shark/creature_shark/StaticMeshes/creature_shark.creature_shark",
+   "yaw": 0,
+   "file": "creature_shark.glb",
+   "triangles": 1912,
+   "sizeCm": [
+    83,
+    190,
+    59
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:vampsquid": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_vampsquid/creature_vampsquid/StaticMeshes/creature_vampsquid.creature_vampsquid",
+   "yaw": 0,
+   "file": "creature_vampsquid.glb",
+   "triangles": 3780,
+   "sizeCm": [
+    189,
+    183,
+    54
    ],
    "emissive": "none"
   }

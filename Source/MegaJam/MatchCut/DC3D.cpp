@@ -5,6 +5,7 @@
 //   collision: engine sweeps against the models themselves (their triangles), sliding along what is hit
 
 #include "DC3D.h"
+#include "DCDoc.h"
 #include "MatchCutGameMode.h"
 #include "DCAudio.h"
 
@@ -35,7 +36,7 @@ namespace DC3
 	const float BoomLen = 440.f;
 	const float BoomUp = 70.f;
 	const float CamRadius = 26.f;
-	const float AreaRadius = 5400.f; // a current turns Unit 0 back past this
+	const float AreaRadius = 5500.f; // a current turns Unit 0 back past this
 	const float Ceiling = 2900.f;
 	const double FleckPeriod = 1600.0;
 	const ECollisionChannel Channel = ECC_Visibility;
@@ -187,9 +188,11 @@ void FDC3D::SpawnHero()
 	GM->HeroRim = Rim;
 
 	// the headlamp: always on in the 3D game, it shows where Unit 0 is heading
-	USpotLightComponent* L = NewObject<USpotLightComponent>(A);
+	// on an actor of its own: when the diver is out of the picture (camera up) the light must stay
+	AActor* LampActor = GM->SpawnGroup(Pos);
+	USpotLightComponent* L = NewObject<USpotLightComponent>(LampActor);
 	L->SetMobility(EComponentMobility::Movable);
-	L->SetupAttachment(A->GetRootComponent());
+	L->SetupAttachment(LampActor->GetRootComponent());
 	L->RegisterComponent();
 	L->SetRelativeLocation(FVector(62.0, 0.0, 30.0)); // in front of the body: a lamp inside the mesh lights it white from within
 	L->SetIntensityUnits(ELightUnits::Unitless);
@@ -239,63 +242,98 @@ void FDC3D::SpawnFlecks()
 
 void FDC3D::BuildArea()
 {
+	float ShaftPower = 14.f;
+	FParse::Value(FCommandLine::Get(), TEXT("-MCShaft="), ShaftPower);
 	const FLinearColor Sand(0.20f, 0.19f, 0.16f);
 	Block(FVector(0.0, 0.0, -150.0), FRotator::ZeroRotator, FVector(22000.0, 22000.0, 300.0), Sand);
+	const TCHAR* Boulder = TEXT("scene:boulder");
+	const TCHAR* Ledge = TEXT("scene:ledge");
+	const TCHAR* Coral = TEXT("scene:coral");
 
-	// the arch straight ahead of the start: two pillars and a slab across them
-	Place(TEXT("solid:rock"), 1, FVector(1500.0, -440.0, -60.0), FRotator(0.f, 20.f, 0.f), 5.2f);
-	Place(TEXT("solid:rock"), 1, FVector(1500.0, 440.0, -60.0), FRotator(0.f, 200.f, 0.f), 5.6f);
-	Place(TEXT("solid:rock"), 2, FVector(1500.0, 0.0, 880.0), FRotator(0.f, 90.f, 0.f), 6.4f);
-	AddRing(FVector(1500.0, 0.0, 470.0), 0.f, 0.f);
+	// the arch straight ahead of the start
+	Place(TEXT("scene:arch"), 0, FVector(1500.0, 0.0, -40.0), FRotator(0.f, 90.f, 0.f), 8.f);
+	Place(Coral, 0, FVector(1250.0, 820.0, -10.0), FRotator(0.f, 40.f, 0.f), 1.3f);
 
 	// the wreck, with what fell off it
-	Place(TEXT("solid:hull"), 0, FVector(3300.0, -700.0, -80.0), FRotator(0.f, 35.f, 0.f), 8.f);
-	Place(TEXT("solid:metal"), 0, FVector(2500.0, -1500.0, -30.0), FRotator(0.f, 70.f, 0.f), 3.0f);
-	Place(TEXT("solid:metal"), 0, FVector(3900.0, 500.0, -40.0), FRotator(0.f, 160.f, 0.f), 2.2f);
-	Place(TEXT("plate"), 0, FVector(2550.0, -350.0, 0.0), FRotator(0.f, 25.f, 0.f), 1.6f);
-	Place(TEXT("weight"), 0, FVector(2900.0, 300.0, 0.0), FRotator(0.f, 110.f, 0.f), 1.4f);
-	Place(TEXT("socket:DOCK"), 0, FVector(2300.0, 620.0, 0.0), FRotator(0.f, -60.f, 0.f), 2.4f);
-	Place(TEXT("cell"), 0, FVector(2300.0, 620.0, 150.0), FRotator(0.f, -60.f, 0.f), 0.8f, false);
-	Place(TEXT("crew"), 0, FVector(2620.0, 880.0, 0.0), FRotator(0.f, 200.f, 0.f), 0.75f);
-	Glow(FVector(2300.0, 620.0, 330.0), FLinearColor(0.2f, 1.f, 0.85f), 5000.f, 900.f);
-	AddRing(FVector(3300.0, -700.0, 1420.0), 35.f, 0.f);
+	Place(TEXT("scene:wreck"), 0, FVector(3300.0, -700.0, -60.0), FRotator(0.f, 35.f, 0.f), 8.f);
+	Place(TEXT("scene:debris"), 0, FVector(2500.0, -1500.0, -30.0), FRotator(0.f, 70.f, 0.f), 3.0f);
+	Place(TEXT("scene:debris"), 0, FVector(3950.0, 450.0, -40.0), FRotator(0.f, 160.f, 0.f), 2.4f);
+
+	// the station, where the dive starts and the crewmate waits (the crewmate belongs to the documentary, DCDoc.cpp)
+	Place(TEXT("scene:station"), 0, FVector(1150.0, -1150.0, 0.0), FRotator(0.f, 30.f, 0.f), 6.f);
+	Glow(FVector(800.0, -700.0, 380.0), FLinearColor(1.f, 0.82f, 0.55f), 5000.f, 1100.f);
 
 	// the vent field: warm light low in the water
-	const FVector Vents[] = { FVector(900.0, -2300.0, 0.0), FVector(1500.0, -2700.0, 0.0), FVector(1750.0, -2050.0, 0.0), FVector(700.0, -3000.0, 0.0) };
-	const float VentScale[] = { 2.8f, 2.2f, 1.8f, 3.2f };
+	const FVector Vents[] = { FVector(900.0, -2700.0, 0.0), FVector(1500.0, -3100.0, 0.0), FVector(1750.0, -2500.0, 0.0), FVector(700.0, -3400.0, 0.0) };
+	const float VentScale[] = { 2.6f, 2.0f, 1.6f, 3.0f };
 	for (int32 i = 0; i < 4; ++i)
 	{
-		Place(TEXT("socket:VENT"), 0, Vents[i] - FVector(0.0, 0.0, 20.0), FRotator(0.f, 75.f * i, 0.f), VentScale[i]);
-		Glow(Vents[i] + FVector(0.0, 0.0, 150.0 * VentScale[i]), FLinearColor(1.f, 0.45f, 0.12f), 4200.f, 1100.f);
+		Place(TEXT("scene:vent"), 0, Vents[i] - FVector(0.0, 0.0, 20.0), FRotator(0.f, 75.f * i, 0.f), VentScale[i]);
+		Glow(Vents[i] + FVector(120.0, 0.0, 120.0 * VentScale[i]), FLinearColor(1.f, 0.45f, 0.12f), 4200.f, 1100.f);
 	}
-	AddRing(FVector(1250.0, -2450.0, 620.0), 90.f, 0.f);
 
-	// the gully: boulders on both sides and slabs over it. The tight spot for the camera.
-	for (int32 i = 0; i < 4; ++i)
+	// the trench: boulders on both sides, ledges over it, a plug of rock at the far end. The sun does not reach in.
+	for (int32 i = 0; i < 6; ++i)
 	{
 		const double X = 500.0 + 760.0 * i;
-		Place(TEXT("solid:rock"), 0, FVector(X, 1700.0 - 40.0 * (i % 2), -90.0), FRotator(0.f, 90.f * i, 0.f), 5.6f);
-		Place(TEXT("solid:rock"), 0, FVector(X + 120.0, 3080.0 + 50.0 * (i % 2), -90.0), FRotator(0.f, 45.f + 90.f * i, 0.f), 5.8f);
+		Place(Boulder, 0, FVector(X, 1640.0 - 40.0 * (i % 2), -90.0), FRotator(0.f, 180.f * i, 0.f), 6.4f);
+		Place(Boulder, 0, FVector(X + 120.0, 3140.0 + 50.0 * (i % 2), -90.0), FRotator(0.f, 40.f + 180.f * i, 0.f), 6.6f);
 	}
-	for (int32 i = 0; i < 3; ++i)
+	for (int32 i = 0; i < 5; ++i)
 	{
-		Place(TEXT("solid:rock"), 2, FVector(760.0 + 900.0 * i, 2390.0, 560.0 + 30.0 * (i % 2)), FRotator(0.f, 80.f + 15.f * i, 0.f), 7.4f);
+		Place(Ledge, 0, FVector(760.0 + 900.0 * i, 2390.0, 600.0 + 30.0 * (i % 2)), FRotator(0.f, 85.f + 6.f * (i % 3), 0.f), 9.f);
 	}
-	AddRing(FVector(1650.0, 2390.0, 300.0), 0.f, 0.f);
-	Glow(FVector(1650.0, 2390.0, 380.0), FLinearColor(0.25f, 0.9f, 1.f), 2600.f, 900.f);
+	Place(Boulder, 0, FVector(5000.0, 2390.0, -90.0), FRotator(0.f, 30.f, 0.f), 8.f);
+	Place(Coral, 0, FVector(350.0, 2390.0, -10.0), FRotator(0.f, 10.f, 0.f), 1.2f);
 
-	// a spire to climb, with a ring high up
-	Place(TEXT("solid:rock"), 1, FVector(-1500.0, 900.0, -100.0), FRotator(0.f, 40.f, 0.f), 11.f);
-	Place(TEXT("solid:rock"), 0, FVector(-1750.0, 520.0, -80.0), FRotator(0.f, 10.f, 0.f), 4.f);
-	AddRing(FVector(-900.0, 420.0, 1750.0), 150.f, 20.f);
-	AddRing(FVector(-1900.0, -1300.0, 260.0), 200.f, 0.f);
+	// the reef, where the shoal lives: shelves of rock stepping up, coral on them
+	Place(Ledge, 0, FVector(-3600.0, 2700.0, -40.0), FRotator(0.f, 20.f, 0.f), 5.5f);
+	Place(Ledge, 0, FVector(-3950.0, 2400.0, 110.0), FRotator(0.f, 75.f, 0.f), 4.2f);
+	Place(Boulder, 0, FVector(-4150.0, 3000.0, -60.0), FRotator(0.f, 130.f, 0.f), 4.6f);
+	Place(Coral, 0, FVector(-3550.0, 2750.0, 120.0), FRotator(0.f, 0.f, 0.f), 1.8f);
+	Place(Coral, 0, FVector(-3900.0, 2250.0, 230.0), FRotator(0.f, 110.f, 0.f), 1.4f);
+	Place(Coral, 0, FVector(-2850.0, 3200.0, -10.0), FRotator(0.f, 200.f, 0.f), 2.2f);
+	Place(Coral, 0, FVector(-2650.0, 1750.0, -10.0), FRotator(0.f, 290.f, 0.f), 1.6f);
+	Place(Boulder, 0, FVector(-2400.0, 3300.0, -50.0), FRotator(0.f, 250.f, 0.f), 2.4f);
 
-	// loose boulders, and a rim of big rock so the area reads as a bowl in the sea floor
-	const FVector Keep[] = { FVector(0.0, 0.0, 700.0), FVector(1500.0, 0.0, 900.0), FVector(3300.0, -700.0, 1500.0), FVector(1250.0, -2500.0, 1300.0),
-		FVector(1650.0, 2390.0, 1900.0), FVector(-1500.0, 800.0, 1100.0), FVector(-1900.0, -1300.0, 500.0), FVector(2500.0, 600.0, 800.0) };
+	// the clearing with the shaft of light: a ring of low rock and coral round an open floor
+	for (int32 i = 0; i < 7; ++i)
+	{
+		const float Ang = 2.f * PI * i / 7.f + 0.3f;
+		Place(i % 3 == 1 ? Coral : i % 3 == 2 ? Ledge : Boulder, 0, FVector(-2500.0 + 950.0 * FMath::Cos(Ang), -2700.0 + 950.0 * FMath::Sin(Ang), -30.0),
+			FRotator(0.f, 51.f * i, 0.f), i % 3 == 1 ? 1.5f : 2.4f);
+	}
+	{
+		AActor* A = GM->SpawnGroup(FVector(-2500.0, -2700.0, 2600.0));
+		USpotLightComponent* L = NewObject<USpotLightComponent>(A);
+		L->SetMobility(EComponentMobility::Movable);
+		L->SetupAttachment(A->GetRootComponent());
+		L->RegisterComponent();
+		L->SetWorldRotation(FRotator(-90.f, 0.f, 0.f));
+		L->SetIntensityUnits(ELightUnits::Unitless);
+		L->bUseInverseSquaredFalloff = false; // a shaft of sun does not thin out on the way down
+		L->SetLightFalloffExponent(1.f);
+		L->SetIntensity(ShaftPower);
+		L->SetLightColor(FLinearColor(0.62f, 0.95f, 1.f));
+		L->SetInnerConeAngle(7.f);
+		L->SetOuterConeAngle(11.f);
+		L->SetAttenuationRadius(3200.f);
+		L->SetCastShadows(false);
+		L->SetVolumetricScatteringIntensity(6.f);
+		L->MarkRenderStateDirty();
+	}
+
+	// a stack of rock to swim round and over
+	Place(Boulder, 0, FVector(-1500.0, 900.0, -100.0), FRotator(0.f, 40.f, 0.f), 7.f);
+	Place(Ledge, 0, FVector(-1450.0, 850.0, 600.0), FRotator(0.f, 10.f, 0.f), 5.f);
+	Place(Coral, 0, FVector(-1950.0, 450.0, -10.0), FRotator(0.f, 10.f, 0.f), 2.f);
+
+	// loose rock and coral, and a rim of big rock so the site reads as a bowl in the sea floor
+	const FVector Keep[] = { FVector(0.0, 0.0, 700.0), FVector(1500.0, 0.0, 1000.0), FVector(3300.0, -700.0, 1500.0), FVector(1250.0, -2900.0, 1300.0),
+		FVector(-1500.0, 800.0, 1100.0), FVector(1050.0, -900.0, 1000.0), FVector(2600.0, 2390.0, 2900.0), FVector(-3400.0, 2500.0, 1300.0), FVector(-2500.0, -2700.0, 1300.0) };
 	FRandomStream Rand(9041);
 	int32 Loose = 0;
-	for (int32 Try = 0; Try < 400 && Loose < 26; ++Try)
+	for (int32 Try = 0; Try < 400 && Loose < 24; ++Try)
 	{
 		const float Ang = Rand.FRandRange(0.f, 2.f * PI);
 		const float Rad = Rand.FRandRange(900.f, 5200.f);
@@ -309,17 +347,91 @@ void FDC3D::BuildArea()
 		{
 			continue;
 		}
-		const int32 V = Rand.RandRange(0, 2);
-		const float S = V == 1 ? Rand.FRandRange(1.6f, 4.2f) : Rand.FRandRange(1.2f, 3.4f);
-		Place(TEXT("solid:rock"), V, At - FVector(0.0, 0.0, 12.0 * S), FRotator(0.f, Rand.FRandRange(0.f, 360.f), 0.f), S);
+		const int32 V = Rand.RandRange(0, 3);
+		const float S = V == 1 ? Rand.FRandRange(0.8f, 1.8f) : Rand.FRandRange(1.2f, 3.4f);
+		Place(V == 1 ? Coral : V == 2 ? Ledge : Boulder, 0, At - FVector(0.0, 0.0, 12.0 * S), FRotator(0.f, Rand.FRandRange(0.f, 360.f), 0.f), S);
 		++Loose;
 	}
 	for (int32 i = 0; i < 16; ++i)
 	{
 		const float Ang = 2.f * PI * i / 16.f + 0.11f * FMath::Sin(i * 2.3f);
-		const float Rad = 6500.f + 350.f * FMath::Sin(i * 1.7f);
+		const float Rad = 7300.f + 350.f * FMath::Sin(i * 1.7f);
 		const float S = 15.f + 4.f * FMath::Sin(i * 3.1f);
-		Place(TEXT("solid:rock"), i % 3 == 2 ? 2 : 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), -260.0), FRotator(0.f, 67.f * i, 0.f), i % 3 == 2 ? S * 1.4f : S);
+		Place(i % 3 == 2 ? Ledge : Boulder, 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), -260.0), FRotator(0.f, 67.f * i, 0.f), i % 3 == 2 ? S * 1.4f : S);
+	}
+
+	// set dressing from the art drop: each piece joins in when its model is there. It sits on whatever lies under it.
+	UWorld* World = GM->GetWorld();
+	auto Scatter = [this, World, &Keep](const TCHAR* Id, int32 Count, float SMin, float SMax, const FVector& Centre, float Spread, bool bCollide, bool bKeepClear, int32 Seed)
+	{
+		if (!GM->Art.Contains(Id))
+		{
+			return;
+		}
+		FRandomStream R(Seed);
+		int32 Done = 0;
+		for (int32 Try = 0; Try < Count * 12 && Done < Count; ++Try)
+		{
+			const float Ang = R.FRandRange(0.f, 2.f * PI);
+			const float Rad = Spread * FMath::Sqrt(R.FRand());
+			FVector At = Centre + FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), 0.0);
+			if (FVector::Dist2D(At, FVector::ZeroVector) < 500.0 || (At.Y > 1900.0 && At.Y < 2900.0 && At.X > 200.0 && At.X < 4400.0 && bCollide))
+			{
+				continue; // not on the start, nothing solid in the trench
+			}
+			bool bFree = true;
+			if (bKeepClear)
+			{
+				for (const FVector& K : Keep)
+				{
+					bFree &= FVector::Dist2D(At, K) > K.Z * 0.8;
+				}
+			}
+			if (!bFree)
+			{
+				continue;
+			}
+			FHitResult Hit;
+			At.Z = World->LineTraceSingleByChannel(Hit, At + FVector(0.0, 0.0, 2400.0), At, DC3::Channel, DC3::Query()) ? Hit.Location.Z - 8.0 : -6.0;
+			if (At.Z > 900.0)
+			{
+				continue; // not on top of the big rock
+			}
+			Place(Id, 0, At, FRotator(0.f, R.FRandRange(0.f, 360.f), 0.f), R.FRandRange(SMin, SMax), bCollide);
+			++Done;
+		}
+	};
+	const FVector Mid(0.0, 0.0, 0.0);
+	const FVector ReefC(-3300.0, 2400.0, 0.0), ShaftC(-2500.0, -2700.0, 0.0), VentC(1200.0, -2900.0, 0.0), WreckC(3300.0, -700.0, 0.0), StationC(1150.0, -1150.0, 0.0);
+	Scatter(TEXT("scene:kelp"), 10, 2.2f, 4.f, ReefC, 1500.f, false, false, 11);
+	Scatter(TEXT("scene:kelp"), 8, 2.f, 3.4f, Mid, 4800.f, false, true, 12);
+	Scatter(TEXT("scene:sponge"), 8, 0.6f, 1.3f, ReefC, 1400.f, false, false, 13);
+	Scatter(TEXT("scene:sponge"), 6, 0.6f, 1.2f, Mid, 4500.f, false, false, 14);
+	Scatter(TEXT("scene:anemone"), 8, 0.35f, 0.7f, ReefC, 1300.f, false, false, 15);
+	Scatter(TEXT("scene:anemone"), 8, 0.35f, 0.7f, ShaftC, 1200.f, false, false, 16);
+	Scatter(TEXT("scene:clam"), 6, 0.4f, 0.8f, Mid, 4200.f, false, false, 17);
+	Scatter(TEXT("scene:tubeworms"), 8, 0.7f, 1.4f, VentC, 900.f, false, false, 18);
+	Scatter(TEXT("scene:chimney"), 3, 2.f, 3.2f, VentC + FVector(500.0, -300.0, 0.0), 900.f, true, false, 19);
+	Scatter(TEXT("scene:spire"), 3, 6.f, 10.f, FVector(-800.0, 3800.0, 0.0), 1500.f, true, true, 20);
+	Scatter(TEXT("scene:cliff"), 4, 10.f, 14.f, FVector(0.0, -5600.0, 0.0), 2600.f, true, true, 21);
+	Scatter(TEXT("scene:whalefall"), 1, 6.f, 6.f, FVector(-700.0, -1700.0, 0.0), 300.f, true, true, 22);
+	Scatter(TEXT("scene:anchor"), 1, 1.8f, 1.8f, WreckC + FVector(-900.0, 900.0, 0.0), 200.f, true, false, 23);
+	Scatter(TEXT("scene:container"), 2, 2.6f, 3.2f, WreckC + FVector(600.0, -1300.0, 0.0), 500.f, true, false, 24);
+	Scatter(TEXT("scene:bell"), 1, 2.2f, 2.2f, StationC + FVector(-900.0, -500.0, 0.0), 150.f, true, false, 25);
+	Scatter(TEXT("scene:module"), 1, 5.f, 5.f, StationC + FVector(300.0, -1000.0, 0.0), 150.f, true, false, 26);
+	Scatter(TEXT("scene:pipe"), 2, 3.f, 4.f, StationC + FVector(900.0, -300.0, 0.0), 500.f, true, false, 27);
+	Scatter(TEXT("scene:sonar"), 1, 1.4f, 1.4f, StationC + FVector(-500.0, 700.0, 0.0), 100.f, true, false, 28);
+	Scatter(TEXT("scene:sub"), 1, 4.f, 4.f, FVector(-2300.0, -700.0, 0.0), 300.f, true, true, 29);
+	Scatter(TEXT("scene:ruins"), 1, 7.f, 7.f, FVector(-400.0, 4000.0, 0.0), 300.f, true, true, 30);
+	if (GM->Art.Contains(TEXT("scene:buoy")))
+	{
+		// amber beacons: one by each place the shot list sends you
+		const FVector Buoys[] = { FVector(500.0, 1500.0, 0.0), FVector(-2000.0, -1900.0, 0.0), FVector(-2300.0, 1700.0, 0.0) };
+		for (const FVector& At : Buoys)
+		{
+			Place(TEXT("scene:buoy"), 0, At, FRotator::ZeroRotator, 1.4f);
+			Glow(At + FVector(0.0, 0.0, 300.0), FLinearColor(1.f, 0.6f, 0.15f), 5000.f, 1000.f);
+		}
 	}
 }
 
@@ -424,14 +536,26 @@ void FDC3D::Start()
 	}
 
 	FParse::Value(FCommandLine::Get(), TEXT("-MCSens="), Sens);
+	Doc = new FDCDoc(GM, this);
+	Doc->Start();
 	Pivot = Pos + FVector(0.0, 0.0, 45.0);
 	TickCamera(0.f);
 
-	// does the hero's sweep see the models? One line trace straight down onto the arch's slab says so in the log.
-	FHitResult Hit;
-	const bool bHit = World->LineTraceSingleByChannel(Hit, FVector(1500.0, 0.0, 2500.0), FVector(1500.0, 0.0, 500.0), DC3::Channel, DC3::Query());
-	UE_LOG(LogMatchCut, Display, TEXT("3D started: %d rings, %d paints, collision probe on the arch: %s at z=%.0f"), Rings.Num(), GM->Paints.Num(),
-		bHit ? TEXT("HIT") : TEXT("NO HIT"), bHit ? Hit.Location.Z : 0.0);
+	// do the sweeps see the models, and are the places the game needs free? The log says so.
+	auto Free = [World](const TCHAR* Name, const FVector& A, const FVector& B, float R)
+	{
+		FHitResult Hit;
+		const bool bHit = World->SweepSingleByChannel(Hit, A, B, FQuat::Identity, DC3::Channel, FCollisionShape::MakeSphere(R), DC3::Query());
+		UE_LOG(LogMatchCut, Display, TEXT("3D PROBE %s: %s%s"), Name, bHit ? TEXT("BLOCKED") : TEXT("free"), bHit ? *FString::Printf(TEXT(" at (%.0f,%.0f,%.0f) by %s"), Hit.Location.X, Hit.Location.Y, Hit.Location.Z, *GetNameSafe(Hit.GetActor())) : TEXT(""));
+	};
+	Free(TEXT("arch top (wants BLOCKED)"), FVector(1500.0, 0.0, 2500.0), FVector(1500.0, 0.0, 20.0), 5.f);
+	Free(TEXT("through the arch"), FVector(700.0, 0.0, 260.0), FVector(2300.0, 0.0, 260.0), 46.f);
+	Free(TEXT("trench, mouth to anglerfish"), FVector(300.0, 2390.0, 250.0), FVector(4050.0, 2390.0, 250.0), 46.f);
+	Free(TEXT("trench roof at x=2600 (wants BLOCKED)"), FVector(2600.0, 2390.0, 2000.0), FVector(2600.0, 2390.0, 300.0), 5.f);
+	Free(TEXT("crewmate"), FVector(700.0, -560.0, 600.0), FVector(700.0, -560.0, 100.0), 46.f);
+	Free(TEXT("shaft"), FVector(-2500.0, -2700.0, 1500.0), FVector(-2500.0, -2700.0, 200.0), 150.f);
+	Free(TEXT("shoal"), FVector(-2900.0, 2250.0, 1500.0), FVector(-2900.0, 2250.0, 450.0), 400.f);
+	UE_LOG(LogMatchCut, Display, TEXT("3D started: %d paints"), GM->Paints.Num());
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -497,15 +621,52 @@ void FDC3D::TickCamera(float Dt)
 	CamPos = Pivot + Boom * BoomFrac;
 	CamPos.Z = FMath::Max(CamPos.Z, (double)DC3::CamRadius);
 	Fov = FMath::FInterpTo(Fov, 72.f + 9.f * Fast, Dt, 3.f);
+	ViewFov = Fov;
+	FRotator Rot = View;
+	float FocusAt = 0.f; // 0: everything sharp
+	bool bHide = FVector::Dist(CamPos, Pos) < 95.0; // too close to see anything but the diver's back
+	if (Doc)
+	{
+		FVector P;
+		FRotator R;
+		float F2 = 0.f;
+		if (Doc->ViewOverride(P, R, F2))
+		{
+			// a take is playing: the lens is where it was then
+			CamPos = P;
+			Rot = R;
+			ViewFov = F2;
+			FocusAt = Doc->Focus;
+			bHide = true;
+		}
+		else if (Doc->AimBlend > 0.001f)
+		{
+			// the camera is up: the picture is the one the diver's own camera takes, held in front of the chest
+			FVector Chest = Pos + FVector(0.0, 0.0, 32.0) + F * 58.0;
+			if (GM->GetWorld()->SweepSingleByChannel(Hit, Pos, Chest, FQuat::Identity, DC3::Channel, FCollisionShape::MakeSphere(12.f), DC3::Query()))
+			{
+				Chest = Pos + (Chest - Pos) * FMath::Max(0.0, Hit.Time - 0.05);
+			}
+			CamPos = FMath::Lerp(CamPos, Chest, (double)Doc->AimBlend);
+			ViewFov = FMath::Lerp(Fov, Doc->Zoom, Doc->AimBlend);
+			bHide |= Doc->AimBlend > 0.35f;
+			FocusAt = Doc->AimBlend > 0.6f ? Doc->Focus : 0.f;
+		}
+	}
 	if (ACameraActor* C = Cam.Get())
 	{
-		C->SetActorLocationAndRotation(CamPos, View);
-		C->GetCameraComponent()->SetFieldOfView(Fov);
+		C->SetActorLocationAndRotation(CamPos, Rot);
+		C->GetCameraComponent()->SetFieldOfView(ViewFov);
+		// a film lens: what it is not focused on goes soft, more so the longer the lens
+		FPostProcessSettings& PP = C->GetCameraComponent()->PostProcessSettings;
+		PP.bOverride_DepthOfFieldFocalDistance = PP.bOverride_DepthOfFieldFstop = PP.bOverride_DepthOfFieldSensorWidth = true;
+		PP.DepthOfFieldFocalDistance = FocusAt;
+		PP.DepthOfFieldFstop = 2.2f;
+		PP.DepthOfFieldSensorWidth = 30.f;
 	}
-	// too close to see anything but the robot's back: it steps out of the picture
 	if (AActor* A = GM->Hero.Actor.Get())
 	{
-		A->SetActorHiddenInGame(FVector::Dist(CamPos, Pos) < 95.0);
+		A->SetActorHiddenInGame(bHide);
 	}
 }
 
@@ -595,6 +756,23 @@ void FDC3D::Tick(float Dt)
 			}
 		}
 	}
+	const bool bShoot = !Doc || Doc->State == EDCDocState::Shooting;
+	if (!bShoot)
+	{
+		In = FVector::ZeroVector;
+		Turn = FVector2D::ZeroVector;
+		Vel = FVector::ZeroVector;
+	}
+	const float Aim = Doc ? Doc->AimBlend : 0.f;
+	if (Doc && Doc->TrackLeft > 0.f && Doc->TrackSub != INDEX_NONE)
+	{
+		// test script: the lens follows a subject
+		Doc->TrackLeft -= Dt;
+		const FRotator To = (Doc->SubPos[Doc->TrackSub] - CamPos).Rotation();
+		Yaw = DC3::TurnTo(Yaw, To.Yaw, 9.f, Dt);
+		Pitch = DC3::TurnTo(Pitch, FMath::Clamp(To.Pitch, -80.f, 80.f), 9.f, Dt);
+	}
+	Turn *= FMath::Lerp(1.f, ViewFov / 72.f, Aim); // a long lens turns slowly
 	Yaw = FRotator::NormalizeAxis(Yaw + Turn.X);
 	Pitch = FMath::Clamp(Pitch + Turn.Y, -82.f, 82.f);
 
@@ -611,7 +789,7 @@ void FDC3D::Tick(float Dt)
 	IdleTime = bThrust || !Turn.IsNearlyZero() ? 0.f : IdleTime + Dt;
 	if (bThrust)
 	{
-		Vel += (Wish * (bFast ? DC3::Boost : DC3::Swim) - Vel) * (1.0 - FMath::Exp(-DC3::Push * Dt));
+		Vel += (Wish * ((bFast ? DC3::Boost : DC3::Swim) * FMath::Lerp(1.f, 0.5f, Aim)) - Vel) * (1.0 - FMath::Exp(-DC3::Push * Dt)); // slower with the camera up
 	}
 	else
 	{
@@ -668,7 +846,32 @@ void FDC3D::Tick(float Dt)
 		A->SetActorLocationAndRotation(Pos + FVector(0.0, 0.0, Bob), FRotator(BodyPitch, BodyYaw, BodyRoll));
 	}
 
+	if (Doc)
+	{
+		Doc->Tick(Dt);
+	}
 	TickCamera(Dt);
+	{
+		// the trench: the roof keeps the sun out, and the lens' eye opens no further. The deeper in, the less of the fill
+		// light and of the water's own glow is left.
+		const bool bIn = CamPos.Y > 1850.0 && CamPos.Y < 2950.0 && CamPos.Z < 620.0;
+		const float Want = bIn ? FMath::Clamp(((float)CamPos.X - 1000.f) / 900.f, 0.f, 1.f) : 0.f;
+		Dark = Dt > 0.f ? FMath::FInterpTo(Dark, Want, Dt, 2.5f) : Want;
+		const float K = 1.f - 0.94f * Dark;
+		if (GM->KeyLight)
+		{
+			GM->KeyLight->GetLightComponent()->SetIntensity(GM->Look.KeyIntensity * (1.f - 0.8f * Dark));
+		}
+		if (GM->FillLight)
+		{
+			GM->FillLight->GetLightComponent()->SetIntensity(GM->Look.FillIntensity * K);
+		}
+		if (GM->Fog)
+		{
+			GM->Fog->GetComponent()->SetFogInscatteringColor(GM->Look.FogColor * K);
+			GM->Fog->GetComponent()->SetVolumetricFogEmissive(GM->Look.FogColor * (GM->Look.VolEmissive * K));
+		}
+	}
 	if (UPointLightComponent* Rim = GM->HeroRim.Get())
 	{
 		// between the camera and Unit 0, a little above: never inside the body (the model is double-sided, a light inside turns it white)
@@ -723,11 +926,16 @@ int32 FDC3D::RunLine(const TArray<FString>& T)
 {
 	const FString& Cmd = T[0];
 	auto Num = [&T](int32 i) { return T.IsValidIndex(i) ? FCString::Atof(*T[i]) : 0.f; };
+	if (const int32 Done = Doc ? Doc->RunLine(T) : 0)
+	{
+		return Done;
+	}
 	if (Cmd == TEXT("tp"))
 	{
 		// tp X Y Z [YAW PITCH]
 		Pos = FVector(Num(1), Num(2), Num(3));
 		Vel = FVector::ZeroVector;
+		ScriptMoveLeft = 0.f; // a long frame can leave a little of the last key3
 		if (T.Num() > 4)
 		{
 			Yaw = Num(4);
