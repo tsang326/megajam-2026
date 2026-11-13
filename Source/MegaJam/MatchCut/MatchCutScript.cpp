@@ -3,6 +3,7 @@
 // One command per line (# starts a comment). Shot space: x right, y up, z distance from the camera, in cm.
 //   skipfilm              leave the opening film now and start playing in shot 0
 //   filmtime T            jump the opening film to T seconds
+//   card                  show the design-file card before the film again
 //   goto N                play shot N from its start point
 //   tp X Y Z              put the robot at a shot-space point
 //   tpn NX NY [Z]         put the robot at a screen position (x, y in [-1,1]), keeping or setting its depth
@@ -10,7 +11,7 @@
 //   swimn NX NY [Z]       the same, to a screen position
 //   move X Y Z SECONDS    hold a direction (x right, y up, z away)
 //   use | cut | lamp 1|0 | retake | restart | givepart | opengate | anykey
-//   wait S | waitstate NAME
+//   wait S | waitstate NAME | waitok (until C would work)
 //   look A|B|C | ghost 0|1 | snap NAME | stat | quit
 
 #include "MatchCutGameMode.h"
@@ -56,7 +57,7 @@ void AMatchCutGameMode::TickScript(float DeltaSeconds)
 	{
 		const FVector To = ScriptSwimTarget - HeroS;
 		ScriptSwimTime += DeltaSeconds;
-		if (To.Size() < 22.0 || ScriptSwimTime > 14.f || State != EDCState::Playing)
+		if ((To.Size() < 22.0 && VelS.Size() < 90.0) || ScriptSwimTime > 14.f || State != EDCState::Playing)
 		{
 			UE_LOG(LogMatchCut, Display, TEXT("SCRIPT swim ended at (%.0f,%.0f,%.0f) after %.2fs, wanted (%.0f,%.0f,%.0f)%s"), HeroS.X, HeroS.Y, HeroS.Z, ScriptSwimTime,
 				ScriptSwimTarget.X, ScriptSwimTarget.Y, ScriptSwimTarget.Z, To.Size() < 22.0 ? TEXT("") : TEXT("  NOT REACHED"));
@@ -129,6 +130,10 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 	{
 		FilmTime = Num(1);
 	}
+	else if (Cmd == TEXT("card"))
+	{
+		StateTime = 0.f; // show the design-file card again from its start
+	}
 	else if (Cmd == TEXT("anykey"))
 	{
 		PressAnyKey();
@@ -168,6 +173,19 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 	else if (Cmd == TEXT("waitstate"))
 	{
 		ScriptWaitState = T.IsValidIndex(1) ? T[1] : FString();
+	}
+	else if (Cmd == TEXT("waitok"))
+	{
+		// wait until C would work (a mark that comes and goes), at most 12 s
+		const bool bWant = !T.IsValidIndex(1) || Num(1) > 0.f; // "waitok 0" waits until C would NOT work
+		if (CurEval.bOk != bWant && ScriptOkWait < 12.f)
+		{
+			ScriptOkWait += 0.1f;
+			ScriptWait = 0.1f;
+			--ScriptPc;
+			return false;
+		}
+		ScriptOkWait = 0.f;
 	}
 	else if (Cmd == TEXT("snap"))
 	{

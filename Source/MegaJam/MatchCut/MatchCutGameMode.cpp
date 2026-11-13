@@ -93,7 +93,8 @@ void AMatchCutGameMode::StartPlay()
 	ApplyLook(LookName);
 	GhostCapture->GetCaptureComponent2D()->HiddenActors = GhostHidden;
 
-	bIntroSeen = IFileManager::Get().FileExists(*(FPaths::ProjectSavedDir() / TEXT("DeepCut/intro_seen.txt")));
+	// a test script always sees the film as a first viewing, so its result does not depend on earlier runs
+	bIntroSeen = !FCString::Strifind(FCommandLine::Get(), TEXT("MCScript=")) && IFileManager::Get().FileExists(*(FPaths::ProjectSavedDir() / TEXT("DeepCut/intro_seen.txt")));
 
 	EnterShot(0, Shots[0].Start, true);
 	UE_LOG(LogMatchCut, Display, TEXT("DEEPCUT started: %d shots, part in shot %d, crew in shot %d, restore frame (%.3f,%.3f), intro seen before: %d"), Shots.Num(), PartShot, CrewShot, RestoreNdc.X, RestoreNdc.Y, bIntroSeen ? 1 : 0);

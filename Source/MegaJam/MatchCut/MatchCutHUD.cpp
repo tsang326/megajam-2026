@@ -234,7 +234,7 @@ void AMatchCutHUD::DrawGhost(AMatchCutGameMode* GM)
 	}
 	if (Shot.bDark)
 	{
-		A *= 0.35f; // on a dark picture the same ghost would glare
+		A *= 0.18f; // on a dark picture the same ghost would glare
 	}
 	FLinearColor Tint = GM->GhostTint * A;
 	Tint.A = 1.f;
@@ -373,6 +373,23 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 					const float Size = FMath::Clamp(62.f * 900.f / (float)FMath::Max(Exit.Marks[m].Z, 100.0), 26.f, 120.f) * (1.f + 0.9f * Reveal * Reveal);
 					FLinearColor Col = Exit.Color;
 					Col.A = (1.f - 0.5f * Reveal) * (bMine || Shot.Exits.Num() == 1 ? 1.f : 0.8f);
+					if (Exit.Period > 0.f)
+					{
+						// a mark that comes and goes: faint while it is closed, with an arc that runs down to the next opening
+						const float Ph = FMath::Fmod(Time, Exit.Period);
+						if (Ph >= Exit.OpenFor)
+						{
+							Col.A *= 0.22f;
+							const float Left = (Exit.Period - Ph) / FMath::Max(Exit.Period - Exit.OpenFor, 0.1f);
+							const int32 Segs = FMath::CeilToInt(24.f * Left);
+							for (int32 s = 0; s < Segs; ++s)
+							{
+								const float A0 = -HALF_PI + s * (2.f * PI / 24.f), A1 = A0 + 2.f * PI / 24.f * 0.7f;
+								const float Rr = GM->MarkRadius * 1080.f + 14.f;
+								Line(P.X + Rr * FMath::Cos(A0), P.Y + Rr * FMath::Sin(A0), P.X + Rr * FMath::Cos(A1), P.Y + Rr * FMath::Sin(A1), FLinearColor(1.f, 1.f, 1.f, 0.6f), 3.f);
+							}
+						}
+					}
 					Tape(P, Exit.Shape, Size, Col, ((m * 37 + e * 11) % 13) - 6.f);
 					// capture radius, and the size the robot's ring must have at this mark's depth
 					const float Cap = GM->MarkRadius * 1080.f;
@@ -383,7 +400,7 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 					}
 					if (Shot.Exits.Num() > 1)
 					{
-						Text(FString::Printf(DCTEXT_MARK_CAM, Exit.To + 1), P.X, P.Y + Size + 12.f, 1.1f, Exit.Color, 1);
+						Text(FString::Printf(DCTEXT_MARK_CAM, Exit.To + 1), P.X, P.Y - GM->MarkRadius * 1080.f - 30.f, 1.1f, Exit.Color, 1);
 					}
 					if (Reveal > 0.f)
 					{
@@ -441,11 +458,13 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 	}
 
 	// what E would do, at the thing itself
+	const bool bCarrying = GM->Props.ContainsByPredicate([GM](const FDCProp& P) { return P.bCarried && P.Shot == GM->Cur; });
 	FVector UseS;
 	const FString Use = GM->UsePrompt(UseS);
 	if (!Use.IsEmpty())
 	{
-		const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, UseS, false));
+		// above the thing; while something is held, above the robot (the held thing hangs under it)
+		const FVector2D P = bCarrying ? FVector2D(HeroPx.X, HeroPx.Y - RingPx(GM->HeroS.Z) + 26.f) : NdcToPx(GM->ViewNdc(GM->Cur, UseS, false)); // held: the box ends 48 px over the ring, above the cut label
 		Rect(P.X - 74.f, P.Y - 108.f, 148.f, 34.f, FLinearColor(0.f, 0.f, 0.f, 0.6f));
 		Text(Use, P.X, P.Y - 104.f, 1.35f, White, 1);
 	}
@@ -471,8 +490,13 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 	const FLinearColor Col = E.bOk ? Green : Red;
 	Disc(HeroPx.X, HeroPx.Y, HR, FLinearColor(Col.R, Col.G, Col.B, 0.16f));
 	Ring(HeroPx.X, HeroPx.Y, HR, Col, 4.f);
-	const float LabelY = HeroPx.Y + HR + 10.f < PicBottom - 40.f ? HeroPx.Y + HR + 10.f : HeroPx.Y - HR - 36.f;
-	Text(E.bOk ? DCText::RingOk : E.Reason, HeroPx.X, LabelY, 1.25f, Col, 1);
+	// under the ring; over it when something hangs under the robot or the ring is at the bottom of the picture
+	const bool bUnder = !bCarrying && HeroPx.Y + HR + 10.f < PicBottom - 40.f;
+	const float LabelY = bUnder ? HeroPx.Y + HR + 10.f : HeroPx.Y - HR - 38.f;
+	const FString Label = E.bOk ? DCText::RingOk : E.Reason;
+	const float LabelW = Label.Len() * 13.f + 20.f;
+	Rect(HeroPx.X - LabelW * 0.5f, LabelY - 3.f, LabelW, 32.f, FLinearColor(0.f, 0.f, 0.f, 0.55f));
+	Text(Label, HeroPx.X, LabelY, 1.25f, Col, 1);
 }
 
 void AMatchCutHUD::DrawReel(AMatchCutGameMode* GM, float Y, float PlayheadT)
@@ -576,8 +600,53 @@ void AMatchCutHUD::DrawClapper(AMatchCutGameMode* GM)
 	Text(GM->TakeReason, X + W * 0.5f, Y + 322.f, 2.2f, Red, 1);
 }
 
+void AMatchCutHUD::DrawFeatures(AMatchCutGameMode* GM, float X, float Y, float Scale, bool bCard)
+{
+	// the design file's feature list: struck out = cut from the prototype, plain = built again
+	float Cx = X;
+	for (int32 i = 0; i < 3; ++i)
+	{
+		const bool bBuilt = i == 0 && GM->bHasPart && GM->State != EDCState::Film;
+		const FString Name = DCText::Features[i];
+		const float W = Name.Len() * 8.f * Scale;
+		if (bCard)
+		{
+			const float Ry = Y + i * 62.f;
+			Text(Name, X, Ry, Scale, bBuilt ? Amber : Dim);
+			Line(X - 10.f, Ry + 9.f * Scale, X + W + 10.f, Ry + 9.f * Scale, Red, 3.f);
+			Text(DCText::CardCut, X + 520.f, Ry, Scale, Red);
+		}
+		else
+		{
+			Text(Name, Cx, Y, Scale, bBuilt ? Amber : FLinearColor(Dim.R, Dim.G, Dim.B, 0.7f));
+			if (!bBuilt)
+			{
+				Line(Cx - 3.f, Y + 9.f * Scale, Cx + W + 3.f, Y + 9.f * Scale, Red, 2.f);
+			}
+			Cx += W + 22.f;
+		}
+	}
+}
+
 void AMatchCutHUD::DrawFilm(AMatchCutGameMode* GM)
 {
+	if (GM->StateTime < 3.2f)
+	{
+		// design-file card: the prototype that was shelved, and what was cut from it
+		Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.02f, 0.025f, 0.03f, 1.f));
+		Frame(360.f, 190.f, 1200.f, 700.f, Dim, 3.f);
+		Text(DCText::CardFile, 400.f, 215.f, 1.5f, Dim);
+		Text(DCText::CardTitle, 400.f, 270.f, 6.0f, White);
+		Text(DCText::CardShelved, 400.f, 430.f, 3.0f, Red);
+		Text(DCText::CardReason, 400.f, 500.f, 1.8f, Dim);
+		Text(DCText::CardFeatures, 400.f, 590.f, 1.5f, Dim);
+		DrawFeatures(GM, 400.f, 640.f, 2.4f, true);
+		if (GM->bFilmSkippable)
+		{
+			Text(DCText::FilmSkip, 1860.f, 56.f, 1.3f, Dim, 2);
+		}
+		return;
+	}
 	const float T = GM->FilmTime;
 	const FDCReelSeg* Seg = nullptr;
 	for (const FDCReelSeg& S : GM->Reel)
@@ -730,6 +799,8 @@ void AMatchCutHUD::DrawHUD()
 	// top bar: scene/take on the left, crew on the right
 	Text(FString::Printf(TEXT("%s   %s"), *FString::Printf(DCTEXT_SCENE, GM->Cur + 1), *FString::Printf(DCTEXT_TAKE, GM->Take)), 60.f, 52.f, 1.5f, Dim);
 	Text(FString::Printf(DCTEXT_CREW, GM->bCrewRescued ? 1 : 0, GM->CrewTotal), 1860.f, 52.f, 1.7f, GM->bCrewRescued ? Amber : Dim, 2);
+	Text(DCText::HudUnit, 60.f, 96.f, 1.0f, Dim);
+	DrawFeatures(GM, 136.f, 96.f, 1.0f, false);
 
 	// bottom bar: survey-camera tag, one line of guidance, timecode
 	if (GM->State != EDCState::Drop || GM->StateTime > 1.0f)

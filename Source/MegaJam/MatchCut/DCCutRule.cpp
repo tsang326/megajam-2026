@@ -230,7 +230,7 @@ void AMatchCutGameMode::TickMovement(float Dt)
 
 bool AMatchCutGameMode::MarkVisible(const FDCExit& Exit, const FVector2D& MarkNdc) const
 {
-	if (!Shots[Exit.To].bDark)
+	if (!Shots[Exit.To].bDark && !Shots[Cur].bDark)
 	{
 		return true;
 	}
@@ -266,6 +266,7 @@ FDCCutEval AMatchCutGameMode::EvalCut() const
 	}
 
 	float HiddenPx = 1.e6f; // nearest mark that the dark is hiding
+	int32 HiddenExit = INDEX_NONE;
 	for (int32 e = 0; e < A.Exits.Num(); ++e)
 	{
 		const FDCExit& Exit = A.Exits[e];
@@ -275,7 +276,11 @@ FDCCutEval AMatchCutGameMode::EvalCut() const
 			const float D = (float)FVector2D((N.X - HeroNdc.X) * 960.0, (N.Y - HeroNdc.Y) * 540.0).Size();
 			if (!MarkVisible(Exit, N))
 			{
-				HiddenPx = FMath::Min(HiddenPx, D);
+				if (D < HiddenPx)
+				{
+					HiddenPx = D;
+					HiddenExit = e;
+				}
 				continue;
 			}
 			if (D < E.DistPx)
@@ -289,6 +294,9 @@ FDCCutEval AMatchCutGameMode::EvalCut() const
 	if (HiddenPx < E.DistPx && HiddenPx <= MarkRadius * 1080.f * 1.5f && bHasPart)
 	{
 		E.Reason = DCText::ReasonDarkLamp; // standing on a mark that only the lamp can show
+		E.Exit = HiddenExit;
+		E.Mark = INDEX_NONE;
+		E.DistPx = HiddenPx;
 		return E;
 	}
 	if (E.Mark == INDEX_NONE)
@@ -315,6 +323,10 @@ FDCCutEval AMatchCutGameMode::EvalCut() const
 	else if (Blocked(Exit.To, E.TargetS, HeroRadius))
 	{
 		E.Reason = DCText::ReasonRock;
+	}
+	else if (!Exit.OpenAt(PlayClock))
+	{
+		E.Reason = DCText::ReasonWait;
 	}
 	else
 	{

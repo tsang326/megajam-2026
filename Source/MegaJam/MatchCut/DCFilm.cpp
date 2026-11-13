@@ -14,7 +14,8 @@
 
 namespace DCFilmConst
 {
-	const float EndHold = 2.2f;
+	const float EndHold = 1.3f;
+	const float CardTime = 3.2f; // the design-file card before the film
 	FString IntroFlagPath()
 	{
 		return FPaths::ProjectSavedDir() / TEXT("DeepCut/intro_seen.txt");
@@ -110,6 +111,10 @@ void AMatchCutGameMode::EndFilm()
 
 void AMatchCutGameMode::TickFilm(float Dt)
 {
+	if (StateTime < DCFilmConst::CardTime)
+	{
+		return; // the design-file card is up (drawn by the HUD)
+	}
 	FilmTime += Dt;
 	if (FilmTime >= FilmLength + DCFilmConst::EndHold)
 	{
@@ -126,7 +131,7 @@ void AMatchCutGameMode::TickFilm(float Dt)
 				{
 					SetView(Set->Camera.Get());
 				}
-				PoseClip(S.Clip, FilmTime - S.T0);
+				PoseClip(S.Clip, (FilmTime - S.T0) * Clip->Length / FMath::Max(S.T1 - S.T0, 0.1f)); // the reel may play a clip faster than it was keyed
 			}
 		}
 	}

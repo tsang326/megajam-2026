@@ -119,8 +119,8 @@
   {
    "id": "drop",
    "name": "DROP ZONE",
-   "gate": "switch",
-   "hint": "Swim to the red valve. Press E.",
+   "gate": "",
+   "hint": "Swim onto the tape mark. Press C to cut.",
    "hintSolved": "Swim onto the tape mark. Press C to cut.",
    "cam": {
     "pos": [
@@ -148,11 +148,6 @@
     700,
     330,
     1300
-   ],
-   "switch": [
-    250,
-    -40,
-    1050
    ],
    "solids": [
     {
@@ -386,7 +381,7 @@
   {
    "id": "vent",
    "name": "THE VENT",
-   "gate": "switch",
+   "gate": "socket:vent",
    "hint": "The current is too strong. No plate on the vent? R: back one shot.",
    "hintSolved": "Make your ring the same size as the mark. SPACE closer, SHIFT farther.",
    "cam": {
@@ -420,11 +415,6 @@
     0,
     900,
     0
-   ],
-   "switch": [
-    1250,
-    -20,
-    1200
    ],
    "solids": [
     {
@@ -559,7 +549,7 @@
      "color": "yellow",
      "marks": [
       [
-       300,
+       150,
        50,
        1350
       ]
@@ -586,7 +576,7 @@
     ]
    },
    "start": [
-    300,
+    150,
     50,
     1350
    ],
@@ -712,10 +702,10 @@
   {
    "id": "dark",
    "name": "THE DARK",
-   "gate": "crew",
+   "gate": "",
    "dark": true,
-   "hint": "Find the crew robot. Swim to it.",
-   "hintSolved": "Crew robot is with you. Swim onto the tape mark. Press C.",
+   "hint": "Dark. F: lamp shows the tape mark. It comes and goes: cut when it is bright.",
+   "hintSolved": "Dark. F: lamp shows the tape mark. It comes and goes: cut when it is bright.",
    "cam": {
     "pos": [
      -900,
@@ -821,6 +811,10 @@
        60,
        1150
       ]
+     ],
+     "pulse": [
+      5.0,
+      2.6
      ]
     }
    ]

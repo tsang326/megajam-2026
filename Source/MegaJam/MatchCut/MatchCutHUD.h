@@ -34,6 +34,7 @@ private:
 	void LoadFonts();
 	void DrawReel(AMatchCutGameMode* GM, float Y, float PlayheadT);
 	void DrawBars(AMatchCutGameMode* GM, float ReelY);
+	void DrawFeatures(class AMatchCutGameMode* GM, float X, float Y, float Scale, bool bCard);
 	void DrawFilm(AMatchCutGameMode* GM);
 	void DrawFlashback(AMatchCutGameMode* GM);
 	void DrawClapper(AMatchCutGameMode* GM);

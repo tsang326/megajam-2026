@@ -15,6 +15,13 @@ Read first: `docs/slice-report.md` (what exists, cut rule, what breaks first), `
 3. **Wider shots.** The current shot is a thin slab with rectangles; the user finds it cramped. Shots must have room to explore.
 4. The restore-by-cut keeps its own visual (the faded old-film frame with the robot's silhouette); do not use tape marks there.
 
+## Change from the user, 2026-11-13 morning (overrides the puzzle list below)
+Read `docs/OUTLINE.md`. Unit 0 is a **shelved prototype shown from the first second** (not a late twist). For stage 1:
+- Opening ≤ 15 s: design-file card "UNIT 0 – PROTOTYPE · SHELVED 02:00 AM" with struck-out features, then the Fathom film with the `[SCENE REMOVED]` gaps. Keep the struck-out feature list visible in the HUD.
+- Part pickup = "FEATURE CUT → BUILT: HEADLAMP" (strike-through removed), then restore-by-cut as before.
+- **Puzzles: edit puzzles only.** Drop switch/valve and crew-holds-door. Use carry across the cut (B), lamp-reveal (the lamp is the rebuilt feature), cut on the right moment, and one camera choice (A).
+- First cut of the game must be doable in under 20 s by a newcomer.
+
 ## User's choice: A + B, build B first (A after B works end to end)
 - **A. Choose the camera:** some shots have 2–3 next cameras; each camera's marks use its own tape colour; the cut goes to the camera whose mark Unit 0 lines up with. Different cameras lead to different routes (one leads to the crew robot).
 - **B. Carry across the cut:** whatever is in frame with Unit 0 inside a small radius (a loose plate, a rock, a rescued crew robot) is placed in the next shot at the same screen position and distance. Puzzles: put the object where it is needed in the *next* shot's frame (block a current, make a step, cover a vent, light a dark spot).

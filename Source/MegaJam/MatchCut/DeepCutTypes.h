@@ -47,6 +47,10 @@ struct FDCExit
 	TArray<FVector> Marks; // shot space of the target shot
 	bool bAnyDepth = false;
 	int32 Shape = 0; // 0 = X, 1 = T
+	// "cut on the right moment": the mark is only good for OpenFor seconds out of every Period (0 = always)
+	float Period = 0.f;
+	float OpenFor = 0.f;
+	bool OpenAt(float Clock) const { return Period <= 0.f || FMath::Fmod(Clock, Period) < OpenFor; }
 };
 
 /** Something loose that can be grabbed and that comes through a cut when it is close to Unit 0. */

@@ -247,6 +247,12 @@ bool AMatchCutGameMode::LoadLayout()
 				Exit.Color = TapeColor(Exit.ColorName);
 				E->TryGetBoolField(TEXT("anyDepth"), Exit.bAnyDepth);
 				Exit.Shape = Shot.Exits.Num() - 1;
+				const TArray<TSharedPtr<FJsonValue>>* Pulse = nullptr;
+				if (E->TryGetArrayField(TEXT("pulse"), Pulse) && Pulse && Pulse->Num() >= 2)
+				{
+					Exit.Period = (float)(*Pulse)[0]->AsNumber();
+					Exit.OpenFor = (float)(*Pulse)[1]->AsNumber();
+				}
 				const TArray<TSharedPtr<FJsonValue>>* Marks = nullptr;
 				if (E->TryGetArrayField(TEXT("marks"), Marks) && Marks)
 				{

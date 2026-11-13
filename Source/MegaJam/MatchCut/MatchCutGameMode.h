@@ -300,5 +300,6 @@ private:
 	bool bScriptHold = false;
 	FVector ScriptSwimTarget = FVector::ZeroVector; // shot space
 	float ScriptSwimTime = 0.f;
+	float ScriptOkWait = 0.f;
 	FString ScriptWaitState;
 };

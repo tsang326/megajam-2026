@@ -107,13 +107,13 @@ film = {
                      "tracks": dict([("unit7lamp", keys(12.0, unit7))] + [("passer%d" % i, keys(12.0, passer(i))) for i in range(3)])},
     },
     "reel": [
-        {"clip": "launch", "len": 5.0, "caption": "FATHOM DYNAMICS SURVEY CREW. LAUNCH DAY."},
-        {"clip": "descent", "len": 4.0, "caption": "DESCENT TO THE SEA FLOOR."},
-        {"gap": True, "len": 2.5},
-        {"clip": "seafloor", "len": 4.5, "caption": "EXPLORATION MISSION SUCCESSFUL."},
-        {"gap": True, "len": 2.5},
-        {"clip": "lift", "len": 4.5, "caption": "UNIT 7 - DEFECTIVE, DECOMMISSIONED."},
-        {"gap": True, "len": 2.5},
+        {"clip": "launch", "len": 2.2, "caption": "FATHOM DYNAMICS SURVEY CREW. LAUNCH DAY."},
+        {"clip": "descent", "len": 1.8, "caption": "DESCENT TO THE SEA FLOOR."},
+        {"gap": True, "len": 0.8},
+        {"clip": "seafloor", "len": 2.0, "caption": "EXPLORATION MISSION SUCCESSFUL."},
+        {"gap": True, "len": 0.8},
+        {"clip": "lift", "len": 2.0, "caption": "UNIT 7 - DEFECTIVE, DECOMMISSIONED."},
+        {"gap": True, "len": 0.8},
     ],
 }
 

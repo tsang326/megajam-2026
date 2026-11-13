@@ -25,6 +25,17 @@ namespace DCText
 	static const TCHAR* FilmEnd = TEXT("END OF FILM.  3 SCENES MISSING.");
 	static const TCHAR* ReelGapLabel = TEXT("REMOVED");
 
+	// design-file card before the film, and the feature list that stays in the top bar. All NEW.
+	static const TCHAR* CardFile = TEXT("FATHOM DYNAMICS  /  DESIGN FILE");
+	static const TCHAR* CardTitle = TEXT("UNIT 0 - PROTOTYPE");
+	static const TCHAR* CardShelved = TEXT("SHELVED 02:00 AM");
+	static const TCHAR* CardReason = TEXT("reason: over budget");
+	static const TCHAR* CardFeatures = TEXT("FEATURES");
+	static const TCHAR* CardCut = TEXT("CUT");
+	static const TCHAR* CardBuilt = TEXT("BUILT");
+	static const TCHAR* HudUnit = TEXT("UNIT 0");
+	static const TCHAR* Features[3] = { TEXT("HEADLAMP"), TEXT("GRIPPER"), TEXT("MULTI-CAM") };
+
 	// survey camera frame
 	static const TCHAR* Rec = TEXT("REC");
 
@@ -40,6 +51,7 @@ namespace DCText
 	static const TCHAR* ReasonOffMark = TEXT("NOT ON A MARK");    // NEW
 	static const TCHAR* ReasonTooClose = TEXT("TOO CLOSE - SHIFT"); // NEW: nearer to the camera than the mark
 	static const TCHAR* ReasonTooFar = TEXT("TOO FAR - SPACE");     // NEW
+	static const TCHAR* ReasonWait = TEXT("NOT YET - WAIT");         // NEW: a mark that comes and goes
 	static const TCHAR* CutFlash = TEXT("CUT");
 
 	// use key, props, sockets
@@ -54,7 +66,7 @@ namespace DCText
 	static const TCHAR* MarksUp = TEXT("MARKS SET");              // NEW: shown for a moment when tape marks appear
 
 	// part, restore, rescue
-	static const TCHAR* PartFound = TEXT("HEADLAMP FOUND");
+	static const TCHAR* PartFound = TEXT("FEATURE CUT -> BUILT: HEADLAMP"); // NEW (was HEADLAMP FOUND)
 	static const TCHAR* PartHow = TEXT("F: lamp on / off");
 	static const TCHAR* RestoreHint = TEXT("A removed scene. Line up with the frame. Press C.");
 	static const TCHAR* RestoreMark = TEXT("MATCH");

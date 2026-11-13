@@ -1,49 +1,43 @@
 # Stage 1 from the opening film to the end card, by the crew route, with one failed take per cut type.
-# Editor:   rm -f Saved/DeepCut/intro_seen.txt; Tools/run_offscreen.sh stage1 Saved/DeepCut/stage1
+# Editor:   Tools/run_offscreen.sh stage1 Saved/DeepCut/stage1
 # Packaged: Tools/run_packaged.sh stage1 Saved/DeepCut/stage1_pkg
-# --- opening film (first view: "anykey" must not skip it)
-wait 1.5
-snap f01_launch
+# --- opening: design-file card, then the film (first view: "anykey" must not skip it)
+card
+wait 0.8
+snap f00_design_card
 anykey
-filmtime 6.5
-wait 0.7
+wait 2.6
+filmtime 1.2
+wait 0.4
+snap f01_launch
+filmtime 3.2
+wait 0.4
 snap f02_descent
-filmtime 9.8
-wait 0.7
+filmtime 4.2
+wait 0.3
 snap f03_gap1
-filmtime 13.5
-wait 0.7
+filmtime 6.0
+wait 0.4
 snap f04_seafloor
-filmtime 20.5
-wait 0.7
+filmtime 8.8
+wait 0.4
 snap f05_unit7
-filmtime 25.9
-wait 0.5
+filmtime 10.5
+wait 0.3
 snap f06_end
 waitstate Drop
 wait 0.8
 snap g00_drop
 waitstate Playing
 wait 1.2
-# --- shot 0 DROP ZONE: valve puzzle, first cut cannot fail
-snap s0a_before_no_marks
+# --- shot 0 DROP ZONE: the mark is there from the start, first cut cannot fail
+snap s0a_mark_from_start
 cut
 wait 0.4
-snap s0b_cut_before_solved_soft
-swimto 180 -40 1050
-wait 0.3
-snap s0c_at_valve_prompt
-use
-wait 0.35
-snap s0d_marks_reveal
-wait 1.6
-snap s0e_marks_shown
-cut
-wait 0.4
-snap s0f_cut_off_mark_soft
+snap s0b_cut_off_mark_soft
 swimn -0.433 0.0615
 wait 0.4
-snap s0g_on_mark
+snap s0c_on_mark
 cut
 wait 0.15
 snap s1a_after_cut_no_marks
@@ -92,19 +86,11 @@ snap s1i_on_mark_plate_fits
 cut
 wait 0.5
 snap s2c_vent_current_stopped
-# --- shot 2 THE VENT: wide shot on a rail, valve at the far end, mark with a depth
-wait 1.0
-swimto 600 -40 1150
-snap s2d_rail_midway
-swimto 1180 -20 1200
-wait 0.3
-snap s2e_at_valve
-use
-wait 0.35
-snap s2f_marks_reveal
-wait 1.5
+# --- shot 2 THE VENT: the plate on the vent is the gate; camera rail; mark with a depth
+wait 1.6
+snap s2d_marks_shown
 # failed take, mark cut: right place on screen, wrong depth
-swimto 1144 41 1100
+swimto 122 41 1100
 wait 0.4
 snap s2g_on_mark_too_close
 cut
@@ -112,9 +98,13 @@ wait 0.3
 snap s2h_FAIL_too_close
 waitstate Playing
 wait 0.5
-swimto 700 -20 1250
-swimto 1200 50 1350
-wait 0.5
+swimto 700 -40 1150
+wait 0.6
+snap s2e_rail_midway
+# the camera has moved along its rail; the mark stays where it is on screen
+wait 1.0
+swimn 0.193 0.114 1350
+wait 0.8
 snap s2i_on_mark_depth_ok
 cut
 wait 0.5
@@ -164,7 +154,7 @@ snap s3l_blue_mark_lamp_on_cell_comes
 cut
 wait 0.6
 snap s4a_dark_lamp_on
-# --- shot 4 THE DARK: rescue
+# --- shot 4 THE DARK: lamp shows the mark, the mark comes and goes, the crew robot is on the way
 lamp 0
 wait 0.4
 snap s4b_dark_lamp_off
@@ -173,11 +163,28 @@ swimto 0 190 1100
 swimto 230 190 1150
 swimto 330 -110 1200
 wait 0.5
-snap s4c_crew_found_marks_reveal
+snap s4c_crew_found
 wait 1.5
 swimto 300 60 1150
+# failed take, timed mark: on the mark while it is faint (wait until C works, then until it stops working)
+waitok
+waitok 0
+wait 0.3
+snap s4d_on_mark_closed
+cut
+wait 0.3
+snap s4e_FAIL_not_yet
+waitstate Playing
 wait 0.5
-snap s4d_on_mark
+swimto 0 190 1100
+swimto 230 190 1150
+swimto 330 -110 1200
+swimto 300 60 1150
+# wait for the mark to go faint, then for it to come back: a full open window is ahead
+waitok
+waitok 0
+waitok
+snap s4f_on_mark_open
 cut
 wait 0.6
 snap s5a_dock
