@@ -12,5 +12,155 @@
    ],
    "emissive": "wired into model.EmissiveTexture"
   }
+ ],
+ "plate": [
+  {
+   "mesh": "/Game/DeepCut/Art/plate/plate/StaticMeshes/plate.plate",
+   "yaw": 0,
+   "file": "plate.glb",
+   "triangles": 2982,
+   "sizeCm": [
+    190,
+    189,
+    37
+   ],
+   "emissive": "none"
+  }
+ ],
+ "cell": [
+  {
+   "mesh": "/Game/DeepCut/Art/cell/cell/StaticMeshes/cell.cell",
+   "yaw": 0,
+   "file": "cell.glb",
+   "triangles": 3620,
+   "sizeCm": [
+    190,
+    101,
+    135
+   ],
+   "emissive": "none"
+  }
+ ],
+ "weight": [
+  {
+   "mesh": "/Game/DeepCut/Art/weight/lid/StaticMeshes/lid.lid",
+   "yaw": 0,
+   "file": "lid.glb",
+   "triangles": 3744,
+   "sizeCm": [
+    189,
+    190,
+    101
+   ],
+   "emissive": "none"
+  }
+ ],
+ "crew": [
+  {
+   "mesh": "/Game/DeepCut/Art/crew/crew/StaticMeshes/crew.crew",
+   "yaw": -90,
+   "file": "crew.glb",
+   "triangles": 3234,
+   "sizeCm": [
+    171,
+    114,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "socket:VENT": [
+  {
+   "mesh": "/Game/DeepCut/Art/socket_VENT/vent/StaticMeshes/vent.vent",
+   "yaw": 0,
+   "file": "vent.glb",
+   "triangles": 9670,
+   "sizeCm": [
+    189,
+    169,
+    132
+   ],
+   "emissive": "none"
+  }
+ ],
+ "socket:DOCK": [
+  {
+   "mesh": "/Game/DeepCut/Art/socket_DOCK/dock/StaticMeshes/dock.dock",
+   "yaw": 0,
+   "file": "dock.glb",
+   "triangles": 6042,
+   "sizeCm": [
+    172,
+    190,
+    84
+   ],
+   "emissive": "none"
+  }
+ ],
+ "solid:rock": [
+  {
+   "mesh": "/Game/DeepCut/Art/solid_rock/rock1/StaticMeshes/rock1.rock1",
+   "yaw": 0,
+   "file": "rock1.glb",
+   "triangles": 6352,
+   "sizeCm": [
+    178,
+    190,
+    126
+   ],
+   "emissive": "none"
+  },
+  {
+   "mesh": "/Game/DeepCut/Art/solid_rock_2/rock2/StaticMeshes/rock2.rock2",
+   "yaw": 0,
+   "file": "rock2.glb",
+   "triangles": 5116,
+   "sizeCm": [
+    53,
+    68,
+    190
+   ],
+   "emissive": "none"
+  },
+  {
+   "mesh": "/Game/DeepCut/Art/solid_rock_3/rock3/StaticMeshes/rock3.rock3",
+   "yaw": 0,
+   "file": "rock3.glb",
+   "triangles": 4168,
+   "sizeCm": [
+    190,
+    153,
+    48
+   ],
+   "emissive": "none"
+  }
+ ],
+ "solid:hull": [
+  {
+   "mesh": "/Game/DeepCut/Art/solid_hull/hull/StaticMeshes/hull.hull",
+   "yaw": 0,
+   "file": "hull.glb",
+   "triangles": 6136,
+   "sizeCm": [
+    181,
+    190,
+    139
+   ],
+   "emissive": "none"
+  }
+ ],
+ "solid:metal": [
+  {
+   "mesh": "/Game/DeepCut/Art/solid_metal/debris/StaticMeshes/debris.debris",
+   "yaw": 0,
+   "file": "debris.glb",
+   "triangles": 8952,
+   "sizeCm": [
+    139,
+    190,
+    145
+   ],
+   "emissive": "none"
+  }
  ]
 }

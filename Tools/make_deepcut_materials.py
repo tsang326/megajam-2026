@@ -35,6 +35,8 @@ def const(mat, value, y):
 
 
 def finish(mat):
+    if mat.get_name() in ("M_DC_Unlit", "M_DC_Lit"):
+        mat.set_editor_property("used_with_instanced_static_meshes", True)  # the water flecks are instanced
     mel.recompile_material(mat)
     ok = unreal.EditorAssetLibrary.save_loaded_asset(mat)
     unreal.log("DEEPCUT_MAT saved %s: %s" % (mat.get_path_name(), ok))

@@ -46,6 +46,22 @@ def run(src_dir, dest):
 YAW = {"hero": -90, "crew": -90}
 
 
+def allow_instancing():
+    """The water flecks are instanced meshes: the two plain materials must be compiled for that (brief 05, C4)."""
+    mel = unreal.MaterialEditingLibrary
+    for name in ("M_DC_Unlit", "M_DC_Lit"):
+        mat = unreal.EditorAssetLibrary.load_asset("/Game/DeepCut/" + name)
+        if not mat:
+            continue
+        try:
+            mat.set_editor_property("used_with_instanced_static_meshes", True)
+        except Exception as err:  # the property name is the engine's; say so if it ever changes
+            unreal.log_warning("DEEPCUT_MAT %s: %s" % (name, err))
+            continue
+        mel.recompile_material(mat)
+        unreal.log("DEEPCUT_MAT %s instanced meshes on, saved: %s" % (name, unreal.EditorAssetLibrary.save_loaded_asset(mat)))
+
+
 def import_art(src_dir, out_name):
     import json
     eal, mel = unreal.EditorAssetLibrary, unreal.MaterialEditingLibrary
@@ -109,6 +125,7 @@ def import_art(src_dir, out_name):
 
 ART_DIR = os.environ.get("DC_ART_DIR", "")
 if ART_DIR:
+    allow_instancing()
     import_art(ART_DIR if os.path.isabs(ART_DIR) else os.path.join(ROOT, ART_DIR), os.environ.get("DC_ART_OUT", "art.json"))
 
 for t in ([] if ART_DIR else run(os.path.join(ROOT, "SourceAssets/audio"), "/Game/DeepCut/Audio")):

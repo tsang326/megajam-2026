@@ -1,0 +1,28 @@
+# The visual pass in four shots (brief 05 C4): run once per look.
+#   MC_EXTRA=-MCLook=A Tools/run_offscreen.sh look_check Saved/DeepCut/look_A      (also B and C)
+skipfilm
+wait 0.5
+skipto 1
+wait 2.5
+snap v1_shelf
+move 1 0 0 1.2
+snap v1b_shelf_swimming
+wait 3.0
+snap v1c_shelf_3s_later
+skipto 3
+wait 2.5
+snap v3_wreck
+skipto 7
+wait 2.0
+snap v7_ledge_dark_lamp_off
+lamp 1
+wait 0.8
+snap v7b_ledge_dark_lamp_on
+skipto 8
+wait 2.5
+snap v8_current_shoal
+skipto 10
+wait 2.5
+snap v10_lift
+stat
+quit

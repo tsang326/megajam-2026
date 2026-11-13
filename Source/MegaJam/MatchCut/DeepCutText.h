@@ -103,6 +103,14 @@ namespace DCText
 	static const TCHAR* HowCaught = TEXT("Get to the tape mark and press C before it reaches you.");
 	static const TCHAR* ReasonCame = TEXT("IT CAME WITH YOU");
 	static const TCHAR* HowCame = TEXT("Cut while it is outside your circle. Then it stays behind.");
+	// brief 05, part B. All NEW.
+	static const TCHAR* WrongShape = TEXT("WRONG SHAPE");
+	static const TCHAR* PredHintTool = TEXT("Cut away while it is OUTSIDE your circle. Then it stays in this shot.");
+	static const TCHAR* PredStayed = TEXT("IT STAYED BEHIND");
+	static const TCHAR* PredStayedHow = TEXT("It is still in the last shot. R: back one shot. See what it did.");
+	static const TCHAR* ShoalGone = TEXT("THE SHOAL IS GONE");
+	static const TCHAR* BackMark = TEXT("BACK TO");
+	static const TCHAR* LiftNeedsMore = TEXT("The lift needs one more thing.");
 	static const TCHAR* StuckBack = TEXT("Nothing more to do here. R: back one shot.");
 	static const TCHAR* EndKeys = TEXT("R: play again     ESC: quit");
 	static const TCHAR* EndKeysNext = TEXT("C: next stage     R: play again     ESC: quit"); // NEW

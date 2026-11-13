@@ -52,6 +52,7 @@ struct FDCExit
 	FLinearColor Color = FLinearColor(1.f, 0.85f, 0.1f);
 	TArray<FVector> Marks; // shot space of the target shot
 	bool bAnyDepth = false;
+	bool bBack = false; // a mark that cuts back to an earlier shot (brief 05: the shuttle)
 	int32 Shape = 0; // 0 = X, 1 = T
 	// "cut on the right moment": the mark is only good for OpenFor seconds out of every Period (0 = always)
 	float Period = 0.f;
@@ -153,6 +154,11 @@ struct FDCShot
 	FString Intro;          // clip played (official cut) the first time the shot is entered
 	bool bIntroPlayed = false;
 	// a part: one cut feature of Unit 0 and the removed scene that comes back with it
+	int32 ShoalSolid = INDEX_NONE; // a shoal of fish that blocks the way until the predator is left behind in this shot
+	bool bShoalGone = false;
+	float ShoalTime = 0.f;
+	FString HintAfter;
+	TWeakObjectPtr<AActor> ShoalActor;
 	bool bHasPart = false;
 	FVector PartS = FVector::ZeroVector;
 	int32 PartFeature = 0;  // index into DCText::Features
@@ -203,6 +209,12 @@ struct FDCLook
 	float DarkFactor = 0.04f;
 	float Ambient = 0.f;
 	FLinearColor Backdrop = FLinearColor(0.01f, 0.05f, 0.06f);
+	// brief 05: colour grading and the water's flecks, per look
+	float Saturation = 1.f;
+	float Contrast = 1.f;
+	FLinearColor Tint = FLinearColor::White;
+	float Snow = 1.f;
+	FLinearColor SnowColor = FLinearColor(0.30f, 0.42f, 0.38f);
 };
 
 struct FDCPaint

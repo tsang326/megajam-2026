@@ -41,25 +41,37 @@ snap s0c_on_mark
 cut
 wait 0.15
 snap s1a_after_cut_no_marks
-# --- shot 1 THE SHELF: no gripper yet. Push the plate onto the VENT frame of the next shot (gate), stay close, cut
+# --- shot 1 THE SHELF: graphic match. Two loose things; the outline of the next shot's crack is long. No gripper yet: push.
 wait 1.6
-snap s1a2_push_prompt
+snap s1a2_push_prompt_two_things_one_outline
 cut
 wait 0.4
 snap s1b_cut_before_solved_says_what_to_do
-# 20 s without progress: the plate is pointed at, with an arrow to the frame
+# 20 s without progress: the right thing is pointed at, with an arrow to the outline
 stuck 21
 wait 0.6
 snap s1b2_stuck_hint_arrow
-# pushing is forgiving: from well above the floor and at another depth
-swimrel plate -150 110 -120
+# wrong shape first: the round one is nearer. Pushing is forgiving: from above the floor and at another depth
+swimrel disc 130 270 -60
+swimrel disc 130 110 -60
 wait 0.2
-snap s1c_beside_plate_high_and_nearer
-move 1 0 0 0.35
+snap s1c_beside_disc_high_and_nearer
+move -1 0 0 0.35
 snap s1c2_push_cue
-swimsock vent -101 80 1050
+swimsock vent 101 80 1050
+wait 0.5
+snap s1c3_round_on_outline_WRONG_SHAPE_no_mark
+# push it away again, then bring the long one from the other side
+swimrel disc -150 250 0
+swimrel disc -150 80 0
+move 1 0 0 0.9
+swimrel bar -180 250 0
+swimrel bar -180 80 0
+wait 0.3
+snap s1c4_beside_long_plate
+swimsock vent -138 80 1050
 wait 0.35
-snap s1d_plate_on_frame_marks_reveal
+snap s1d_long_on_outline_marks_reveal
 wait 1.5
 # failed take, mark cut: not on a mark
 cut
@@ -70,7 +82,7 @@ wait 0.6
 # wrong way first: on the mark but too far from the plate (far from the camera). The plate stays behind.
 swimmark 0 0 1300
 wait 0.5
-snap s1f_on_mark_plate_stays
+snap s1f_on_mark_too_far_it_stays
 cut
 wait 0.6
 snap s2a_vent_no_plate
@@ -82,13 +94,14 @@ retake
 wait 0.8
 snap s1g_back_one_shot
 # R put the plate back where it was when the shot began. Right way: push it onto the frame again, stand on the mark close to it, cut
-swimrel plate -150 80 0
-swimsock vent -101 80 1050
+swimrel bar -180 250 0
+swimrel bar -180 80 0
+swimsock vent -138 80 1050
 wait 0.3
-snap s1h_plate_on_vent_frame
+snap s1h_long_on_outline_again
 swimmark 0 0 1050
 wait 0.5
-snap s1i_on_mark_plate_fits
+snap s1i_on_mark_long_fits
 cut
 wait 0.5
 snap s2c_vent_current_stopped
@@ -146,10 +159,10 @@ snap s3j_FAIL_too_dark
 waitstate Playing
 wait 0.5
 # the power cell must come too (it has to come through two cuts): push it closer to the blue mark
-swimto 230 -80 1150
+swimrel cell 140 0 0
 wait 0.3
 snap s3k_beside_cell_stays
-swimto 95 -80 1150
+swimto 60 -80 1150
 lamp 1
 swimto 105 60 1150
 swimn -0.236 0.280 1100

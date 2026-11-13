@@ -338,8 +338,43 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 				const FLinearColor Col = bOn ? Green : FLinearColor(Amber.R, Amber.G, Amber.B, 0.75f);
 				const FVector2D P = NdcToPx(N);
 				const float R = 60.f * 900.f / (float)FMath::Max(S.S.Z, 100.0);
-				Brackets(P.X, P.Y, R, Col, bOn ? 3.5f : 2.f);
-				Text(S.Label, P.X, P.Y - R - 34.f, 1.0f, Col, 1);
+				if (S.Accepts == TEXT("long") || S.Accepts == TEXT("round"))
+				{
+					// graphic match: the shape the next shot has in this place, as an outline
+					FDCProp Shape;
+					Shape.Kind = S.Accepts;
+					const FVector H = GM->PropHalf(Shape);
+					const float W = (float)(H.X / (GM->TanH * FMath::Max(S.S.Z, 100.0)) * 960.0);
+					const float Hh = FMath::Max(W * (float)(H.Z / H.X) * 0.38f, 10.f);
+					if (S.Accepts == TEXT("round"))
+					{
+						for (int32 i = 0; i < 32; ++i)
+						{
+							const float A0 = 2.f * UE_PI * i / 32, A1 = 2.f * UE_PI * (i + 1) / 32;
+							Line(P.X + W * FMath::Cos(A0), P.Y + Hh * FMath::Sin(A0), P.X + W * FMath::Cos(A1), P.Y + Hh * FMath::Sin(A1), Col, bOn ? 4.f : 3.f);
+						}
+					}
+					else
+					{
+						Frame(P.X - W, P.Y - Hh, 2.f * W, 2.f * Hh, Col, bOn ? 4.f : 3.f);
+					}
+					Text(S.Label, P.X, P.Y - Hh - 34.f, 1.0f, Col, 1);
+					// a loose thing on the place with another shape: say so
+					for (const FDCProp& Pr : GM->Props)
+					{
+						const FVector2D Q = NdcToPx(GM->ViewNdc(GM->Cur, Pr.S, false));
+						if (Pr.Shot == GM->Cur && !Pr.bLocked && Pr.Kind != S.Accepts && FVector2D::Distance(Q, P) <= GM->SocketRadius * 1080.f)
+						{
+							Rect(P.X - 80.f, P.Y + Hh + 8.f, 160.f, 30.f, FLinearColor(0.f, 0.f, 0.f, 0.6f));
+							Text(DCText::WrongShape, P.X, P.Y + Hh + 10.f, 1.2f, Red, 1);
+						}
+					}
+				}
+				else
+				{
+					Brackets(P.X, P.Y, R, Col, bOn ? 3.5f : 2.f);
+					Text(S.Label, P.X, P.Y - R - 34.f, 1.0f, Col, 1);
+				}
 			}
 		}
 		for (const FDCExit& Exit : Shot.Exits)
@@ -415,7 +450,11 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 					{
 						Ring(P.X, P.Y, RingPx(Exit.Marks[m].Z), FLinearColor(1.f, 1.f, 1.f, 0.55f), 2.f);
 					}
-					if (Shot.Exits.Num() > 1)
+					if (Exit.bBack)
+					{
+						Text(FString::Printf(TEXT("%s %s"), DCText::BackMark, *GM->Shots[Exit.To].Name), P.X, P.Y - GM->MarkRadius * 1080.f - 30.f, 1.1f, Exit.Color, 1);
+					}
+					else if (Shot.Exits.Num() > 1)
 					{
 						Text(FString::Printf(DCTEXT_MARK_CAM, Exit.To + 1, *GM->Shots[Exit.To].Name), P.X, P.Y - GM->MarkRadius * 1080.f - 30.f, 1.1f, Exit.Color, 1);
 					}
@@ -1080,6 +1119,10 @@ void AMatchCutHUD::DrawHUD()
 
 		const FDCShot& Shot = GM->Shots[GM->Cur];
 		FString Hint = Shot.bGateOpen && !Shot.HintSolved.IsEmpty() ? Shot.HintSolved : Shot.Hint;
+		if (Shot.bShoalGone && !Shot.HintAfter.IsEmpty())
+		{
+			Hint = Shot.HintAfter;
+		}
 		FLinearColor HintCol = White;
 		float HintScale = 1.7f;
 		if (GM->State == EDCState::TakeCard || GM->State == EDCState::EndCard || GM->State == EDCState::Drop)
@@ -1088,7 +1131,7 @@ void AMatchCutHUD::DrawHUD()
 		}
 		else if (GM->PredPhase > 0)
 		{
-			Hint = DCText::PredHint;
+			Hint = Shot.ShoalSolid != INDEX_NONE && !Shot.bShoalGone ? DCText::PredHintTool : DCText::PredHint;
 			HintCol = Red;
 		}
 		else if (GM->SoftFailTime > 0.f)

@@ -247,6 +247,25 @@ void AMatchCutGameMode::SpawnSolid(FDCSolid& Solid, const FVector& CamPos, const
 	const FQuat Q = CamRot.Quaternion() * Solid.Rot.Quaternion();
 	// actor axes: X = away from the camera, Y = right, Z = up
 	const FVector Size(Solid.Size.Z, Solid.Size.X, Solid.Size.Y);
+	if (Solid.Kind == TEXT("shoal"))
+	{
+		// not rock: a ball of small silver fish. The box is what Unit 0 bumps into.
+		AActor* A = SpawnGroup(Center);
+		A->SetActorRotation(Q);
+		FRandomStream Rand(GetTypeHash(Center));
+		const FLinearColor Fish(0.75f, 0.85f, 0.9f);
+		for (int32 i = 0; i < 120; ++i)
+		{
+			const FVector P(Rand.FRandRange(-0.5f, 0.5f) * Size.X, Rand.FRandRange(-0.5f, 0.5f) * Size.Y, Rand.FRandRange(-0.5f, 0.5f) * Size.Z);
+			AddPart(A, SphereMesh, P, FRotator(Rand.FRandRange(-15.f, 15.f), 90.f + Rand.FRandRange(-20.f, 20.f), 0.f), FVector(0.22, 0.045, 0.10), Fish, Fish * 0.9f);
+		}
+		GhostHidden.Add(A);
+		Solid.Actor = A;
+		Solid.World = FTransform(Q, Center);
+		Solid.Half = Size * 0.5;
+		Solid.BaseLoc = Center;
+		return;
+	}
 	const FString ArtId = FString(TEXT("solid:")) + (Solid.Kind.IsNone() ? FString(TEXT("rock")) : Solid.Kind.ToString());
 	if (Size.GetMax() < 2000.0 && Art.Contains(ArtId))
 	{
@@ -262,7 +281,15 @@ void AMatchCutGameMode::SpawnSolid(FDCSolid& Solid, const FVector& CamPos, const
 	}
 	else
 	{
-		Solid.Actor = SpawnBox(Center, Q.Rotator(), Size, DCColor::ForKind(Solid.Kind), !bInGhost);
+		// rock is not one colour: each block gets its own shade from where it stands
+		FLinearColor Col = DCColor::ForKind(Solid.Kind);
+		if (Solid.Kind.IsNone() || Solid.Kind == TEXT("rock"))
+		{
+			FRandomStream Rand(GetTypeHash(Center));
+			const float V = Rand.FRandRange(0.78f, 1.12f);
+			Col = FLinearColor(Col.R * V * Rand.FRandRange(0.92f, 1.08f), Col.G * V, Col.B * V * Rand.FRandRange(0.85f, 1.15f));
+		}
+		Solid.Actor = SpawnBox(Center, Q.Rotator(), Size, Col, !bInGhost);
 	}
 	Solid.World = FTransform(Q, Center);
 	Solid.Half = Size * 0.5;
@@ -511,9 +538,26 @@ void AMatchCutGameMode::SpawnWorld()
 			Prop.Actor = Robot.Actor;
 			continue;
 		}
-		if (AddArt(A, Prop.Kind.ToString(), FVector::ZeroVector, Prop.Kind == TEXT("cell") ? FVector(64.0, 64.0, 88.0) : FVector(130.0, 150.0, Prop.Kind == TEXT("weight") ? 42.0 : 24.0)))
+		const bool bLong = Prop.Kind == TEXT("long"), bRound = Prop.Kind == TEXT("round");
+		const FString PropArt = bLong ? FString(TEXT("plate")) : (bRound ? FString(TEXT("weight")) : Prop.Kind.ToString());
+		const FVector PropBox = Prop.Kind == TEXT("cell") ? FVector(64.0, 64.0, 88.0) : (bLong ? FVector(68.0, 190.0, 24.0) : (bRound ? FVector(116.0, 116.0, 34.0) : FVector(130.0, 150.0, Prop.Kind == TEXT("weight") ? 42.0 : 24.0)));
+		// the long plate and the round one are the same two models as the plate and the lid, flattened to their boxes:
+		// their outline is what the puzzle is about
+		// the two shapes of the graphic match keep their plain orange shapes: outline and contrast matter more there
+		if (!bLong && !bRound && AddArt(A, PropArt, FVector::ZeroVector, PropBox, 0, false))
 		{
 			// the model; its box is the one the shapes below fill
+		}
+		else if (bLong)
+		{
+			// a long plate: actor X is away from the camera, Y across the picture
+			AddPart(A, CubeMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(0.68, 1.9, 0.24), DCColor::Plate, DCColor::Plate * 0.45f);
+			AddPart(A, CubeMesh, FVector(0, 0, 10), FRotator::ZeroRotator, FVector(0.14, 1.6, 0.08), DCColor::DarkMetal, FLinearColor::Black);
+		}
+		else if (bRound)
+		{
+			AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(1.16, 1.16, 0.24), DCColor::Plate, DCColor::Plate * 0.45f);
+			AddPart(A, CylinderMesh, FVector(0, 0, 10), FRotator::ZeroRotator, FVector(0.5, 0.5, 0.08), DCColor::DarkMetal, FLinearColor::Black);
 		}
 		else if (Prop.Kind == TEXT("weight"))
 		{
@@ -540,7 +584,7 @@ void AMatchCutGameMode::SpawnWorld()
 		AActor* A = SpawnGroup(ShotToWorld(Socket.Shot, Socket.S));
 		A->SetActorRotation(Shot.CamRot);
 		const FString SocketArt = TEXT("socket:") + Socket.Label;
-		const bool bSocketArt = Art.Contains(SocketArt);
+		const bool bSocketArt = Art.Contains(SocketArt) && Socket.Accepts != TEXT("long");
 		if (bSocketArt)
 		{
 			// the model, with the small light the game switches from red to green
@@ -570,9 +614,18 @@ void AMatchCutGameMode::SpawnWorld()
 		}
 		else
 		{
+			if (Socket.Accepts == TEXT("long"))
+			{
+				// a crack that runs across the picture: only a long thing covers it
+				AddPart(A, CubeMesh, FVector(0, 0, 3), FRotator::ZeroRotator, FVector(1.0, 2.3, 0.10), DCColor::DarkMetal, FLinearColor::Black);
+				AddPart(A, CubeMesh, FVector(0, 0, 9), FRotator::ZeroRotator, FVector(0.22, 1.9, 0.06), FLinearColor(0.5f, 0.9f, 0.9f), FLinearColor(0.5f, 1.4f, 1.4f));
+			}
+			else
+			{
 			// a vent: a long slot in the floor that runs away from the camera
 			AddPart(A, CubeMesh, FVector(0, 0, 3), FRotator::ZeroRotator, FVector(9.0, 1.9, 0.10), DCColor::DarkMetal, FLinearColor::Black);
 			AddPart(A, CubeMesh, FVector(0, 0, 9), FRotator::ZeroRotator, FVector(8.6, 0.5, 0.06), FLinearColor(0.5f, 0.9f, 0.9f), FLinearColor(0.5f, 1.4f, 1.4f));
+			}
 			Socket.Paint = Paints.Num() - 1;
 		}
 		Socket.Actor = A;
@@ -584,6 +637,7 @@ void AMatchCutGameMode::SpawnWorld()
 	PredActor->SetActorHiddenInGame(true);
 
 	// the player's robot: battered, one thruster missing, number plate scraped off
+	SpawnWater();
 	Hero = SpawnRobot(Shots[0].CamPos, DCColor::Hero, DCColor::EyeCyan, true, TEXT("hero"));
 	if (AActor* A = Hero.Actor.Get())
 	{
@@ -768,6 +822,10 @@ void AMatchCutGameMode::ApplyLook(const FString& Name)
 			FPostProcessSettings& PP = Cam->GetCameraComponent()->PostProcessSettings;
 			PP.VignetteIntensity = Look.Vignette;
 			PP.FilmGrainIntensity = Look.Grain;
+			PP.bOverride_ColorSaturation = PP.bOverride_ColorContrast = PP.bOverride_ColorGain = true;
+			PP.ColorSaturation = FVector4(Look.Saturation, Look.Saturation, Look.Saturation, 1.0);
+			PP.ColorContrast = FVector4(Look.Contrast, Look.Contrast, Look.Contrast, 1.0);
+			PP.ColorGain = FVector4(Look.Tint.R, Look.Tint.G, Look.Tint.B, 1.0);
 		}
 	}
 	if (USpotLightComponent* L = LampSpot.Get())

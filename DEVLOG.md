@@ -86,3 +86,22 @@ The first person to play stage 1 by hand got stuck in THE SHELF: the plate was u
 - Tested first with a rounded box written by `Tools/make_test_glb.py` (`-MCArt=art_test.json` shows it as the plate), then with the hero model. Capture: `docs/captures/brief05/art/`.
 - Hero: one mesh without a rig, so it swims by code (bob, lean into the move, turn through facing the camera, small bank). First capture showed it facing backwards: fixed with a -90 degree turn in the list. It came out black because the game draws no reflections: models are now drawn non-metal, and Unit 0 has a soft light only it takes. The model has no separate parts, so the headlamp, gripper and pods cannot be shown or hidden by stage.
 - Not done yet: the eleven prop and rock models (imported after the puzzle work). The hero's colours look washed out in the green fog; the emissive map is wired in but does not show in captures.
+
+### 2026-11-13, night: three puzzles that need a thought (brief 05, part B)
+
+All three use rules the game already had (near things come through the cut, a thing that lands in a frame of the next shot fits, R goes back one shot). Verified by `stage1` and `stage2` offscreen: `END CARD stage=1 scenes=1/3 crew=1/7` and `END CARD stage=2 scenes=2/3 crew=2/7`. Captures: `docs/captures/brief05/partB/`.
+
+- **Graphic match, THE SHELF (shot 1).** Two loose things, a round one and a long one. The next shot's crack is drawn here as an outline with its real shape. Only the long plate on the outline shows the tape mark. The round one on the outline gets a red WRONG SHAPE label and no mark. The vent in the next shot is now a crack across the picture, so the outline and the crack are the same shape.
+- **The predator as a tool, THE CURRENT (shot 8).** The crew unit is behind a shoal that Unit 0 cannot swim through. The predator now comes as soon as the vent is covered. Cut away while it is outside the carry circle: the log says `PREDATOR stayed behind`, the next shot says IT STAYED BEHIND and tells the player to press R. Back in the shot the shoal flies apart and the crew unit is free. Cut while it is inside the circle and it comes along: IT CAME WITH YOU, take again. The shoal stays gone after a retake.
+- **Shuttle, THE DRIFT and THE LIFT (shots 9 and 10).** The lift needs the crew unit and a power cell, and the gripper holds one thing. The cell lies in THE DRIFT, too heavy to drift along. A white mark in THE LIFT cuts back to THE DRIFT. Either order works. The second predator of THE DRIFT is gone: the timed mark is enough there.
+- A pushed thing can no longer be pushed so far to the side that Unit 0 cannot get behind it.
+- `Tools/make_full12.py` writes `full12.txt` from the two stage scripts.
+- Found on the way: the stage 1 script lost the power cell when Unit 0 bumped it early in THE WRECK. The script now swims to the cell wherever it is.
+
+### 2026-11-13, ~23:30: the water, and all twelve models in the game (brief 05, C4 and the art drop)
+
+- Engine-only visual pass (`DCVisual.cpp`): 660 flecks of marine snow sink and 92 bubbles rise in front of the live camera (two instanced meshes, no particle system); the slats that cut the key light into shafts now sway, so the light bars on the floor move slowly like caustics; colour grading per look (saturation, contrast, tint in `deepcut.json` `looks`); each rock block gets its own shade. The rim light on Unit 0 came with the hero model.
+- All twelve models of `ArtDrop/` are imported (`Tools/import_art.sh`, 125 MB under `Content/DeepCut/Art/`). Rock boxes take the rock model nearest their own proportions. No model for `solid:dark` and `socket:LIFT`: code shapes stay. The two pieces of the graphic match keep their plain orange shapes, because their outline and contrast are the puzzle. The crack in THE VENT keeps its code shape for the same reason.
+- First capture with the models showed every model glowing pale: the code raised the emissive of all of them. Now only the hero's is raised (it is the only one with an emissive map).
+- `full12` offscreen after all of this: `END CARD stage=1 scenes=1/3 crew=1/7`, then `END CARD stage=2 scenes=2/3 crew=2/7`.
+- Frame times in that run (editor, offscreen, background priority while the Mac was in use, so an upper bound): 28-37 ms in shots 0-3 and 6-7, 47-57 ms in shots 8-9, and 89-250 ms in shots 4, 5 and 10. Not measured at normal priority or in the packaged build yet.

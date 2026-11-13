@@ -14,7 +14,7 @@ move -1 0 0 0.7
 snap a4_swim_left
 wait 1.2
 snap a5_rest_facing_left
-swimrel plate -150 60 0
+swimrel bar -180 60 0
 move 1 0 0 0.4
 snap a6_push_plate
 goto 3

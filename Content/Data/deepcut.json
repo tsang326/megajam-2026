@@ -55,6 +55,19 @@
     0.0,
     0.03,
     0.035
+   ],
+   "saturation": 1.25,
+   "contrast": 1.1,
+   "tint": [
+    1.0,
+    1.0,
+    0.97
+   ],
+   "snow": 1.0,
+   "snowColor": [
+    0.3,
+    0.42,
+    0.38
    ]
   },
   "B": {
@@ -89,6 +102,19 @@
     0.002,
     0.012,
     0.05
+   ],
+   "saturation": 1.1,
+   "contrast": 1.15,
+   "tint": [
+    0.94,
+    1.0,
+    1.1
+   ],
+   "snow": 0.8,
+   "snowColor": [
+    0.22,
+    0.3,
+    0.45
    ]
   },
   "C": {
@@ -112,7 +138,10 @@
     0.02,
     0.2,
     0.22
-   ]
+   ],
+   "saturation": 1.0,
+   "contrast": 1.0,
+   "snow": 0.0
   }
  },
  "shots": [
@@ -246,8 +275,8 @@
    "id": "shelf",
    "name": "THE SHELF",
    "gate": "fits:vent",
-   "hint": "Push the loose plate onto the VENT frame.",
-   "hintSolved": "Near things come with you through the cut. Stay close to the plate. Swim onto the tape mark.",
+   "hint": "Two loose things. One has the shape of the outline. Push it onto the outline.",
+   "hintSolved": "Near things come with you through the cut. Stay close to it. Swim onto the tape mark.",
    "cam": {
     "pos": [
      -900,
@@ -342,10 +371,19 @@
    ],
    "props": [
     {
-     "id": "plate",
-     "kind": "plate",
+     "id": "disc",
+     "kind": "round",
      "p": [
-      -60,
+      380,
+      -203,
+      1050
+     ]
+    },
+    {
+     "id": "bar",
+     "kind": "long",
+     "p": [
+      -330,
       -203,
       1050
      ]
@@ -370,7 +408,7 @@
    "id": "vent",
    "name": "THE VENT",
    "gate": "socket:vent",
-   "hint": "The current is too strong. The vent needs the plate. R: back one shot.",
+   "hint": "The current is too strong. The crack needs the long plate. R: back one shot.",
    "hintSolved": "This mark has a depth. Make your ring the same size as the white ring.",
    "cam": {
     "pos": [
@@ -473,7 +511,7 @@
     {
      "id": "vent",
      "label": "VENT",
-     "accepts": "plate",
+     "accepts": "long",
      "p": [
       200,
       -215,
@@ -1176,9 +1214,9 @@
    "id": "net",
    "name": "THE CURRENT",
    "stage": 2,
-   "gate": "grab",
-   "hint": "A crew unit, behind the current. The vent needs the lid. No lid? R: back one shot.",
-   "hintSolved": "Carry the crew unit to the mark. Then cut.",
+   "gate": "socket:vent2",
+   "hint": "The vent needs the lid. No lid? R: back one shot.",
+   "hintSolved": "A shoal hides a crew unit. Only something big can scatter it. Wait on the mark.",
    "cam": {
     "pos": [
      -900,
@@ -1212,8 +1250,8 @@
      80,
      1150
     ],
-    "delay": 5.0,
-    "warn": 6.0,
+    "delay": 4.0,
+    "warn": 5.0,
     "speed": 110,
     "accel": 18
    },
@@ -1332,14 +1370,27 @@
       ]
      ]
     }
-   ]
+   ],
+   "shoal": {
+    "p": [
+     450,
+     -110,
+     1150
+    ],
+    "s": [
+     320,
+     210,
+     500
+    ]
+   },
+   "hintAfter": "The shoal is gone. Carry the crew unit to the mark: E. Then cut."
   },
   {
    "id": "drift",
    "name": "THE DRIFT",
    "stage": 2,
    "gate": "",
-   "hint": "The big one drifts over your landing place. Cut when the place is clear.",
+   "hint": "The lift needs the crew unit and this power cell. You hold one thing at a time. Cut when the place is clear.",
    "cam": {
     "pos": [
      -900,
@@ -1367,17 +1418,6 @@
     330,
     1400
    ],
-   "predator": {
-    "from": [
-     980,
-     -40,
-     1150
-    ],
-    "delay": 6.0,
-    "warn": 4.0,
-    "speed": 190,
-    "accel": 18
-   },
    "solids": [
     {
      "p": [
@@ -1461,13 +1501,25 @@
      "when": "clear",
      "amp": 1400
     }
+   ],
+   "props": [
+    {
+     "id": "cell2",
+     "kind": "cell",
+     "heavy": true,
+     "p": [
+      330,
+      -169,
+      1150
+     ]
+    }
    ]
   },
   {
    "id": "lift",
    "name": "THE LIFT",
    "stage": 2,
-   "hint": "Put the crew unit in the lift: E. No unit? R: back one shot.",
+   "hint": "The lift needs a crew unit and a power cell: E drops one in. White mark: back for the other.",
    "cam": {
     "pos": [
      -900,
@@ -1559,13 +1611,39 @@
       -150,
       1200
      ]
+    },
+    {
+     "id": "power",
+     "label": "POWER",
+     "accepts": "cell",
+     "p": [
+      -60,
+      -150,
+      1200
+     ]
     }
-   ]
+   ],
+   "exits": [
+    {
+     "to": "drift",
+     "color": "white",
+     "anyDepth": true,
+     "back": true,
+     "marks": [
+      [
+       -540,
+       -60,
+       1150
+      ]
+     ]
+    }
+   ],
+   "hintSolved": "The lift needs a crew unit and a power cell: E drops one in. White mark: back for the other."
   }
  ],
  "gentleLight": 14000,
  "gentleLightRadius": 560,
  "gentleBack": 1500,
  "floorY": -215,
- "heroRim": 600
+ "heroRim": 300
 }

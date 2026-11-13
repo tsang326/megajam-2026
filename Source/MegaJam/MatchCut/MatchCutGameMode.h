@@ -284,6 +284,7 @@ private:
 	TWeakObjectPtr<UPointLightComponent> HeroRim;
 	float HeroFace = 0.f;  // 0 = faces right, 180 = faces left; turns through "faces the camera"
 	float HeroLean = 0.f;
+	bool bPredStayed = false;
 	float HeroRimPower = 2500.f;
 	float HeroBank = 0.f;
 
@@ -343,6 +344,17 @@ private:
 	// paints, looks
 	TArray<FDCPaint> Paints;
 	TArray<TWeakObjectPtr<AActor>> ShaftSlats;
+	// the water (DCVisual.cpp)
+	void SpawnWater();
+	void TickWater(float Dt);
+	TArray<FVector> SlatBase;
+	TWeakObjectPtr<AActor> SnowActor;
+	TWeakObjectPtr<AActor> BubbleActor;
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> SnowMID;
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> BubbleMID;
+	float WaterTime = 0.f;
 	TArray<TWeakObjectPtr<ACameraActor>> AllCameras;
 	float AmbientNow = 0.f;
 

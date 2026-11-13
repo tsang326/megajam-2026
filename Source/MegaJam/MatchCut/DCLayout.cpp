@@ -168,6 +168,11 @@ bool AMatchCutGameMode::LoadLayout()
 			L->TryGetBoolField(TEXT("shafts"), Out.bShafts);
 			ReadFloat(L, TEXT("vignette"), Out.Vignette);
 			ReadFloat(L, TEXT("grain"), Out.Grain);
+			ReadFloat(L, TEXT("saturation"), Out.Saturation);
+			ReadFloat(L, TEXT("contrast"), Out.Contrast);
+			Out.Tint = ReadColor(L, TEXT("tint"), Out.Tint);
+			ReadFloat(L, TEXT("snow"), Out.Snow);
+			Out.SnowColor = ReadColor(L, TEXT("snowColor"), Out.SnowColor);
 			ReadFloat(L, TEXT("darkFactor"), Out.DarkFactor);
 			ReadFloat(L, TEXT("ambient"), Out.Ambient);
 			Out.Backdrop = ReadColor(L, TEXT("backdrop"), Out.Backdrop);
@@ -194,6 +199,16 @@ bool AMatchCutGameMode::LoadLayout()
 		S->TryGetStringField(TEXT("name"), Shot.Name);
 		S->TryGetStringField(TEXT("hint"), Shot.Hint);
 		S->TryGetStringField(TEXT("hintSolved"), Shot.HintSolved);
+		S->TryGetStringField(TEXT("hintAfter"), Shot.HintAfter);
+		const TSharedPtr<FJsonObject>* Shoal = nullptr;
+		if (S->TryGetObjectField(TEXT("shoal"), Shoal) && Shoal)
+		{
+			FDCSolid& Sol = Shot.Solids.AddDefaulted_GetRef();
+			Sol.C = ReadVec(*Shoal, TEXT("p"));
+			Sol.Size = ReadVec(*Shoal, TEXT("s"), FVector(200.0));
+			Sol.Kind = TEXT("shoal");
+			Shot.ShoalSolid = Shot.Solids.Num() - 1;
+		}
 		S->TryGetStringField(TEXT("gate"), Shot.Gate);
 		S->TryGetBoolField(TEXT("dark"), Shot.bDark);
 		double StageNum = 1.0;
@@ -284,6 +299,7 @@ bool AMatchCutGameMode::LoadLayout()
 				E->TryGetStringField(TEXT("color"), Exit.ColorName);
 				Exit.Color = TapeColor(Exit.ColorName);
 				E->TryGetBoolField(TEXT("anyDepth"), Exit.bAnyDepth);
+				E->TryGetBoolField(TEXT("back"), Exit.bBack);
 				Exit.Shape = Shot.Exits.Num() - 1;
 				const TArray<TSharedPtr<FJsonValue>>* Pulse = nullptr;
 				if (E->TryGetArrayField(TEXT("pulse"), Pulse) && Pulse && Pulse->Num() >= 2)
@@ -324,6 +340,7 @@ bool AMatchCutGameMode::LoadLayout()
 					Prop.Kind = FName(*Kind);
 				}
 				Prop.bHeavy = Prop.Kind == TEXT("weight") || Prop.Kind == TEXT("crew");
+				P->TryGetBoolField(TEXT("heavy"), Prop.bHeavy);
 				Prop.Shot = Prop.HomeShot = Index;
 				Prop.S = Prop.HomeS = ReadVec(P, TEXT("p"));
 			}

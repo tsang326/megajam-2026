@@ -476,6 +476,19 @@ bool AMatchCutGameMode::TryCut()
 		return false;
 	}
 
+	if (PredPhase == 2 && FVector::Dist(PredS, HeroS) < CarryRadius)
+	{
+		// inside the circle it would come through the cut with Unit 0
+		UE_LOG(LogMatchCut, Display, TEXT("PREDATOR inside the carry radius at the cut in shot %d (%.0f cm): it comes along, caught"), Cur, FVector::Dist(PredS, HeroS));
+		for (FDCProp& P : Props)
+		{
+			P.bCarried = P.bCarried && P.Shot != Cur;
+		}
+		bCaught = true;
+		FailTake(DCText::ReasonCame);
+		ResetPredator();
+		return false;
+	}
 	const FDCExit Exit = A.Exits[E.Exit];
 	const FVector2D Before = HeroNdc;
 	const int32 From = Cur;
@@ -501,6 +514,15 @@ bool AMatchCutGameMode::TryCut()
 		}
 	}
 
+	if (PredPhase > 0 && Shots[From].ShoalSolid != INDEX_NONE && !Shots[From].bShoalGone)
+	{
+		// The carry rule works on it too: outside the circle it stays in the old shot. There it goes through the shoal.
+		FDCShot& Old = Shots[From];
+		Old.bShoalGone = true;
+		Old.Solids[Old.ShoalSolid].bActive = false;
+		bPredStayed = true;
+		UE_LOG(LogMatchCut, Display, TEXT("PREDATOR stayed behind in shot %d \"%s\" (%.0f cm away, carry radius %.0f): the shoal is scattered"), From, *Old.Name, FVector::Dist(PredS, HeroS), CarryRadius);
+	}
 	if (PredPhase > 0)
 	{
 		UE_LOG(LogMatchCut, Display, TEXT("PREDATOR escaped by the cut in shot %d: phase=%d, %.0f cm away, %.1fs after the warning began"), Cur, PredPhase, FVector::Dist(PredS, HeroS), PredClock - A.PredDelay);
@@ -522,6 +544,11 @@ bool AMatchCutGameMode::TryCut()
 	for (const TPair<int32, int32>& L : Landed)
 	{
 		FillSocket(L.Key, L.Value, false);
+	}
+	if (bPredStayed)
+	{
+		bPredStayed = false;
+		ShowBanner(DCText::PredStayed, DCText::PredStayedHow, 7.f);
 	}
 	if (bCrewRescued)
 	{

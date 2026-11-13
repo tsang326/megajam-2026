@@ -94,7 +94,7 @@ void AMatchCutGameMode::FillSocket(int32 SocketIndex, int32 PropIndex, bool bQui
 	Socket.bFilled = true;
 	Progress();
 	Prop.Shot = Socket.Shot;
-	Prop.S = Socket.S + (Prop.Kind == TEXT("plate") ? FVector(0.0, 12.0, 0.0) : FVector::ZeroVector);
+	Prop.S = Socket.S + ((Prop.Kind == TEXT("plate") || Prop.Kind == TEXT("long") || Prop.Kind == TEXT("round")) ? FVector(0.0, 12.0, 0.0) : FVector::ZeroVector);
 	Prop.Socket = SocketIndex;
 	Prop.bLocked = true;
 	Prop.bCarried = false;
@@ -122,19 +122,33 @@ void AMatchCutGameMode::FillSocket(int32 SocketIndex, int32 PropIndex, bool bQui
 			Audio->Play(TEXT("plate_lift"), 0.9f, 0.7f);
 		}
 	}
+	// a shot ends its stage when every socket in it is filled (brief 05: the lift needs two things)
+	bool bEnds = false, bAll = true;
+	for (const FDCSocket& S : Sockets)
+	{
+		if (S.Shot == Socket.Shot)
+		{
+			bEnds |= S.bEnds;
+			bAll &= S.bFilled;
+		}
+	}
+	const TCHAR* More = bEnds && !bAll ? DCText::LiftNeedsMore : TEXT("");
 	if (Socket.Accepts == TEXT("crew"))
 	{
-		ShowBanner(DCText::CrewSafe, FString::Printf(DCTEXT_CREW, CrewCount(), CrewTotal), 4.f);
+		ShowBanner(DCText::CrewSafe, bEnds && !bAll ? FString(More) : FString::Printf(DCTEXT_CREW, CrewCount(), CrewTotal), 4.f);
 		UE_LOG(LogMatchCut, Display, TEXT("RESCUE crew robot %s is in the lift in shot %d: CREW %d/%d"), *Prop.Id, Socket.Shot, CrewCount(), CrewTotal);
-		if (Socket.bEnds)
+		if (bEnds && bAll)
 		{
 			EndTimer = 3.0f;
 		}
 	}
-	else if (Socket.bEnds)
+	else if (bEnds || Socket.Accepts == TEXT("cell"))
 	{
-		ShowBanner(DCText::PowerOn, TEXT(""), 3.f);
-		EndTimer = 3.0f;
+		ShowBanner(DCText::PowerOn, More, 3.f);
+		if (bEnds && bAll)
+		{
+			EndTimer = 3.0f;
+		}
 	}
 	else
 	{
@@ -229,7 +243,13 @@ void AMatchCutGameMode::NudgeProps()
 			continue;
 		}
 		PushOut(Cur, P.S, bFloor ? 14.0 : 32.0, nullptr);
-		P.S.X = FMath::Clamp(P.S.X, Shot.VolMin.X, Shot.VolMax.X);
+		{
+			// never into a corner: Unit 0 must always be able to get to the far side of it (no dead end)
+			const double Room = H.X + 2.0 * HeroRadius + 24.0;
+			const double Edge = DC::FrameX * FMath::Max(P.S.Z - 150.0, 100.0) * TanH;
+			const double X0 = FMath::Max(Shot.VolMin.X, Shot.Truck - Edge) + Room, X1 = FMath::Min(Shot.VolMax.X, Shot.Truck + Edge) - Room;
+			P.S.X = FMath::Clamp(P.S.X, FMath::Min(X0, Before.X), FMath::Max(X1, Before.X)); // a thing that starts outside is not pulled in
+		}
 		P.S.Y = FMath::Clamp(P.S.Y, Shot.VolMin.Y - 60.0, Shot.VolMax.Y);
 		P.S.Z = FMath::Clamp(P.S.Z, Shot.VolMin.Z, Shot.VolMax.Z);
 		if (bFloor)
@@ -438,6 +458,25 @@ void AMatchCutGameMode::UpdateCurrents(float Dt)
 
 void AMatchCutGameMode::TickPuzzles(float Dt)
 {
+	{
+		// a shoal the predator went through: seen flying apart the first time Unit 0 is back in this shot
+		FDCShot& Sh = Shots[Cur];
+		if (Sh.bShoalGone && Sh.ShoalSolid != INDEX_NONE && Sh.ShoalTime < 1.2f)
+		{
+			if (Sh.ShoalTime <= 0.f)
+			{
+				ShowBanner(DCText::ShoalGone, TEXT(""), 3.5f);
+				UE_LOG(LogMatchCut, Display, TEXT("SHOAL gone in shot %d: the way is open"), Cur);
+				Progress();
+			}
+			Sh.ShoalTime += Dt;
+			if (AActor* A = Sh.Solids[Sh.ShoalSolid].Actor.Get())
+			{
+				A->SetActorScale3D(FVector(1.0 + 3.0 * Sh.ShoalTime));
+				A->SetActorHiddenInGame(Sh.ShoalTime >= 1.2f);
+			}
+		}
+	}
 	FDCShot& Shot = Shots[Cur];
 	RevealTime = FMath::Max(0.f, RevealTime - Dt);
 

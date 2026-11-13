@@ -68,7 +68,34 @@ UStaticMeshComponent* AMatchCutGameMode::AddArt(AActor* Owner, const FString& Id
 	{
 		return nullptr;
 	}
-	const FDCArtRef& Ref = (*Set)[Hash % Set->Num()];
+	// a box that is filled takes a model of about its own proportions (a pillar for a tall box, a slab for a flat one),
+	// so nothing is stretched much; among those that suit, the hash of the place picks
+	TArray<int32> Suit;
+	if (bFill && Set->Num() > 1)
+	{
+		const double BoxTall = Size.Z / FMath::Max3(Size.X, Size.Y, 1.0);
+		double Best = 1.e9;
+		int32 BestIndex = 0;
+		for (int32 i = 0; i < Set->Num(); ++i)
+		{
+			const FVector E = ArtMeshes[(*Set)[i].Mesh]->GetBoundingBox().GetSize();
+			const double Off = FMath::Abs(FMath::Loge((E.Z / FMath::Max3(E.X, E.Y, 1.0)) / FMath::Max(BoxTall, 0.01)));
+			if (Off < 0.75)
+			{
+				Suit.Add(i);
+			}
+			if (Off < Best)
+			{
+				Best = Off;
+				BestIndex = i;
+			}
+		}
+		if (Suit.Num() == 0)
+		{
+			Suit.Add(BestIndex);
+		}
+	}
+	const FDCArtRef& Ref = Suit.Num() > 0 ? (*Set)[Suit[Hash % Suit.Num()]] : (*Set)[Hash % Set->Num()];
 	UStaticMesh* Mesh = ArtMeshes[Ref.Mesh];
 	const FBox B = Mesh->GetBoundingBox();
 	// a filled box (rock) may be turned in quarter turns by the hash, so two boxes with one mesh do not look the same
@@ -122,7 +149,7 @@ UStaticMeshComponent* AMatchCutGameMode::AddArt(AActor* Owner, const FString& Id
 			{
 				MID->SetScalarParameterValue(I.Name, 0.f);
 			}
-			else if (N.Contains(TEXT("EmissiveStrength")))
+			else if (N.Contains(TEXT("EmissiveStrength")) && Id == TEXT("hero")) // the only model with an emissive map
 			{
 				MID->SetScalarParameterValue(I.Name, 6.f);
 			}
@@ -134,7 +161,7 @@ UStaticMeshComponent* AMatchCutGameMode::AddArt(AActor* Owner, const FString& Id
 		{
 			const FString N = I.Name.ToString();
 			Names += N + TEXT(" ");
-			if (N.Contains(TEXT("Emissive")))
+			if (N.Contains(TEXT("Emissive")) && Id == TEXT("hero"))
 			{
 				MID->SetVectorParameterValue(I.Name, FLinearColor::White);
 			}

@@ -253,8 +253,16 @@ void AMatchCutGameMode::RestartAll()
 		}
 		Shot.Switch.bOn = false;
 		Shot.Switch.Turn = 0.f;
+		Shot.bShoalGone = false;
+		Shot.ShoalTime = 0.f;
 		for (FDCSolid& Solid : Shot.Solids)
 		{
+			Solid.bActive = true;
+			if (Solid.Kind == TEXT("shoal") && Solid.Actor.IsValid())
+			{
+				Solid.Actor->SetActorHiddenInGame(false);
+				Solid.Actor->SetActorScale3D(FVector(1.0));
+			}
 			Solid.Open = 0.f;
 			Solid.World.SetLocation(Solid.BaseLoc);
 			if (AActor* A = Solid.Actor.Get())
@@ -380,6 +388,7 @@ void AMatchCutGameMode::TickPlaying(float Dt)
 	CurEval = EvalCut();
 	HeroFloorY = FloorUnder(Cur, HeroS);
 	TickTeach(Dt);
+	TickWater(Dt);
 	if (!InRestore() && Shots[Cur].Exits.IsValidIndex(CurEval.Exit) && CurEval.Exit != GhostExit)
 	{
 		// two cameras: the ghost shows the one whose mark is nearest

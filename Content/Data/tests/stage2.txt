@@ -108,64 +108,101 @@ snap t3g_low_mark_lid_fits
 cut
 wait 1.0
 snap t4c_lid_on_vent_current_off
-# --- shot 8 THE CURRENT: a crew unit to carry; the predator comes once the mark shows
-swimto 450 -130 1150
-wait 0.3
-snap t4d_at_crew_unit
-use
-wait 0.8
-snap t4e_crew_held_mark_shows
+# --- shot 8 THE CURRENT: the predator as a tool. A shoal hides the crew unit; only the predator scatters it.
+swimto 200 -120 1150
+move 1 0 0 1.2
+snap t4d_shoal_blocks_the_way
+swimmark 0 0
+wait 0.4
+snap t4e_on_mark_waiting
 waitpred 1
 wait 0.8
 snap t4f_predator_warning
-wait 2.5
-snap t4g_predator_eyes_at_edge
 waitpred 2
 wait 1.5
-snap t4h_predator_comes
-wait 2.5
-snap t4i_predator_close
-waitstate TakeCard
-wait 0.4
-snap t4j_CAUGHT_signal_lost
-wait 0.35
-snap t4j2_CAUGHT_take_2
+snap t4h_predator_comes_outside_circle
+cut
+wait 0.8
+snap t5a_drift_it_stayed_behind
+# back one shot: the shoal flies apart, the crew unit is free
+retake
+wait 0.5
+snap t4n_back_shoal_flying_apart
+wait 1.6
+snap t4o_shoal_gone
+swimrel crew2 0 50 0
+wait 0.3
+snap t4p_at_crew_unit
+use
+wait 0.6
+snap t4q_crew_held
+# failed take: cut while it is inside the circle. It comes along.
+swimmark 0 0
+waitpred 2
+wait 4.8
+snap t4r_predator_inside_circle
+cut
+wait 0.3
+snap t4s_CAUGHT_it_came_with_you
+wait 1.0
+snap t4s2_CAUGHT_take_2
 waitstate Playing
 wait 0.6
-snap t4k_take_again
-# again: grab the crew unit, stand on the mark, cut when it comes
-swimto 450 -150 1150
+# again: grab the crew unit, stand on the mark, cut while it is far
+swimrel crew2 0 50 0
 use
 wait 0.4
-swimn 0.452 0.268 1150
-wait 0.4
-snap t4l_on_mark_with_crew
+swimmark 0 0
 waitpred 2
 wait 1.2
 snap t4m_predator_comes_cut_now
 cut
 wait 0.8
-snap t5a_escaped_drift
-# --- shot 9 THE DRIFT: the mark holds only while the landing place in the next shot is clear
-swimn -0.527 0.0 1150
+snap t5b_drift_with_crew_cell_and_two_frames
+# --- shot 9 THE DRIFT / shot 10 THE LIFT: the shuttle. The lift needs the crew unit and the power cell; one thing at a time.
+swimmark 0 0
 waitok 0
 wait 0.2
-snap t5b_on_mark_place_not_clear
+snap t5c_on_mark_place_not_clear
 waitok
 wait 0.1
-snap t5c_on_mark_place_clear
+snap t5d_on_mark_place_clear
 cut
 wait 1.0
-snap t6a_lift
-# --- shot 10 THE LIFT: put the crew unit in the lift
-swimto 250 -100 1200
+snap t6a_lift_two_frames
+swimsock lift 0 60 1200
 wait 0.5
 snap t6b_crew_over_lift
 use
 wait 1.0
-snap t6c_crew_safe
+snap t6c_crew_safe_needs_one_more
+# back for the cell by the white mark
+swimmark 0 0
+wait 0.4
+snap t6d_on_back_mark
+cut
+wait 0.8
+snap t5e_back_in_drift
+swimrel cell2 0 60 0
+wait 0.3
+snap t5f_at_heavy_cell
+use
+wait 0.5
+swimmark 0 0
+waitok 0
+waitok
+wait 0.1
+snap t5g_on_mark_with_cell
+cut
+wait 0.8
+snap t6e_lift_with_cell
+swimsock power 0 60 1200
+wait 0.4
+use
+wait 1.0
+snap t6f_power_on
 waitstate EndCard
 wait 1.5
-snap t6d_end_card_stage2
+snap t6g_end_card_stage2
 stat
 quit
