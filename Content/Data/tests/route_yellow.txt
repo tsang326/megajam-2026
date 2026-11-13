@@ -7,7 +7,7 @@ givepart
 wait 1.5
 snap y1_wreck_marks
 # without the cell: the dock cannot be powered, R goes back
-swimto 400 -50 1150
+swimmark 0 0
 wait 0.4
 snap y2_on_yellow_cell_stays
 cut

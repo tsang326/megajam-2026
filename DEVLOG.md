@@ -105,3 +105,10 @@ All three use rules the game already had (near things come through the cut, a th
 - First capture with the models showed every model glowing pale: the code raised the emissive of all of them. Now only the hero's is raised (it is the only one with an emissive map).
 - `full12` offscreen after all of this: `END CARD stage=1 scenes=1/3 crew=1/7`, then `END CARD stage=2 scenes=2/3 crew=2/7`.
 - Frame times in that run (editor, offscreen, background priority while the Mac was in use, so an upper bound): 28-37 ms in shots 0-3 and 6-7, 47-57 ms in shots 8-9, and 89-250 ms in shots 4, 5 and 10. Not measured at normal priority or in the packaged build yet.
+
+### 2026-11-14, ~00:45: packaged build, yellow route mark, report (brief 05)
+
+- Packaged Mac build runs `full12` to both end cards with the models, the water and the three puzzles, and `route_yellow` to its end card. Captures: `docs/captures/brief05/packaged/`.
+- Frame times in the packaged `full12`: 25-34 ms in every shot in the first run; 26-34 ms and 54-110 ms (shots 3-7) in the second. Both at background priority with the Mac in use. A run at normal priority is still missing.
+- `route_yellow` failed once tonight: the power cell sat on the DOCK frame and still stayed behind. Cause: the frame's centre was 294 cm from THE WRECK's yellow mark, outside the 280 cm carry circle; it only worked when the cell lay on the right part of the frame. The mark moved from x 400 to 380. From its start place the cell still stays (292 cm), from the frame it comes and fits (275 cm).
+- `docs/brief05-report.md` written: what changed, how a newcomer learns each puzzle, frame times, every new English line, what is unverified, what to cut first, play commands.
