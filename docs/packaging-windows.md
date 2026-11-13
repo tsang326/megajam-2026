@@ -5,7 +5,7 @@ The jam wants a packaged Windows build. It has to be made on the Windows PC: thi
 ## What is already set up in the repo
 
 - `Config/DefaultGame.ini`, `[/Script/UnrealEd.ProjectPackagingSettings]`: the map `/Game/MatchCut/Lvl_MatchCut` is in `MapsToCook`, `/Game/DeepCut` (the materials and the 13 sounds in `/Game/DeepCut/Audio`) is always cooked, and `Content/Data` is staged as UFS, so everything in it ends up inside the pak: `deepcut.json` (shots), `film.json` (opening film and removed scene), `audio.json` (mixer), `Fonts/*.ttf` (the two HUD fonts, loaded at run time) and `tests/*.txt` (test scripts).
-- `Config/DefaultEngine.ini`: `GameDefaultMap` is the slice map and `GlobalDefaultGameMode` is `/Script/MegaJam.MatchCutGameMode`, so the packaged game starts straight in the opening film.
+- `Config/DefaultEngine.ini`: `GameDefaultMap` is the slice map and `GlobalDefaultGameMode` is `/Script/MegaJam.MatchCutGameMode`, so the packaged game starts straight in the opening (design-file card, then the film).
 - The game reads all of its data with `FPaths::ProjectContentDir() / "Data/..."`, which resolves inside the pak in a packaged build.
 - The sounds are in Git LFS like the map and the materials (`*.uasset`, `*.wav`).
 
@@ -34,9 +34,9 @@ Or in the editor: Platforms > Windows > Shipping, then Platforms > Windows > Pac
 
 ## Check before uploading
 
-1. Run `MegaJam.exe` on the PC. The opening film must start by itself.
+1. Run `MegaJam.exe` on the PC. The design-file card ("UNIT 0 - PROTOTYPE", three struck-out features) must show first, then the opening film starts by itself. Together they take about 15 seconds.
 2. In a Development build open `MegaJam\Saved\Logs\MegaJam.log` and look for `Layout loaded from ... 6 shots`, `Film loaded from ...`, `AUDIO init: 13 of 13 sounds loaded` and `HUD fonts: mono=1 title=1`. If it says `Cannot read layout`, the `Data` folder was not staged. Fewer than 13 sounds means `/Game/DeepCut/Audio` was not cooked (check `git lfs pull`). `mono=0` means the fonts were not staged; the game then falls back to the engine font.
-2b. Scripted check without playing (Development build): `MegaJam.exe -MCScript=stage1 -MCOut=C:\temp\stage1 -windowed -ResX=1280 -ResY=720`. It plays stage 1 by itself from the film to the end card, writes captures to the folder and quits. The log must contain `END CARD` and no `NOT REACHED`. A bare script name is looked up in the staged `Content/Data/tests`.
+2b. Scripted check without playing (Development build): `MegaJam.exe -MCScript=stage1 -MCOut=C:\temp\stage1 -windowed -ResX=1280 -ResY=720`. It plays stage 1 by itself from the film to the end card, writes captures to the folder and quits. The log must contain `END CARD` and no `NOT REACHED`. A bare script name is looked up in the staged `Content/Data/tests`. On the Mac the packaged app is sandboxed and cannot write outside its container, so `Tools/run_packaged.sh` leaves `-MCOut` out and copies the captures afterwards; a Windows build has no such limit.
 3. Play to the end card once with the keyboard (WASD, Space / Shift for depth, E, C, F, R), with sound on. Sound has only been checked by log on the Mac, never by ear.
 4. Try it once on the weakest PC available (the Intel Iris Xe one). If it is slow there, start with `MegaJam.exe -MCLook=B` or `-MCLook=C`, or change `"look"` in `deepcut.json` before packaging. Look A uses volumetric fog and is the most expensive of the three.
 5. `-MCSkipFilm` skips the opening film (useful while testing). Remove `Saved\DeepCut\intro_seen.txt` to get the "first view" behaviour back.

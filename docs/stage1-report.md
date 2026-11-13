@@ -145,11 +145,26 @@ HUD text is drawn with two OFL fonts loaded at run time from `Content/Data/Fonts
 
 ## Frame times
 
-FRAMETIME_SECTION
+Average frame time per shot at 1920x1080, look A, offscreen, from the `FRAMETIME` log lines. Every run was started with `taskpolicy -b` (background priority, which macOS throttles hard) while the machine was doing other work, so these are upper bounds and not what a player gets. A foreground run on 12 Nov, before this work, logged 13-14 ms in every shot; that has not been measured again with the new shots.
+
+| Shot | Packaged, run 1 | Packaged, run 2 | Editor `-game` |
+|---|---|---|---|
+| 0 Drop zone | 38 ms | 48 ms | 43 ms |
+| 1 The shelf | 31-41 ms | 75-81 ms | 63-69 ms |
+| 2 The chimney | 39-47 ms | 41-66 ms | 46 ms |
+| 3 The wreck (lamp) | 29 ms | 34 ms | 88 ms |
+| 4 The dark (lamp) | 47 ms | 50 ms | 39 ms |
+| 5 Dock, end card | 65 ms | 48 ms | 31 ms |
+
+The two packaged runs differ by a factor of two in the same shot, so the load on the machine decides these numbers more than the scene does. `max` is 400 ms in every line; I did not look into where those long frames fall. Not measured: a foreground run at normal priority, and anything on Windows.
 
 ## Packaging
 
-PACKAGING_SECTION
+- `Tools/package_mac.sh` builds a Development package into `Saved/Package/Mac/MegaJam.app` (cook, stage, pak; about 25 minutes at background priority).
+- `Tools/run_packaged.sh stage1 Saved/DeepCut/stage1_pkg` plays stage 1 in the packaged build, offscreen. Result on 13 Nov: `Layout loaded` (6 shots, 2 props, 2 sockets), `Film loaded` (10.4 s), `AUDIO init: 13 of 13 sounds loaded`, `HUD fonts: mono=1 title=1`, every cut and every failed take the same as in the editor run, `END CARD scenes=1/3 crew=1/7`, no `NOT REACHED`, 79 audio events, 50 captures. Seven of the captures are in `docs/captures/stage1_pkg/`.
+- The packaged Mac app is sandboxed (`com.apple.security.app-sandbox`, added by the engine's packaging). It reads only its own bundle and writes only inside `~/Library/Containers/com.YourCompany.MegaJam/Data/`. A script given by path outside the bundle is not read, and `-MCOut` or `-abslog` pointing outside the container write nothing, without an error. The runner therefore uses a script name (staged in `Content/Data/tests`), lets the captures go to the container and copies them out, and takes the log from stdout. The save file `intro_seen.txt` also lives in the container.
+- The bundle id is still the template's `com.YourCompany.MegaJam`. It only matters for a Mac release, which the jam does not ask for.
+- Windows: not built. `docs/packaging-windows.md` has the steps and the checks; none of them has been run.
 
 ## New player-facing lines (all need approval)
 
@@ -209,5 +224,7 @@ Keep to the last: tape marks, the plate over the vent, restore-by-cut, the card 
 - Whether a newcomer understands STAYS / COMES / FITS and the dashed circle without help, and whether the first cut takes a person under 20 s (the script needs 6 s; the mark is about 130 px from the arrival point).
 - The dark shot is crowded when the cell is held on the mark: prompt, ring text, lamp circle and countdown arc overlap (`s4d_on_mark_closed`).
 - Whether 92 px is comfortable by hand. The script stops within 22 cm of its target, a player will not.
+- Frame times at normal priority. Every number in this report comes from a throttled background run.
+- The packaged build has only been run by script, offscreen. Nobody has opened `MegaJam.app` in a window.
 - The Windows build (see `docs/packaging-windows.md`).
 - The focus pull on reveal is not built.

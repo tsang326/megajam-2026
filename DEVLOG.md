@@ -40,3 +40,9 @@ Solo developer + AI agents (Claude Code). Times are Vietnam time (UTC+7).
 ## Declared before the jam
 - Tool setup only: an empty UE smoke-test project and an Unreal MCP test project (no game content), a tools/perks list, and a shelved concept note (*Lost Property*) that this game does not use.
 - No models, images, music, dialogue or prompts for game assets were made before 12/11 12:00.
+
+### 2026-11-13, afternoon: packaged build runs stage 1
+
+- Packaged the Mac Development build and ran the `stage1` script in it, offscreen: card, film, all five cuts, one failed take per cut type, end card `scenes=1/3 crew=1/7`. 13 of 13 sounds and both fonts load from the pak. 50 captures.
+- The first packaged runs wrote no log and no captures. Cause: the packaged Mac app is sandboxed and cannot write outside its container, and it fails silently. `Tools/run_packaged.sh` now lets the captures go to the container and copies them out, and takes the log from stdout.
+- Frame times from these runs are 29-81 ms per shot, but they were taken at background priority on a busy machine and two runs differ by a factor of two. A normal-priority measurement is still missing.
