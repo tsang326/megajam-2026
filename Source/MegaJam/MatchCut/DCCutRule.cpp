@@ -134,6 +134,7 @@ void AMatchCutGameMode::MoveHero(const FVector& Delta)
 	{
 		HeroS += Delta / Steps;
 		PushOut(Cur, HeroS, R, &VelS);
+		NudgeProps();
 	}
 
 	// the water volume of the shot, and the edge of the frame
@@ -291,7 +292,7 @@ FDCCutEval AMatchCutGameMode::EvalCut() const
 			}
 		}
 	}
-	if (HiddenPx < E.DistPx && HiddenPx <= MarkRadius * 1080.f * 1.5f && bHasPart)
+	if (HiddenPx < E.DistPx && HiddenPx <= MarkRadius * 1080.f * 1.5f && bFeature[0])
 	{
 		E.Reason = DCText::ReasonDarkLamp; // standing on a mark that only the lamp can show
 		E.Exit = HiddenExit;

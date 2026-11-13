@@ -46,3 +46,11 @@ Solo developer + AI agents (Claude Code). Times are Vietnam time (UTC+7).
 - Packaged the Mac Development build and ran the `stage1` script in it, offscreen: card, film, all five cuts, one failed take per cut type, end card `scenes=1/3 crew=1/7`. 13 of 13 sounds and both fonts load from the pak. 50 captures.
 - The first packaged runs wrote no log and no captures. Cause: the packaged Mac app is sandboxed and cannot write outside its container, and it fails silently. `Tools/run_packaged.sh` now lets the captures go to the container and copies them out, and takes the log from stdout.
 - Frame times from these runs are 29-81 ms per shot, but they were taken at background priority on a busy machine and two runs differ by a factor of two. A normal-priority measurement is still missing.
+
+### 2026-11-13, evening: stage 1 without the gripper
+
+- Stage 1 no longer has `E: grab / drop`. Loose things are pushed by swimming into them and come through a cut when they are inside the dashed radius (STAYS / COMES / FITS labels kept). The plate and the power cell puzzles are solved by nudging. `F: lamp` shows only after HEADLAMP is built.
+- THE WRECK: the two marks are labelled with the camera they cut to (`CAM 06 THE DOCK`, `CAM 05 THE DARK`), the blue one is the crew signal, and the hint says the same.
+- THE DARK: the timed mark now has a reason in the picture. A warm glow drifts through the shot and the mark only holds while the glow is on it.
+- Checked offscreen with the editor build: `stage1` (49 captures, end card `scenes=1/3 crew=1/7`) and `route_yellow` (end card `scenes=1/3 crew=0/7`) both run to the end.
+- Found, not fixed yet: in THE DARK the body of the creature that carries the glow can be seen clearly; it should be only a faint light in this stage. Not checked in the packaged build.

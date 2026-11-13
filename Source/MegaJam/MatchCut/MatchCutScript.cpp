@@ -206,14 +206,14 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 	}
 	else if (Cmd == TEXT("lamp"))
 	{
-		if (bHasPart && bLampOn != (Num(1) > 0.f))
+		if (bFeature[0] && bLampOn != (Num(1) > 0.f))
 		{
 			PressLamp();
 		}
 	}
 	else if (Cmd == TEXT("givepart"))
 	{
-		bHasPart = true;
+		bFeature[0] = true;
 		bGapFilled[0] = true; // skip the restore as well
 		if (AActor* A = PartActor.Actor.Get())
 		{

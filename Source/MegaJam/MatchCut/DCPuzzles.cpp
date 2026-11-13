@@ -33,6 +33,18 @@ void AMatchCutGameMode::UpdateGate(int32 ShotIndex, bool bQuiet)
 			bOpen |= P.HomeShot == ShotIndex && P.bEverGrabbed;
 		}
 	}
+	else if (Shot.Gate.StartsWith(TEXT("fits:")))
+	{
+		// a loose thing of this shot has been moved onto the place of that socket in the next shot's frame
+		const FString Id = Shot.Gate.RightChop(5);
+		for (int32 s = 0; s < Sockets.Num(); ++s)
+		{
+			for (const FDCProp& P : Props)
+			{
+				bOpen |= ShotIndex == Cur && Sockets[s].Id == Id && P.Shot == ShotIndex && (Sockets[s].bFilled || PropFitsSocket(P, s));
+			}
+		}
+	}
 	else if (Shot.Gate.StartsWith(TEXT("socket:")))
 	{
 		const FString Id = Shot.Gate.RightChop(7);
@@ -80,7 +92,8 @@ void AMatchCutGameMode::FillSocket(int32 SocketIndex, int32 PropIndex, bool bQui
 	FDCProp& Prop = Props[PropIndex];
 	Socket.bFilled = true;
 	Prop.Shot = Socket.Shot;
-	Prop.S = Socket.S;
+	Prop.S = Socket.S + (Prop.Kind == TEXT("plate") ? FVector(0.0, 12.0, 0.0) : FVector::ZeroVector);
+	Prop.Socket = SocketIndex;
 	Prop.bLocked = true;
 	Prop.bCarried = false;
 	if (Socket.Accepts == TEXT("cell"))
@@ -130,7 +143,7 @@ void AMatchCutGameMode::CheckSockets(int32 ShotIndex)
 		for (int32 p = 0; p < Props.Num(); ++p)
 		{
 			const FDCProp& Prop = Props[p];
-			if (Prop.Shot == ShotIndex && !Prop.bCarried && !Prop.bLocked && Prop.Kind == Sockets[s].Accepts && FVector::Dist(Prop.S, Sockets[s].S) < 70.0)
+			if (Prop.Shot == ShotIndex && ShotIndex == Cur && !Prop.bCarried && !Prop.bLocked && PropFitsSocket(Prop, s))
 			{
 				FillSocket(s, p, false);
 				break;
@@ -139,8 +152,82 @@ void AMatchCutGameMode::CheckSockets(int32 ShotIndex)
 	}
 }
 
+bool AMatchCutGameMode::PropFitsSocket(const FDCProp& Prop, int32 SocketIndex) const
+{
+	const FDCSocket& Socket = Sockets[SocketIndex];
+	if (Socket.bFilled || Socket.Accepts != Prop.Kind || Prop.bLocked || Prop.Shot != Cur)
+	{
+		return false;
+	}
+	// the frame rule: same place on screen (the socket is seen from its own shot's entry camera), about the same depth
+	const FVector2D N = ViewNdc(Cur, Prop.S, false);
+	const FVector2D SN = ViewNdc(Socket.Shot, Socket.S, Socket.Shot != Cur);
+	return FVector2D((N.X - SN.X) * 960.0, (N.Y - SN.Y) * 540.0).Size() <= SocketRadius * 1080.0 && FMath::Abs(Prop.S.Z - Socket.S.Z) <= 300.0;
+}
+
+void AMatchCutGameMode::NudgeProps()
+{
+	// The gripper is a cut feature until it is built again: before that, loose things are pushed by contact.
+	// The thing is a box; it moves along the face the robot touches, so a push is straight and does not slip off.
+	if (State != EDCState::Playing)
+	{
+		return;
+	}
+	const FDCShot& Shot = Shots[Cur];
+	for (FDCProp& P : Props)
+	{
+		if (P.Shot != Cur || P.bLocked || P.bCarried || P.bHeavy)
+		{
+			continue;
+		}
+		const bool bFlat = P.Kind == TEXT("plate");
+		const FVector H = bFlat ? FVector(65.0, 12.0, 75.0) : FVector(34.0, 46.0, 34.0);
+		const FVector D = P.S - HeroS;
+		const FVector O(H.X + HeroRadius - FMath::Abs(D.X), H.Y + HeroRadius - FMath::Abs(D.Y), H.Z + HeroRadius - FMath::Abs(D.Z));
+		if (O.X <= 0.0 || O.Y <= 0.0 || O.Z <= 0.0)
+		{
+			continue;
+		}
+		const FVector Before = P.S;
+		if (!bFlat && O.Y < O.X && O.Y < O.Z)
+		{
+			P.S.Y += (D.Y >= 0.0 ? O.Y : -O.Y);
+		}
+		else if (O.X <= O.Z)
+		{
+			P.S.X += (D.X >= 0.0 ? O.X : -O.X);
+		}
+		else
+		{
+			P.S.Z += (D.Z >= 0.0 ? O.Z : -O.Z);
+		}
+		PushOut(Cur, P.S, bFlat ? 14.0 : 32.0, nullptr);
+		P.S.X = FMath::Clamp(P.S.X, Shot.VolMin.X, Shot.VolMax.X);
+		P.S.Y = FMath::Clamp(P.S.Y, Shot.VolMin.Y - 60.0, Shot.VolMax.Y);
+		P.S.Z = FMath::Clamp(P.S.Z, Shot.VolMin.Z, Shot.VolMax.Z);
+		if (bFlat)
+		{
+			P.S.Y = Before.Y; // a plate stays on the floor it lies on
+		}
+		if (!P.bEverGrabbed && FVector::Dist(Before, P.S) > 0.5)
+		{
+			P.bEverGrabbed = true;
+			UE_LOG(LogMatchCut, Display, TEXT("PROP %s nudged in shot %d"), *P.Id, Cur);
+			if (Audio)
+			{
+				Audio->Play(TEXT("plate_lift"), 0.5f, 1.1f);
+			}
+		}
+	}
+	CheckSockets(Cur);
+}
+
 int32 AMatchCutGameMode::PropInReach() const
 {
+	if (!bFeature[1])
+	{
+		return INDEX_NONE; // no gripper yet
+	}
 	int32 Best = INDEX_NONE;
 	double BestD = ReachRadius;
 	for (int32 i = 0; i < Props.Num(); ++i)
@@ -331,13 +418,13 @@ void AMatchCutGameMode::TickPuzzles(float Dt)
 	}
 
 	// the part
-	if (Cur == PartShot && !bHasPart && PartActor.Actor.IsValid())
+	if (Cur == PartShot && !bFeature[0] && PartActor.Actor.IsValid())
 	{
 		PartPulse += Dt;
 		PartActor.Actor->SetActorLocationAndRotation(ShotToWorld(Cur, Shot.PartS) + FVector(0, 0, 8.0 * FMath::Sin(PartPulse * 2.5f)), FRotator(0.0, PartPulse * 60.0, 0.0));
 		if (FVector::Dist(Shot.PartS, HeroS) < HeroRadius + 50.f)
 		{
-			bHasPart = true;
+			bFeature[0] = true;
 			PartActor.Actor->SetActorHiddenInGame(true);
 			ShowBanner(DCText::PartFound, DCText::PartHow, 5.f);
 			UE_LOG(LogMatchCut, Display, TEXT("PART picked up in shot %d: lamp granted, restore-by-cut armed"), Cur);

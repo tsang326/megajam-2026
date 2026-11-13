@@ -332,10 +332,14 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 			const FVector2D N = GM->ViewNdc(Active.To, S.S, true);
 			if (S.Shot == Active.To && !S.bFilled && GM->MarkVisible(Active, N))
 			{
+				// green once a loose thing of this shot sits on the frame's place
+				const int32 SocketIndex = (int32)(&S - GM->Sockets.GetData());
+				const bool bOn = GM->Props.ContainsByPredicate([GM, SocketIndex](const FDCProp& Pr) { return GM->PropFitsSocket(Pr, SocketIndex); });
+				const FLinearColor Col = bOn ? Green : FLinearColor(Amber.R, Amber.G, Amber.B, 0.75f);
 				const FVector2D P = NdcToPx(N);
 				const float R = 60.f * 900.f / (float)FMath::Max(S.S.Z, 100.0);
-				Brackets(P.X, P.Y, R, FLinearColor(Amber.R, Amber.G, Amber.B, 0.75f), 2.f);
-				Text(S.Label, P.X, P.Y - R - 34.f, 1.0f, FLinearColor(Amber.R, Amber.G, Amber.B, 0.75f), 1);
+				Brackets(P.X, P.Y, R, Col, bOn ? 3.5f : 2.f);
+				Text(S.Label, P.X, P.Y - R - 34.f, 1.0f, Col, 1);
 			}
 		}
 		for (const FDCExit& Exit : Shot.Exits)
@@ -347,10 +351,11 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 				const float Blink = FMath::Fmod(Time, 1.2f);
 				if (Blink < 0.75f)
 				{
-					Disc(B.X, B.Y, 7.f, Amber);
-					Ring(B.X, B.Y, 12.f + 40.f * Blink, FLinearColor(Amber.R, Amber.G, Amber.B, 0.8f - Blink), 2.5f);
+					// in the tape colour of the camera that leads to it, so label, colour and hint agree
+					Disc(B.X, B.Y, 7.f, Exit.Color);
+					Ring(B.X, B.Y, 12.f + 40.f * Blink, FLinearColor(Exit.Color.R, Exit.Color.G, Exit.Color.B, 0.8f - Blink), 2.5f);
 				}
-				Text(DCText::CrewSignal, B.X, B.Y + 30.f, 1.0f, Amber, 1);
+				Text(DCText::CrewSignal, B.X, B.Y + 30.f, 1.0f, Exit.Color, 1);
 			}
 		}
 
@@ -400,7 +405,7 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 					}
 					if (Shot.Exits.Num() > 1)
 					{
-						Text(FString::Printf(DCTEXT_MARK_CAM, Exit.To + 1), P.X, P.Y - GM->MarkRadius * 1080.f - 30.f, 1.1f, Exit.Color, 1);
+						Text(FString::Printf(DCTEXT_MARK_CAM, Exit.To + 1, *GM->Shots[Exit.To].Name), P.X, P.Y - GM->MarkRadius * 1080.f - 30.f, 1.1f, Exit.Color, 1);
 					}
 					if (Reveal > 0.f)
 					{
@@ -606,7 +611,7 @@ void AMatchCutHUD::DrawFeatures(AMatchCutGameMode* GM, float X, float Y, float S
 	float Cx = X;
 	for (int32 i = 0; i < 3; ++i)
 	{
-		const bool bBuilt = i == 0 && GM->bHasPart && GM->State != EDCState::Film;
+		const bool bBuilt = GM->bFeature[i] && GM->State != EDCState::Film;
 		const FString Name = DCText::Features[i];
 		const float W = Name.Len() * 8.f * Scale;
 		if (bCard)
@@ -842,6 +847,6 @@ void AMatchCutHUD::DrawHUD()
 			HintCol = FLinearColor(1.f, 1.f, 1.f, 0.8f + 0.2f * FMath::Sin(Time * 4.f));
 		}
 		Text(Hint, 960.f, 962.f, HintScale, HintCol, 1);
-		Text(GM->bHasPart ? DCText::ControlsLamp : DCText::Controls, 960.f, 1040.f, 1.0f, Dim, 1);
+		Text(FString(DCText::ControlsMove) + (GM->bFeature[1] ? DCText::ControlsGrab : TEXT("")) + (GM->bFeature[0] ? DCText::ControlsLampKey : TEXT("")) + DCText::ControlsEnd, 960.f, 1040.f, 1.0f, Dim, 1);
 	}
 }

@@ -41,17 +41,18 @@ snap s0c_on_mark
 cut
 wait 0.15
 snap s1a_after_cut_no_marks
-# --- shot 1 THE SHELF: grab the plate (gate), carry it across the cut (B puzzle 1)
+# --- shot 1 THE SHELF: no gripper yet. Push the plate onto the VENT frame of the next shot (gate), stay close, cut
 wait 0.8
 cut
 wait 0.4
 snap s1b_cut_before_solved
-swimto 400 -100 1050
+swimto 420 -100 1050
+swimto 420 -244 1050
 wait 0.3
-snap s1c_at_plate_prompt
-use
+snap s1c_beside_plate
+swimto 137 -244 1050
 wait 0.35
-snap s1d_marks_reveal
+snap s1d_plate_on_frame_marks_reveal
 wait 1.5
 # failed take, mark cut: not on a mark
 cut
@@ -59,28 +60,26 @@ wait 0.3
 snap s1e_FAIL_not_on_mark
 waitstate Playing
 wait 0.6
-# wrong way first: keep holding the plate and cut. It comes along but lands outside the vent.
-swimn -0.268 -0.280
+# wrong way first: on the mark but too far from the plate (far from the camera). The plate stays behind.
+swimn -0.189 -0.392 1300
 wait 0.5
-snap s1f_plate_held_comes_not_fits
+snap s1f_on_mark_plate_stays
 cut
 wait 0.6
-snap s2a_vent_plate_missed
+snap s2a_vent_no_plate
 move 1 0 0 2.5
 snap s2b_current_pushes_back
 retake
 wait 0.8
 snap s1g_back_one_shot
-# right way: drop the plate where the vent is in the next shot, stay close, cut
-swimto 400 -100 1050
-use
-swimto -100 -140 1050
-swimto 36 -140 1050
-wait 0.7
-use
+# right way: push the plate onto the frame again, rise clear of it, stand on the mark close to it, cut
+swimto 420 -100 1050
+swimto 420 -244 1050
+swimto 137 -244 1050
+swimto 137 -150 1050
 wait 0.3
-snap s1h_plate_dropped_on_vent_frame
-swimn -0.268 -0.280
+snap s1h_plate_on_vent_frame
+swimn -0.189 -0.392 1050
 wait 0.5
 snap s1i_on_mark_plate_fits
 cut
@@ -132,7 +131,7 @@ snap s3g_scene_restored_marks_reveal
 wait 1.6
 snap s3h_two_cameras_lamp_off
 # failed take, dark camera: on the blue mark with the lamp off
-swimn -0.52 0.336 1100
+swimn -0.236 0.280 1100
 wait 0.4
 snap s3i_on_dark_mark_lamp_off
 cut
@@ -140,62 +139,55 @@ wait 0.3
 snap s3j_FAIL_too_dark
 waitstate Playing
 wait 0.5
-# take the power cell along (B puzzle 2: it has to come through two cuts)
-swimto 380 -130 1250
+# the power cell must come too (it has to come through two cuts): push it closer to the blue mark
+swimto 230 -80 1150
 wait 0.3
-snap s3k_at_cell_prompt
-use
-wait 0.5
+snap s3k_beside_cell_stays
+swimto 95 -80 1150
 lamp 1
-swimto 0 100 1150
-swimn -0.52 0.336 1100
+swimto 105 60 1150
+swimn -0.236 0.280 1100
 wait 0.6
 snap s3l_blue_mark_lamp_on_cell_comes
 cut
 wait 0.6
 snap s4a_dark_lamp_on
-# --- shot 4 THE DARK: lamp shows the mark, the mark comes and goes, the crew robot is on the way
+# --- shot 4 THE DARK: lamp, crew robot, push the cell onto the DOCK frame, the mark holds while the glow is on it
 lamp 0
 wait 0.4
 snap s4b_dark_lamp_off
 lamp 1
-swimto 0 190 1100
-swimto 230 190 1150
-swimto 330 -110 1200
+swimto -400 -120 1150
 wait 0.5
 snap s4c_crew_found
 wait 1.5
+swimto -60 -80 1150
+swimto 45 -80 1150
+wait 0.3
+snap s4g_cell_on_dock_frame
+swimto 45 60 1150
 swimto 300 60 1150
-# failed take, timed mark: on the mark while it is faint (wait until C works, then until it stops working)
+# failed take, timed mark: on the mark while the glow is away (wait until C works, then until it stops working)
 waitok
 waitok 0
 wait 0.3
-snap s4d_on_mark_closed
+snap s4d_on_mark_glow_away
 cut
 wait 0.3
 snap s4e_FAIL_not_yet
 waitstate Playing
 wait 0.5
-swimto 0 190 1100
-swimto 230 190 1150
-swimto 330 -110 1200
+swimto 45 60 1150
 swimto 300 60 1150
-# wait for the mark to go faint, then for it to come back: a full open window is ahead
+# wait for the glow to leave and come back: a full window is ahead
 waitok
 waitok 0
 waitok
-snap s4f_on_mark_open
+snap s4f_on_mark_glow_on_it
 cut
 wait 0.6
-snap s5a_dock
-# --- shot 5 THE DOCK: plug the cell in
-swimto -150 -40 1250
-swimto -260 -40 1250
-wait 0.7
-snap s5b_at_dock_with_cell
-use
-wait 0.5
-snap s5c_power_on
+snap s5a_dock_power_on
+# --- shot 5 THE DOCK: the cell landed in the dock frame through the cut
 waitstate EndCard
 wait 1.2
 snap s5d_end_card

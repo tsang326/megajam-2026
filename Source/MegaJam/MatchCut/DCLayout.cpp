@@ -130,6 +130,9 @@ bool AMatchCutGameMode::LoadLayout()
 	ReadFloat(Root, TEXT("socketRadius"), SocketRadius);
 	ReadFloat(Root, TEXT("reachRadius"), ReachRadius);
 	Root->TryGetNumberField(TEXT("crewTotal"), CrewTotal);
+	ReadFloat(Root, TEXT("gentleLight"), GentleLightPower);
+	ReadFloat(Root, TEXT("gentleLightRadius"), GentleLightRadius);
+	ReadFloat(Root, TEXT("gentleBack"), GentleBack);
 	Root->TryGetStringField(TEXT("look"), LookName);
 	double Spacing = 50000.0;
 	Root->TryGetNumberField(TEXT("spacing"), Spacing);
@@ -253,6 +256,8 @@ bool AMatchCutGameMode::LoadLayout()
 					Exit.Period = (float)(*Pulse)[0]->AsNumber();
 					Exit.OpenFor = (float)(*Pulse)[1]->AsNumber();
 				}
+				E->TryGetStringField(TEXT("when"), Exit.When);
+				ReadFloat(E, TEXT("amp"), Exit.Amp);
 				const TArray<TSharedPtr<FJsonValue>>* Marks = nullptr;
 				if (E->TryGetArrayField(TEXT("marks"), Marks) && Marks)
 				{
@@ -283,6 +288,7 @@ bool AMatchCutGameMode::LoadLayout()
 				{
 					Prop.Kind = FName(*Kind);
 				}
+				Prop.bHeavy = Prop.Kind == TEXT("weight") || Prop.Kind == TEXT("crew");
 				Prop.Shot = Prop.HomeShot = Index;
 				Prop.S = Prop.HomeS = ReadVec(P, TEXT("p"));
 			}

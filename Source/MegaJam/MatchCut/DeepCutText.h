@@ -13,7 +13,7 @@
 #define DCTEXT_RESTORED TEXT("SCENE RESTORED  %d/%d")
 #define DCTEXT_CREW TEXT("CREW %d/%d")
 #define DCTEXT_END_LINE TEXT("Scenes restored %d/%d.   Crew found %d/%d.")
-#define DCTEXT_MARK_CAM TEXT("CAM %02d") // NEW: label next to a tape mark
+#define DCTEXT_MARK_CAM TEXT("CAM %02d  %s") // label next to a tape mark when a shot has two cameras: camera number, shot name (brief 04)
 
 namespace DCText
 {
@@ -75,8 +75,11 @@ namespace DCText
 	static const TCHAR* CrewFound = TEXT("CREW FOUND");
 
 	// general
-	static const TCHAR* Controls = TEXT("WASD swim   SPACE / SHIFT closer / farther   E use   C cut   R back one shot   ESC quit");          // NEW
-	static const TCHAR* ControlsLamp = TEXT("WASD swim   SPACE / SHIFT closer / farther   E use   F lamp   C cut   R back one shot   ESC quit"); // NEW
+	// the controls line is put together from these: a key only shows once its feature is built (brief 04)
+	static const TCHAR* ControlsMove = TEXT("WASD swim   SPACE / SHIFT closer / farther");
+	static const TCHAR* ControlsGrab = TEXT("   E grab");
+	static const TCHAR* ControlsLampKey = TEXT("   F lamp");
+	static const TCHAR* ControlsEnd = TEXT("   C cut   R back one shot   ESC quit");
 	static const TCHAR* EndTitle = TEXT("END OF STAGE 1"); // NEW (was END OF SLICE)
 	static const TCHAR* EndKeys = TEXT("R: play again     ESC: quit");
 }

@@ -50,6 +50,10 @@ struct FDCExit
 	// "cut on the right moment": the mark is only good for OpenFor seconds out of every Period (0 = always)
 	float Period = 0.f;
 	float OpenFor = 0.f;
+	// why the mark comes and goes: "glow" = the gentle creature's light drifts over it in this shot,
+	// "clear" = the creature's body drifts over the landing spot in the next shot
+	FString When;
+	float Amp = 450.f;
 	bool OpenAt(float Clock) const { return Period <= 0.f || FMath::Fmod(Clock, Period) < OpenFor; }
 };
 
@@ -62,7 +66,10 @@ struct FDCProp
 	FVector S = FVector::ZeroVector; // shot space
 	bool bCarried = false;
 	bool bLocked = false; // sits in a socket
-	bool bEverGrabbed = false;
+	bool bEverGrabbed = false; // grabbed or nudged at least once
+	bool bHeavy = false;       // cannot be nudged, sinks when let go: needs the gripper
+	int32 Socket = INDEX_NONE; // the socket it sits in
+	int32 EyePaint = INDEX_NONE;
 	int32 HomeShot = 0;
 	FVector HomeS = FVector::ZeroVector;
 	TWeakObjectPtr<AActor> Actor;
@@ -78,8 +85,21 @@ struct FDCSocket
 	FString Label;
 	bool bFilled = false;
 	bool bEnds = false; // filling it ends the stage
+	float Drop = 0.f;   // once filled it sinks this far (a net pulled down by a weight)
+	float Anim = 0.f;
 	int32 Paint = INDEX_NONE;
 	TWeakObjectPtr<AActor> Actor;
+};
+
+/** A crew robot that is freed by touching it. */
+struct FDCCrewBot
+{
+	int32 Shot = 0;
+	FVector S = FVector::ZeroVector;
+	bool bRescued = false;
+	FVector Pos = FVector::ZeroVector; // world
+	TWeakObjectPtr<AActor> Actor;
+	int32 EyePaint = INDEX_NONE;
 };
 
 /** Moving water. Pushes the robot while it is inside the box. Stops when its socket is filled. */
@@ -120,10 +140,30 @@ struct FDCShot
 	FVector Rail = FVector::ZeroVector; // x = min truck, y = max truck, z = truck when the shot starts
 	double Truck = 0.0;
 	bool bDark = false;
-	FString Gate; // "", "switch", "grab", "socket:<id>", "restore", "crew"
+	FString Gate; // "", "switch", "grab", "fits:<socket>", "socket:<id>", "restore", "crew"
 	bool bGateOpen = false;
+	int32 Stage = 1;
+	bool bDeadEnd = false;  // no way on and no end card: R is the only way out
+	FString Intro;          // clip played (official cut) the first time the shot is entered
+	bool bIntroPlayed = false;
+	// a part: one cut feature of Unit 0 and the removed scene that comes back with it
 	bool bHasPart = false;
 	FVector PartS = FVector::ZeroVector;
+	int32 PartFeature = 0;  // index into DCText::Features
+	int32 PartGap = 0;      // which hole in the reel it fills
+	FString PartClip;       // the removed scene
+	FVector2D RestoreNdc = FVector2D(-0.2, -0.15);
+	float RestoreT = 0.f;   // the frame of the clip that is shown as the frame to match
+	TWeakObjectPtr<AActor> PartActor;
+	// the predator: comes once the marks are showing
+	bool bPredator = false;
+	FVector PredFrom = FVector::ZeroVector;
+	float PredDelay = 4.f;
+	float PredWarn = 4.f;
+	float PredSpeed = 110.f;
+	// the gentle creature rests here
+	bool bGentle = false;
+	FVector GentleS = FVector::ZeroVector;
 	bool bHasCrew = false;
 	FVector CrewS = FVector::ZeroVector;
 	bool bHasSwitch = false;
@@ -172,6 +212,8 @@ struct FDCRobot
 	TWeakObjectPtr<AActor> Actor;
 	int32 EyePaint = INDEX_NONE;
 	bool bPlain = false; // not a robot (a cable, a crate): position only
+	bool bCreature = false; // faces where its key says; (0,0) = faces the camera
+	FLinearColor EyeColor = FLinearColor(4.0f, 2.6f, 0.6f);
 };
 
 struct FDCCutEval
@@ -207,6 +249,33 @@ struct FDCClip
 	float Length = 1.f;
 	TArray<FDCTrack> Tracks;
 	TArray<FVector2D> Lamp; // (time, intensity) keys for the set's lamp, if any
+	TArray<FVector2D> Cuts; // (from, to): the seconds the official cut leaves out
+	TArray<FVector2D> Static; // (from, to): no signal
+	TArray<TPair<FVector2D, FString>> Captions; // (from, to), text
+	bool bHasMatch = false;
+	FVector2D MatchNdc = FVector2D::ZeroVector;
+	float MatchT = 0.f;
+	float ThumbT = 4.f;
+	float OfficialLength() const
+	{
+		float L = Length;
+		for (const FVector2D& C : Cuts) { L -= (float)(C.Y - C.X); }
+		return FMath::Max(L, 0.5f);
+	}
+	/** Clip time for a play time of the official cut (the cut seconds are skipped). */
+	float OfficialToClip(float T) const
+	{
+		for (const FVector2D& C : Cuts)
+		{
+			if (T >= C.X) { T += (float)(C.Y - C.X); }
+		}
+		return T;
+	}
+	bool InCut(float T) const
+	{
+		for (const FVector2D& C : Cuts) { if (T >= C.X && T < C.Y) { return true; } }
+		return false;
+	}
 };
 
 struct FDCFilmSet
@@ -214,6 +283,9 @@ struct FDCFilmSet
 	FVector Origin = FVector::ZeroVector;
 	TWeakObjectPtr<ACameraActor> Camera;
 	bool bOldFilm = false;
+	bool bHeadCam = false; // first-person record: mask frame, bubbles
+	bool bTorch = false;
+	TWeakObjectPtr<class USpotLightComponent> Torch;
 };
 
 /** A stretch of the film timeline: a clip of the official film or a removed scene. */
@@ -233,4 +305,5 @@ struct FDCSnap
 	FVector HeroS = FVector::ZeroVector;
 	TArray<FDCProp> Props;
 	TArray<bool> Sockets;
+	TArray<bool> Gates;
 };

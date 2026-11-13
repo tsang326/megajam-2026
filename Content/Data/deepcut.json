@@ -1,5 +1,5 @@
 {
- "_comment": "Deep Cut stage 1 layout (brief 03). Shot space: x right, y up, z distance from the shot's camera, in cm. A point is seen at screen ((x - truck)/(z tanH), y/(z tanV)). solids: p centre, s [width,height,depth], r [pitch,yaw,roll]. exits: marks are points in the TARGET shot. Preview one shot with Tools/preview_shot.sh N; draw the map with Tools/shotmap.py.",
+ "_comment": "Deep Cut layout (briefs 03 and 04). Shot space: x right, y up, z distance from the shot's camera, in cm. A point is seen at screen ((x - truck)/(z tanH), y/(z tanV)). solids: p centre, s [width,height,depth], r [pitch,yaw,roll]. exits: marks are points in the TARGET shot. Preview one shot with Tools/preview_shot.sh N; draw the map with Tools/shotmap.py.",
  "fov": 60,
  "exposure": 2.5,
  "heroRadius": 36,
@@ -15,7 +15,7 @@
  "markRadius": 0.085,
  "markDepthTol": 160,
  "carryRadius": 280,
- "socketRadius": 0.075,
+ "socketRadius": 0.09,
  "reachRadius": 120,
  "spacing": 50000,
  "look": "A",
@@ -245,9 +245,9 @@
   {
    "id": "shelf",
    "name": "THE SHELF",
-   "gate": "grab",
-   "hint": "Pick up the loose plate. Swim to it and press E.",
-   "hintSolved": "Near things come with you. Drop the plate on the VENT frame. Then cut.",
+   "gate": "fits:vent",
+   "hint": "Push the loose plate onto the VENT frame.",
+   "hintSolved": "Near things come with you through the cut. Stay close to the plate. Then cut.",
    "cam": {
     "pos": [
      -900,
@@ -286,18 +286,6 @@
       4400,
       300,
       2600
-     ]
-    },
-    {
-     "p": [
-      480,
-      -235,
-      1080
-     ],
-     "s": [
-      420,
-      90,
-      420
      ]
     },
     {
@@ -357,8 +345,8 @@
      "id": "plate",
      "kind": "plate",
      "p": [
-      450,
-      -165,
+      250,
+      -262,
       1050
      ]
     }
@@ -370,8 +358,8 @@
      "anyDepth": true,
      "marks": [
       [
-       -170,
-       -100,
+       -120,
+       -140,
        1100
       ]
      ]
@@ -397,8 +385,8 @@
     ]
    },
    "start": [
-    -170,
-    -100,
+    -120,
+    -140,
     1100
    ],
    "volMin": [
@@ -518,7 +506,7 @@
      "accepts": "plate",
      "p": [
       40,
-      -230,
+      -280,
       1150
      ]
     }
@@ -562,7 +550,7 @@
    "name": "THE WRECK",
    "gate": "restore",
    "hint": "Something is shining in the wreck. Swim to it.",
-   "hintSolved": "Two cameras. Yellow: the dock. Blue: a crew signal in the dark (F: lamp).",
+   "hintSolved": "Yellow: the dock. Blue: a crew signal in the dark (F: lamp). Push the power cell along.",
    "cam": {
     "pos": [
      -900,
@@ -668,9 +656,9 @@
      "id": "cell",
      "kind": "cell",
      "p": [
-      430,
-      -190,
-      1250
+      90,
+      -80,
+      1150
      ]
     }
    ],
@@ -680,7 +668,7 @@
      "color": "yellow",
      "marks": [
       [
-       300,
+       400,
        -50,
        1150
       ]
@@ -691,8 +679,8 @@
      "color": "blue",
      "marks": [
       [
-       -330,
-       120,
+       -150,
+       100,
        1100
       ]
      ]
@@ -704,8 +692,8 @@
    "name": "THE DARK",
    "gate": "",
    "dark": true,
-   "hint": "Dark. F: lamp shows the tape mark. It comes and goes: cut when it is bright.",
-   "hintSolved": "Dark. F: lamp shows the tape mark. It comes and goes: cut when it is bright.",
+   "hint": "Dark. F: lamp. Push the cell onto the DOCK frame. The mark only holds while the warm glow is on it.",
+   "hintSolved": "Dark. F: lamp. Push the cell onto the DOCK frame. The mark only holds while the warm glow is on it.",
    "cam": {
     "pos": [
      -900,
@@ -719,8 +707,8 @@
     ]
    },
    "start": [
-    -330,
-    120,
+    -150,
+    100,
     1100
    ],
    "volMin": [
@@ -734,9 +722,9 @@
     1400
    ],
    "crew": [
-    380,
+    -480,
     -150,
-    1200
+    1150
    ],
    "solids": [
     {
@@ -753,14 +741,14 @@
     },
     {
      "p": [
-      20,
-      -90,
-      1180
+      -250,
+      -190,
+      1300
      ],
      "s": [
-      170,
-      440,
-      220
+      200,
+      220,
+      200
      ],
      "kind": "dark",
      "r": [
@@ -813,16 +801,18 @@
       ]
      ],
      "pulse": [
-      5.0,
-      2.6
-     ]
+      6.0,
+      2.8
+     ],
+     "when": "glow",
+     "amp": 600
     }
    ]
   },
   {
    "id": "dock",
    "name": "THE DOCK",
-   "hint": "Put the power cell in the dock. No cell? R: back one shot.",
+   "hint": "The dock needs the power cell. No cell? R: back one shot.",
    "cam": {
     "pos": [
      -900,
@@ -836,7 +826,7 @@
     ]
    },
    "start": [
-    300,
+    400,
     -50,
     1150
    ],
@@ -878,7 +868,7 @@
     },
     {
      "p": [
-      -300,
+      120,
       -225,
       1260
      ],
@@ -914,12 +904,15 @@
      "accepts": "cell",
      "ends": true,
      "p": [
-      -300,
+      120,
       -110,
       1250
      ]
     }
    ]
   }
- ]
+ ],
+ "gentleLight": 14000,
+ "gentleLightRadius": 560,
+ "gentleBack": 1500
 }

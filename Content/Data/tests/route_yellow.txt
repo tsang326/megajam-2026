@@ -1,4 +1,4 @@
-# The short route: from the wreck straight to the dock by the yellow camera, plus R twice.
+# The short route: from the wreck straight to the dock by the yellow camera, plus R.
 #   Tools/run_offscreen.sh route_yellow Saved/DeepCut/route_yellow
 skipfilm
 wait 1.0
@@ -7,27 +7,23 @@ givepart
 wait 1.5
 snap y1_wreck_marks
 # without the cell: the dock cannot be powered, R goes back
-swimto 300 -50 1150
+swimto 400 -50 1150
 wait 0.4
-snap y2_on_yellow_no_cell
+snap y2_on_yellow_cell_stays
 cut
 wait 0.8
 snap y3_dock_no_cell
 retake
 wait 0.8
 snap y4_back_in_wreck
-swimto 380 -130 1250
-use
-wait 0.4
-swimto 300 -50 1150
+# push the cell to the right until it sits on the DOCK frame, rise clear of it, stand on the yellow mark
+swimto -20 -80 1150
+swimto 85 -80 1150
+swimto 85 40 1150
+swimto 400 -50 1150
 wait 0.5
-snap y5_on_yellow_with_cell
+snap y5_on_yellow_cell_fits
 cut
-wait 0.6
-swimto -150 -40 1250
-swimto -260 -40 1250
-wait 0.7
-use
 wait 0.6
 snap y6_power_on
 waitstate EndCard

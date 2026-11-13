@@ -145,6 +145,43 @@ UStaticMeshComponent* AMatchCutGameMode::AddPart(AActor* Owner, UStaticMesh* Mes
 	return C;
 }
 
+AActor* AMatchCutGameMode::SpawnGentle(const FVector& Loc)
+{
+	// The gentle creature: big, slow, warm. Local frame: +X is forward, Z up; it is seen from the side.
+	AActor* A = SpawnGroup(Loc);
+	const FLinearColor Skin(0.95f, 0.62f, 0.28f);
+	const FLinearColor Glow(1.5f, 0.75f, 0.2f);
+	const FLinearColor Spot(7.f, 4.0f, 1.0f);
+	AddPart(A, SphereMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(7.0, 2.6, 2.5), Skin, Glow);
+	AddPart(A, SphereMesh, FVector(290, 0, -10), FRotator::ZeroRotator, FVector(3.0, 2.2, 1.9), Skin, Glow);
+	AddPart(A, SphereMesh, FVector(-60, 0, 120), FRotator(-18, 0, 0), FVector(3.2, 0.5, 1.5), Skin, Glow * 0.8f); // soft back fin
+	AddPart(A, SphereMesh, FVector(-380, 0, 10), FRotator(8, 0, 0), FVector(3.0, 1.2, 1.1), Skin, Glow * 0.8f);
+	AddPart(A, SphereMesh, FVector(-560, 0, 30), FRotator(14, 0, 0), FVector(2.0, 0.7, 0.6), Skin, Glow * 0.7f);
+	AddPart(A, SphereMesh, FVector(-700, 0, 55), FRotator(0, 0, 0), FVector(1.1, 0.4, 1.6), Skin, Glow * 0.7f); // tail fluke
+	for (int32 Side = -1; Side <= 1; Side += 2)
+	{
+		AddPart(A, SphereMesh, FVector(60, Side * 150.0, -90), FRotator(0, 0, Side * 25.0), FVector(2.4, 1.6, 0.3), Skin, Glow * 0.8f); // side fin
+		for (int32 i = 0; i < 7; ++i)
+		{
+			// a row of lights along each flank
+			AddPart(A, SphereMesh, FVector(-250.0 + i * 85.0, Side * (118.0 + 8.0 * FMath::Sin(i * 1.3)), 25.0 - 6.0 * FMath::Abs(i - 3)), FRotator::ZeroRotator, FVector(0.22 - 0.015 * FMath::Abs(i - 3)), Spot.GetClamped(0.f, 1.f), Spot);
+		}
+		AddPart(A, SphereMesh, FVector(370, Side * 78.0, 20), FRotator::ZeroRotator, FVector(0.30, 0.16, 0.30), FLinearColor(0.02f, 0.03f, 0.05f), FLinearColor::Black); // calm dark eye
+	}
+	UPointLightComponent* G = NewObject<UPointLightComponent>(A);
+	G->SetMobility(EComponentMobility::Movable);
+	G->SetupAttachment(A->GetRootComponent());
+	G->RegisterComponent();
+	G->SetAbsolute(true, true, false); // placed by UpdateGentle, nearer to the camera than the body
+	G->SetIntensityUnits(ELightUnits::Unitless);
+	G->SetIntensity(GentleLightPower);
+	G->SetLightColor(FLinearColor(1.f, 0.72f, 0.38f));
+	G->SetAttenuationRadius(GentleLightRadius);
+	G->SetCastShadows(false);
+	GentleLight = G;
+	return A;
+}
+
 FDCRobot AMatchCutGameMode::SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered)
 {
 	FDCRobot Robot;
@@ -429,12 +466,15 @@ void AMatchCutGameMode::SpawnWorld()
 		else
 		{
 			// a vent: a long slot in the floor that runs away from the camera
-			AddPart(A, CubeMesh, FVector(0, 0, -24), FRotator::ZeroRotator, FVector(9.0, 1.9, 0.10), DCColor::DarkMetal, FLinearColor::Black);
-			AddPart(A, CubeMesh, FVector(0, 0, -18), FRotator::ZeroRotator, FVector(8.6, 0.5, 0.06), FLinearColor(0.5f, 0.9f, 0.9f), FLinearColor(0.5f, 1.4f, 1.4f));
+			AddPart(A, CubeMesh, FVector(0, 0, 3), FRotator::ZeroRotator, FVector(9.0, 1.9, 0.10), DCColor::DarkMetal, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(0, 0, 9), FRotator::ZeroRotator, FVector(8.6, 0.5, 0.06), FLinearColor(0.5f, 0.9f, 0.9f), FLinearColor(0.5f, 1.4f, 1.4f));
 			Socket.Paint = Paints.Num() - 1;
 		}
 		Socket.Actor = A;
 	}
+
+	GentleActor = SpawnGentle(Shots[0].CamPos - FVector(0.0, 0.0, 90000.0));
+	GentleActor->SetActorHiddenInGame(true);
 
 	// the player's robot: battered, one thruster missing, number plate scraped off
 	Hero = SpawnRobot(Shots[0].CamPos, DCColor::Hero, DCColor::EyeCyan, true);

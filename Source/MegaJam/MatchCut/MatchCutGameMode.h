@@ -116,6 +116,7 @@ private:
 	ACameraActor* SpawnCamera(const FVector& Pos, const FRotator& Rot);
 	AActor* SpawnBox(const FVector& Center, const FRotator& Rot, const FVector& Size, const FLinearColor& Color, bool bHideFromGhost);
 	AActor* SpawnGroup(const FVector& Loc);
+	AActor* SpawnGentle(const FVector& Loc);
 	FDCRobot SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered);
 	UStaticMeshComponent* AddPart(AActor* Owner, UStaticMesh* Mesh, const FVector& Loc, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, const FLinearColor& Emissive);
 	int32 AddPaint(UStaticMeshComponent* Comp, const FLinearColor& Color, const FLinearColor& Emissive);
@@ -140,7 +141,7 @@ private:
 	void MoveHero(const FVector& Delta);
 	void TickMovement(float Dt);
 	void UpdateRail(float Dt, bool bSnap);
-	bool InRestore() const { return bHasPart && !bGapFilled[0] && Cur == PartShot; }
+	bool InRestore() const { return bFeature[0] && !bGapFilled[0] && Cur == PartShot; }
 	bool ShotIsLit(int32 Shot) const { return !Shots[Shot].bDark; }
 
 	// ---- DCPuzzles.cpp
@@ -152,6 +153,10 @@ private:
 	void UpdateProps(float Dt);
 	void UpdateCurrents(float Dt);
 	int32 PropInReach() const;
+	/** True when the prop, seen from the current shot, sits on the socket's place in the frame (a socket of this or the next shot). */
+	bool PropFitsSocket(const FDCProp& Prop, int32 Socket) const;
+	void NudgeProps();
+	void UpdateGentle(float Dt);
 	bool SwitchInReach() const;
 	FString UsePrompt(FVector& OutS) const;
 	void TakeSnap(FDCSnap& Out) const;
@@ -222,7 +227,7 @@ private:
 	float PlayClock = 0.f;
 	bool bFirstCutDone = false;
 	float SoftFailTime = 0.f;
-	bool bHasPart = false;
+	bool bFeature[3] = { false, false, false }; // HEADLAMP, GRIPPER, MULTI-CAM: built again when its part is found
 	bool bLampOn = false;
 	bool bCrewRescued = false;
 	bool bGapFilled[3] = { false, false, false };
@@ -255,6 +260,15 @@ private:
 	int32 GhostExit = 0;
 	TWeakObjectPtr<USpotLightComponent> LampSpot;
 	TWeakObjectPtr<UPointLightComponent> LampGlow;
+
+	// the gentle creature: big, slow, warm. In stage 1 only its glow is seen, far off in the dark.
+	TWeakObjectPtr<AActor> GentleActor;
+	TWeakObjectPtr<UPointLightComponent> GentleLight;
+	int32 GentleShot = INDEX_NONE;
+	FVector GentleS = FVector::ZeroVector;
+	float GentleLightPower = 9000.f;
+	float GentleLightRadius = 1300.f;
+	float GentleBack = 650.f;
 
 	// ghost
 	int32 GhostMode = 1; // 0 off, 1 flat base-colour capture

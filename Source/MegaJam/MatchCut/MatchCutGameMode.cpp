@@ -144,7 +144,7 @@ void AMatchCutGameMode::PressCut()
 
 void AMatchCutGameMode::PressLamp()
 {
-	if (State == EDCState::Playing && bHasPart)
+	if (State == EDCState::Playing && bFeature[0])
 	{
 		bLampOn = !bLampOn;
 		UE_LOG(LogMatchCut, Display, TEXT("LAMP %s"), bLampOn ? TEXT("on") : TEXT("off"));
@@ -194,7 +194,7 @@ void AMatchCutGameMode::PressAnyKey()
 void AMatchCutGameMode::RestartAll()
 {
 	bFirstCutDone = false;
-	bHasPart = false;
+	bFeature[0] = bFeature[1] = bFeature[2] = false;
 	bLampOn = false;
 	bCrewRescued = false;
 	bDepthUsed = false;
@@ -209,6 +209,7 @@ void AMatchCutGameMode::RestartAll()
 		P.Shot = P.HomeShot;
 		P.S = P.HomeS;
 		P.bCarried = P.bLocked = P.bEverGrabbed = false;
+		P.Socket = INDEX_NONE;
 	}
 	for (FDCSocket& S : Sockets)
 	{
@@ -491,6 +492,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 
 	UpdateProps(Dt);
 	UpdateCurrents(Dt);
+	UpdateGentle(Dt);
 	UpdateHeroActor(Dt);
 	UpdateMusic();
 	if (Audio)
@@ -508,5 +510,75 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 			GhostTimer = 0.08f;
 			GhostCapture->GetCaptureComponent2D()->CaptureSceneDeferred();
 		}
+	}
+}
+
+void AMatchCutGameMode::UpdateGentle(float Dt)
+{
+	// Where the gentle creature is. A mark that comes and goes has its reason here:
+	//   "glow":  the creature sways through this shot far behind the mark; the mark holds while its light is on it
+	//   "clear": the creature sways over the landing spot in the next shot; the mark holds while the spot is free
+	AActor* A = GentleActor.Get();
+	if (!A || !Shots.IsValidIndex(Cur))
+	{
+		return;
+	}
+	const bool bWorld = State == EDCState::Playing || State == EDCState::TakeCard || State == EDCState::EndCard;
+	const FDCShot& Shot = Shots[Cur];
+	int32 Owner = INDEX_NONE;
+	FVector Want = FVector::ZeroVector;
+	FVector LightS = FVector::ZeroVector;
+	for (const FDCExit& E : Shot.Exits)
+	{
+		if (E.Period <= 0.f || E.Marks.Num() == 0 || E.When.IsEmpty())
+		{
+			continue;
+		}
+		const FVector M = E.Marks[0];
+		if (E.When == TEXT("glow"))
+		{
+			const double U = PlayClock - E.OpenFor * 0.5;
+			Owner = Cur;
+			Want = FVector(M.X + E.Amp * FMath::Sin(UE_PI * U / E.Period), M.Y + 60.0 + 25.0 * FMath::Sin(PlayClock * 0.7), M.Z + GentleBack);
+			LightS = FVector(Want.X, M.Y + 40.0, M.Z + 120.0);
+		}
+		else
+		{
+			const double U = PlayClock - (E.OpenFor + (E.Period - E.OpenFor) * 0.5);
+			Owner = E.To;
+			Want = FVector(M.X + E.Amp * FMath::Sin(UE_PI * U / E.Period), M.Y - 10.0 + 20.0 * FMath::Sin(PlayClock * 0.7), M.Z + 170.0);
+			LightS = Want - FVector(0.0, 0.0, 250.0);
+		}
+	}
+	if (Owner == INDEX_NONE && Shot.bGentle)
+	{
+		Owner = Cur;
+		Want = Shot.GentleS + FVector(160.0 * FMath::Sin(PlayClock * 0.25), 25.0 * FMath::Sin(PlayClock * 0.6), 0.0);
+		LightS = Want - FVector(0.0, 0.0, 250.0);
+	}
+	if (!bWorld || Owner == INDEX_NONE)
+	{
+		A->SetActorHiddenInGame(true);
+		if (UPointLightComponent* L = GentleLight.Get())
+		{
+			L->SetVisibility(false);
+		}
+		GentleShot = INDEX_NONE;
+		return;
+	}
+	const FVector Prev = GentleS;
+	GentleS = (Owner == GentleShot) ? FMath::VInterpTo(GentleS, Want, Dt, 3.f) : Want;
+	GentleShot = Owner;
+	const FDCShot& O = Shots[Owner];
+	const double Dir = (GentleS.X - Prev.X) >= 0.0 ? 1.0 : -1.0;
+	const FVector X = O.AxR * Dir;
+	FRotator Rot = FRotationMatrix::MakeFromXZ(X, O.AxU).Rotator();
+	Rot.Roll += 4.0 * FMath::Sin(PlayClock * 0.8);
+	A->SetActorHiddenInGame(false);
+	A->SetActorLocationAndRotation(ShotToWorld(Owner, GentleS), FMath::RInterpTo(A->GetActorRotation(), Rot, Dt, 1.5f));
+	if (UPointLightComponent* L = GentleLight.Get())
+	{
+		L->SetVisibility(true);
+		L->SetWorldLocation(ShotToWorld(Owner, FVector(GentleS.X, LightS.Y, LightS.Z)));
 	}
 }
