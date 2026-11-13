@@ -71,15 +71,20 @@ def import_art(src_dir, out_name):
     count = {}
     for entry in manifest:
         aid, src = entry["id"], os.path.join(src_dir, entry["file"])
+        if aid.endswith("_old"):
+            continue  # kept in the drop as a fallback only
         if not os.path.isfile(src):
             unreal.log_warning("DEEPCUT_ART %s: file missing: %s" % (aid, src))
             continue
         count[aid] = count.get(aid, 0) + 1
         safe = "".join(c if c.isalnum() else "_" for c in aid) + ("_%d" % count[aid] if count[aid] > 1 else "")
         dest = os.environ.get("DC_ART_DEST", "/Game/DeepCut/Art") + "/" + safe
-        t = unreal.AssetImportTask()
-        t.filename, t.destination_path, t.automated, t.replace_existing, t.save = src, dest, True, True, True
-        tools.import_asset_tasks([t])
+        # DC_ART_ONLY=hero,creature:manta imports only those again; the others keep what is already in the project
+        only = [x for x in os.environ.get("DC_ART_ONLY", "").split(",") if x]
+        if not only or aid in only or not eal.list_assets(dest, recursive=True, include_folder=False):
+            t = unreal.AssetImportTask()
+            t.filename, t.destination_path, t.automated, t.replace_existing, t.save = src, dest, True, True, True
+            tools.import_asset_tasks([t])
         assets = [a.split(".")[0] for a in eal.list_assets(dest, recursive=True, include_folder=False)]
         meshes = [a for a in assets if isinstance(unreal.load_asset(a), unreal.StaticMesh)]
         if not meshes:
@@ -92,7 +97,9 @@ def import_art(src_dir, out_name):
         size = box.max - box.min
         emissive = os.path.splitext(src)[0] + "_emissive.png"
         wired = "none"
-        if os.path.isfile(emissive):
+        if os.path.isfile(emissive) and only and aid not in only:
+            wired = "kept"
+        elif os.path.isfile(emissive):
             et = unreal.AssetImportTask()
             et.filename, et.destination_path, et.automated, et.replace_existing, et.save = emissive, dest, True, True, True
             tools.import_asset_tasks([et])
@@ -106,15 +113,18 @@ def import_art(src_dir, out_name):
                     unreal.log("DEEPCUT_ART %s material %s texture params %s" % (aid, mi.get_name(), names))
                     if slot:
                         mel.set_material_instance_texture_parameter_value(mi, slot, tex)
-                        for v in [str(n) for n in mel.get_vector_parameter_names(mi)]:
-                            if "emissive" in v.lower():
-                                mel.set_material_instance_vector_parameter_value(mi, v, unreal.LinearColor(1, 1, 1, 1))
-                        for v in [str(n) for n in mel.get_scalar_parameter_names(mi)]:
-                            if "emissive" in v.lower():
-                                mel.set_material_instance_scalar_parameter_value(mi, v, 1.0)
+                        # the glTF material only reads its emissive map when this switch is on; without it the
+                        # emissive colour alone is added to the whole surface (the model turns pale all over)
+                        try:
+                            mel.set_material_instance_static_switch_parameter_value(mi, "bHasEmissiveTexture", True)
+                            switch = "switch on"
+                        except Exception as e:
+                            switch = "switch NOT set (%s)" % e
+                        mel.set_material_instance_vector_parameter_value(mi, "EmissiveFactor", unreal.LinearColor(1, 1, 1, 1))
+                        mel.set_material_instance_scalar_parameter_value(mi, "EmissiveStrength", 1.0)
                         mel.update_material_instance(mi)
                         eal.save_loaded_asset(mi)
-                        wired = "wired into %s.%s" % (mi.get_name(), slot)
+                        wired = "wired into %s.%s, %s" % (mi.get_name(), slot, switch)
         art.setdefault(aid, []).append({"mesh": mesh.get_path_name(), "yaw": entry.get("yaw", YAW.get(aid, 0)), "file": entry["file"], "triangles": mesh.get_num_triangles(0),
                                         "sizeCm": [round(size.x), round(size.y), round(size.z)], "emissive": wired})
         unreal.log("DEEPCUT_ART %s <- %s: %s, %d triangles, %d material slots, size %.0f x %.0f x %.0f cm, emissive: %s" % (

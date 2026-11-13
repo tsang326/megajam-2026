@@ -2,6 +2,7 @@
 
 #include "MatchCutHUD.h"
 #include "MatchCutGameMode.h"
+#include "DC3D.h"
 #include "DeepCutText.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -1036,6 +1037,11 @@ void AMatchCutHUD::DrawHUD()
 		return;
 	}
 	K = Canvas->ClipY / 1080.f; // the Canvas is the 16:9 view rect, whatever the window is
+	if (GM->World3D())
+	{
+		Draw3D(GM);
+		return;
+	}
 
 	if (GM->State == EDCState::Film)
 	{
@@ -1157,5 +1163,55 @@ void AMatchCutHUD::DrawHUD()
 		}
 		Text(Hint, 960.f, 962.f, HintScale, HintCol, 1);
 		Text(GM->ControlsLine(), 960.f, 1040.f, 1.0f, Dim, 1);
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// the 3D game (brief 06): a survey camera's overlay, and as little text as possible
+// ---------------------------------------------------------------------------------------------
+
+void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
+{
+	const FDC3D& W = *GM->World3D();
+	const float Time = GM->PlayClock;
+
+	// corner brackets of the viewfinder
+	const FLinearColor Edge(1.f, 1.f, 1.f, 0.35f);
+	const float M = 44.f, L = 54.f;
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const float X = (i & 1) ? 1920.f - M : M;
+		const float Y = (i & 2) ? 1080.f - M : M;
+		Rect((i & 1) ? X - L : X, Y - 1.f, L, 3.f, Edge);
+		Rect(X - 1.f, (i & 2) ? Y - L : Y, 3.f, L, Edge);
+	}
+
+	if (FMath::Fmod(Time, 1.2f) < 0.8f)
+	{
+		Disc(84.f, 92.f, 9.f, Red);
+	}
+	Text(DCText::Rec, 104.f, 78.f, 1.5f, White);
+	Text(Timecode(Time, 0), 190.f, 78.f, 1.5f, Dim);
+
+	// depth and heading, as the camera's own readout
+	const int32 Heading = ((int32)FMath::RoundToInt(W.Yaw) % 360 + 360) % 360;
+	Text(FString::Printf(TEXT("DEPTH %.1f m   HDG %03d"), 212.0 - W.Pos.Z / 100.0, Heading), 1836.f, 78.f, 1.5f, Dim, 2);
+
+	// speed: a short bar that fills as Unit 0 goes faster, bright while boosting
+	const float Speed = FMath::Clamp((float)W.Vel.Size() / 980.f, 0.f, 1.f);
+	Rect(84.f, 1000.f, 220.f, 4.f, FLinearColor(1.f, 1.f, 1.f, 0.18f));
+	Rect(84.f, 1000.f, 220.f * Speed, 4.f, Speed > 0.62f ? Amber : Green);
+
+	if (W.Rings.Num() > 0)
+	{
+		const bool bAll = W.RingsDone >= W.Rings.Num();
+		Text(FString::Printf(TEXT("RINGS %d / %d"), W.RingsDone, W.Rings.Num()), 1836.f, 986.f, 1.5f, bAll || W.RingFlash > 0.f ? Green : Dim, 2);
+	}
+
+	// the controls: shown at the start, and again after ten seconds of doing nothing
+	const float Show = Time < 14.f ? 1.f : FMath::Clamp((W.IdleTime - 10.f) * 0.8f, 0.f, 1.f);
+	if (Show > 0.f)
+	{
+		Text(DCText::Controls3D, 960.f, 962.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, 0.85f * Show), 1);
 	}
 }

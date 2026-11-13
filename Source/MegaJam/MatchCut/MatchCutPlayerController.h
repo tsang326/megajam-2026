@@ -15,4 +15,7 @@ class AMatchCutPlayerController : public APlayerController
 public:
 	AMatchCutPlayerController();
 	virtual void PlayerTick(float DeltaTime) override;
+
+private:
+	bool bMouseTaken = false;
 };

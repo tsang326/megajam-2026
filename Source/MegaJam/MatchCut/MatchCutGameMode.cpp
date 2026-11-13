@@ -4,6 +4,7 @@
 #include "MatchCutPlayerController.h"
 #include "MatchCutHUD.h"
 #include "DCAudio.h"
+#include "DC3D.h"
 #include "DeepCutText.h"
 
 #include "Camera/CameraActor.h"
@@ -67,6 +68,17 @@ void AMatchCutGameMode::StartPlay()
 	}
 
 	GAreScreenMessagesEnabled = false; // engine debug text would sit on top of the picture
+
+	if (!FParse::Param(FCommandLine::Get(), TEXT("MC2D")))
+	{
+		// brief 06: the 3D game. The side-view game stays behind -MC2D (and the tag v2d-fallback).
+		D3 = new FDC3D(this);
+		D3->Start();
+		Audio = NewObject<UDCAudio>(this);
+		Audio->Init(GetWorld());
+		LoadScript();
+		return;
+	}
 
 	SpawnWorld();
 	Audio = NewObject<UDCAudio>(this);
@@ -507,6 +519,26 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	if (Shots.Num() == 0 || !Hero.Actor.IsValid())
 	{
+		return;
+	}
+	if (D3)
+	{
+		TickScript(DeltaSeconds);
+		PlayClock += DeltaSeconds;
+		ShotElapsed += DeltaSeconds;
+		if (ShotElapsed > 1.f)
+		{
+			FrameAccum += DeltaSeconds;
+			FrameMax = FMath::Max(FrameMax, (double)DeltaSeconds);
+			++FrameCount;
+		}
+		D3->Tick(FMath::Min(DeltaSeconds, 0.05f));
+		if (Audio)
+		{
+			Audio->SetLoop(TEXT("amb_underwater"), 1.f, 2.0f);
+			Audio->SetLoop(TEXT("mus_explore"), 1.f, 3.0f);
+			Audio->Tick(DeltaSeconds);
+		}
 		return;
 	}
 	const float Dt = FMath::Min(DeltaSeconds, 0.1f); // long frames (shader hitches, background runs) must not tunnel the robot

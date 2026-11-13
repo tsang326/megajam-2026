@@ -112,3 +112,15 @@ All three use rules the game already had (near things come through the cut, a th
 - Frame times in the packaged `full12`: 25-34 ms in every shot in the first run; 26-34 ms and 54-110 ms (shots 3-7) in the second. Both at background priority with the Mac in use. A run at normal priority is still missing.
 - `route_yellow` failed once tonight: the power cell sat on the DOCK frame and still stayed behind. Cause: the frame's centre was 294 cm from THE WRECK's yellow mark, outside the 280 cm carry circle; it only worked when the cell lay on the right part of the frame. The mark moved from x 400 to 380. From its start place the cell still stays (292 cm), from the frame it comes and fits (275 cm).
 - `docs/brief05-report.md` written: what changed, how a newcomer learns each puzzle, frame times, every new English line, what is unverified, what to cut first, play commands.
+
+### 2026-11-14, ~03:45: the game goes 3D; movement and camera first (brief 06, M1)
+
+- The side-view game is kept as the git tag `v2d-fallback` (09033c8) and behind `-MC2D`. An unfinished change that removed depth movement from it was dropped.
+- New `DC3D.cpp`: free swimming with momentum (push towards a speed, slow glide when the keys are let go, slide along rock), collision by engine sweeps against the models' triangles, a camera behind Unit 0 that a swept ball keeps out of rock.
+- One test area built in code from the ArtDrop models at uniform scale (arch, wreck, vents, a roofed gully, a spire), six rings to swim through.
+- The hero model had looked pale since it was imported. Cause: the glTF material adds its emissive colour to the whole surface unless the static switch `bHasEmissiveTexture` is on; the import set the colour to white without the switch. Fixed in `Tools/import_assets.py`, hero imported again; its emissive map now lights only eyes, lamp and chest.
+- Lumen does not run on this Mac: the engine falls back to SM5 (its SM6 check fails on this macOS). A run with Lumen asked for looked and timed the same as one without.
+- Film look without Lumen: volumetric fog, dappled moving light from unseen pieces high in the water, blue water, warm headlamp, bloom, chromatic aberration, grain.
+- `m1_swim` offscreen, alone: 29.9 ms average over 3037 frames (editor build, background priority, Mac in use).
+- 03:40: the hero is now a diver in a hard suit (new `ArtDrop/hero.glb`); imported with `DC_ART_ONLY=hero Tools/import_art.sh`. The robot model is no longer used.
+- Six creature models from the art drop imported (manta, anglerfish, jellyfish, turtle, eel, fish) for brief 07; not used yet.

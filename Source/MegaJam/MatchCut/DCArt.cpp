@@ -161,9 +161,9 @@ UStaticMeshComponent* AMatchCutGameMode::AddArt(AActor* Owner, const FString& Id
 		{
 			const FString N = I.Name.ToString();
 			Names += N + TEXT(" ");
-			if (N.Contains(TEXT("Emissive")) && Id == TEXT("hero"))
+			if (N == TEXT("EmissiveFactor") && Id == TEXT("hero"))
 			{
-				MID->SetVectorParameterValue(I.Name, FLinearColor::White);
+				MID->SetVectorParameterValue(I.Name, D3 ? FLinearColor::Black : FLinearColor::White); // the 3D game sets it itself (DC3D.cpp)
 			}
 		}
 		if (!bArtParamsLogged.Contains(Id))

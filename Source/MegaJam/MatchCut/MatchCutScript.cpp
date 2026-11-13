@@ -15,6 +15,7 @@
 //   look A|B|C | ghost 0|1 | snap NAME | stat | quit
 
 #include "MatchCutGameMode.h"
+#include "DC3D.h"
 #include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -115,6 +116,10 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 	UE_LOG(LogMatchCut, Display, TEXT("SCRIPT %s   [state=%s shot=%d s=(%.0f,%.0f,%.0f) ndc=(%.3f,%.3f) gate=%d ok=%d reason=\"%s\"]"), *Line, StateName(), Cur, HeroS.X, HeroS.Y, HeroS.Z,
 		HeroNdc.X, HeroNdc.Y, Shots[Cur].bGateOpen ? 1 : 0, CurEval.bOk ? 1 : 0, CurEval.Reason);
 
+	if (const int32 Done = D3 ? D3->RunLine(T) : 0)
+	{
+		return Done == 1;
+	}
 	if (Cmd == TEXT("skipfilm"))
 	{
 		if (State == EDCState::Film)

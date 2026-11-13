@@ -46,6 +46,7 @@ class AMatchCutGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 	friend class AMatchCutHUD;
+	friend struct FDC3D;
 
 public:
 	AMatchCutGameMode();
@@ -63,6 +64,8 @@ public:
 	/** Mouse wheel: one step farther (+) or closer (-). */
 	void AddDepthStep(float Steps);
 	bool IsScriptActive() const { return bScriptActive; }
+	/** The 3D game (brief 06), or null when the old side-view game runs (-MC2D). */
+	struct FDC3D* World3D() const { return D3; }
 
 	/** The cut. Returns true when the take succeeded. */
 	bool TryCut();
@@ -224,6 +227,8 @@ private:
 	void LoadScript();
 	void TickScript(float DeltaSeconds);
 	bool RunScriptLine(const FString& Line);
+
+	struct FDC3D* D3 = nullptr; // DC3D.cpp
 
 	// ---- data
 	TArray<FDCShot> Shots;

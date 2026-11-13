@@ -130,4 +130,8 @@ namespace DCText
 	static const TCHAR* OfficialEndHint = TEXT("That is the official record. Some seconds are missing.");
 	static const TCHAR* CutByFathom = TEXT("RESTORED SECONDS");
 	static const TCHAR* DiverCam = TEXT("DIVER CAM  REC");
+
+	// brief 06: the 3D game
+	static const TCHAR* Controls3D = TEXT("MOUSE look     W A S D swim     SPACE up     X down     SHIFT boost");
+	// (the readouts "DEPTH n m   HDG n" and "RINGS n / n" are format strings in MatchCutHUD.cpp)
 }

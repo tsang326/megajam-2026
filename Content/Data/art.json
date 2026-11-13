@@ -4,13 +4,13 @@
    "mesh": "/Game/DeepCut/Art/hero/hero/StaticMeshes/hero.hero",
    "yaw": -90,
    "file": "hero.glb",
-   "triangles": 7542,
+   "triangles": 14724,
    "sizeCm": [
-    134,
-    116,
+    79,
+    126,
     190
    ],
-   "emissive": "wired into model.EmissiveTexture"
+   "emissive": "wired into model.EmissiveTexture, switch on"
   }
  ],
  "plate": [
@@ -159,6 +159,90 @@
     139,
     190,
     145
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:manta": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_manta/creature_manta/StaticMeshes/creature_manta.creature_manta",
+   "yaw": 0,
+   "file": "creature_manta.glb",
+   "triangles": 1000,
+   "sizeCm": [
+    191,
+    159,
+    19
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:angler": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_angler/creature_angler/StaticMeshes/creature_angler.creature_angler",
+   "yaw": 0,
+   "file": "creature_angler.glb",
+   "triangles": 5748,
+   "sizeCm": [
+    107,
+    190,
+    108
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:jelly": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_jelly/creature_jelly/StaticMeshes/creature_jelly.creature_jelly",
+   "yaw": 0,
+   "file": "creature_jelly.glb",
+   "triangles": 11800,
+   "sizeCm": [
+    104,
+    189,
+    157
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:giant": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_giant/creature_giant/StaticMeshes/creature_giant.creature_giant",
+   "yaw": 0,
+   "file": "creature_giant.glb",
+   "triangles": 6678,
+   "sizeCm": [
+    190,
+    148,
+    50
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:eel": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_eel/creature_eel/StaticMeshes/creature_eel.creature_eel",
+   "yaw": 0,
+   "file": "creature_eel.glb",
+   "triangles": 4070,
+   "sizeCm": [
+    53,
+    190,
+    38
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:fish": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_fish/creature_fish/StaticMeshes/creature_fish.creature_fish",
+   "yaw": 0,
+   "file": "creature_fish.glb",
+   "triangles": 4170,
+   "sizeCm": [
+    89,
+    190,
+    62
    ],
    "emissive": "none"
   }

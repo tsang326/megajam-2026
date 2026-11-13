@@ -1,0 +1,76 @@
+# brief 06 M1: swimming, the camera, the test area. Offscreen: Tools/run_offscreen.sh m1_swim Saved/DeepCut/m1
+wait 2
+stat3
+snap a01_start
+key3 1 0 0 1.2
+snap a02_swim_forward
+key3 0 0 0 1.5
+stat3
+snap a03_glide
+swim3 1500 0 470
+swim3 2100 0 520
+snap a04_through_arch
+turn3 60 0 3
+snap a05_look_round
+swim3 2700 300 420
+snap a06_wreck_dock
+swim3 3300 -700 1420
+snap a07_over_wreck
+look3 215 -35
+wait 0.6
+snap a08_look_down_at_wreck
+key3 1 0 0 2.5 boost
+snap a09_boost
+stat3
+tp 300 2390 300 0 0
+wait 0.5
+snap b01_gully_mouth
+swim3 1650 2390 300
+snap b02_in_gully
+look3 180 10
+wait 1.0
+snap b03_gully_look_back
+look3 90 0
+wait 1.0
+snap b04_gully_look_side
+look3 0 60
+wait 1.0
+snap b05_gully_look_up
+stat3
+tp 1500 0 2300 0 -80
+wait 0.4
+key3 1 0 0 4
+stat3
+snap c01_dive_onto_arch
+tp 1500 -900 300 90 0
+wait 0.4
+key3 1 0 0 3
+stat3
+snap c02_into_pillar
+tp 0 0 300 0 0
+key3 1 0 0 3
+key3 0 0 0 0.1
+stat3
+key3 0 0 0 2
+stat3
+swim3 1250 -2450 620
+snap d01_vents
+swim3 -900 420 1750
+snap d02_spire_ring
+look3 20 -30
+wait 0.8
+snap d03_view_from_high
+swim3 -1900 -1300 260
+snap d04_low_ring
+tp 5300 0 400 0 0
+key3 1 0 0 4
+stat3
+snap e01_edge_current
+tp -600 -300 220 30 -5
+wait 0.8
+snap f01_hero_close
+look3 210 -5
+wait 0.8
+snap f02_hero_front
+stat
+quit

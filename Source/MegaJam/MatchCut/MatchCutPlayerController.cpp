@@ -2,6 +2,7 @@
 
 #include "MatchCutPlayerController.h"
 #include "MatchCutGameMode.h"
+#include "DC3D.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "InputCoreTypes.h"
 
@@ -28,6 +29,44 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 	}
 	if (GM->IsScriptActive())
 	{
+		return;
+	}
+	if (FDC3D* W = GM->World3D())
+	{
+		// brief 06: swim where the camera looks. No key here is a macOS shortcut (no CTRL).
+		if (!bMouseTaken)
+		{
+			bMouseTaken = true;
+			bShowMouseCursor = false;
+			SetInputMode(FInputModeGameOnly());
+		}
+		auto Down = [this](const FKey& Key) { return IsInputKeyDown(Key) ? 1.f : 0.f; };
+		FVector Move(Down(EKeys::W) - Down(EKeys::S), Down(EKeys::D) - Down(EKeys::A),
+			Down(EKeys::SpaceBar) - FMath::Max(Down(EKeys::X), Down(EKeys::Q)));
+		const float PadX = GetInputAnalogKeyState(EKeys::Gamepad_LeftX);
+		const float PadY = GetInputAnalogKeyState(EKeys::Gamepad_LeftY);
+		if (FMath::Abs(PadX) > 0.2f) { Move.Y += PadX; }
+		if (FMath::Abs(PadY) > 0.2f) { Move.X += PadY; }
+		Move.Z += GetInputAnalogKeyState(EKeys::Gamepad_RightTriggerAxis) - GetInputAnalogKeyState(EKeys::Gamepad_LeftTriggerAxis);
+		W->Move = Move.GetClampedToMaxSize(1.0);
+		W->bBoost = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift) || IsInputKeyDown(EKeys::Gamepad_LeftThumbstick);
+
+		// look: mouse, arrow keys, right stick
+		if (WasInputKeyJustPressed(EKeys::LeftBracket)) { W->Sens = FMath::Max(0.03f, W->Sens * 0.8f); }
+		if (WasInputKeyJustPressed(EKeys::RightBracket)) { W->Sens = FMath::Min(0.5f, W->Sens * 1.25f); }
+		if (WasInputKeyJustPressed(EKeys::I)) { W->bInvertY = !W->bInvertY; }
+		float MouseX = 0.f, MouseY = 0.f;
+		GetInputMouseDelta(MouseX, MouseY);
+		if (W->Time > 0.5f) // the first counts after the window takes the mouse can be one big jump
+		{
+			W->LookDelta += FVector2D(MouseX, MouseY * (W->bInvertY ? -1.f : 1.f)) * W->Sens;
+		}
+		FVector2D Rate(Down(EKeys::Right) - Down(EKeys::Left), Down(EKeys::Up) - Down(EKeys::Down));
+		const float LookX = GetInputAnalogKeyState(EKeys::Gamepad_RightX);
+		const float LookY = GetInputAnalogKeyState(EKeys::Gamepad_RightY);
+		if (FMath::Abs(LookX) > 0.2f) { Rate.X += LookX; }
+		if (FMath::Abs(LookY) > 0.2f) { Rate.Y += LookY * (W->bInvertY ? -1.f : 1.f); }
+		W->LookRate = FVector2D(Rate.X * 120.0, Rate.Y * 85.0);
 		return;
 	}
 

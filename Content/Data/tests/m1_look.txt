@@ -1,0 +1,17 @@
+# brief 06: the look only (hero close, the wreck, from high, the gully)
+wait 2
+snap a01_start
+tp -600 -300 220 30 -5
+wait 0.8
+snap f01_hero_close
+look3 210 -5
+wait 0.8
+snap f02_hero_front
+tp 2500 200 420 20 -10
+wait 0.8
+snap a06_wreck_dock
+tp 1650 2390 300 0 0
+wait 0.8
+snap b02_in_gully
+stat
+quit
