@@ -33,3 +33,5 @@ One line per asset: file · tool · prompt / source · created (VN time) · job/
 | Content/Data/film.json | `Tools/make_film_json.py`, written with Claude Code | Opening film and removed scene as key poses (sets, clips, reel order, captions). Own work | 2026-11-13 ~12:00 | – |
 | Content/Data/tests/*.txt | Hand-written with Claude Code | Test scripts for the offscreen runner; staged with the build so the packaged game can run them. Not game content | 2026-11-13 ~12:00 | – |
 | Tape marks, focus brackets, prop rings, socket frames | Drawn in code on the HUD canvas | Own work | 2026-11-13 ~12:00 | – |
+| Content/Data/deepcut.json (stage 2 shots), Content/Data/film.json (clip "diver") | Hand-written with Claude Code; film.json made by `Tools/make_film_json.py` | Five stage 2 shots; the diver head-cam record as key poses with the removed seconds marked. Own work | 2026-11-13 ~17:00 | – |
+| Predator, gentle creature, heavy lid, lift cradle, diver mask and bubbles | Built in code from engine shapes (spheres, boxes) and drawn on the HUD canvas | Own work. No generated images | 2026-11-13 ~17:00 | – |

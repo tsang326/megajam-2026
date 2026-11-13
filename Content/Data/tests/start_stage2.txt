@@ -1,0 +1,9 @@
+# Start at stage 2 with -MCShot=6 (set MC_EXTRA=-MCShot=6): the official diver record must play, then THE TRENCH.
+wait 2.0
+snap m6a_official_record_plays
+stat
+waitstate Playing
+wait 1.0
+snap m6b_trench
+stat
+quit

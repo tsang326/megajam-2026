@@ -54,3 +54,15 @@ Solo developer + AI agents (Claude Code). Times are Vietnam time (UTC+7).
 - THE DARK: the timed mark now has a reason in the picture. A warm glow drifts through the shot and the mark only holds while the glow is on it.
 - Checked offscreen with the editor build: `stage1` (49 captures, end card `scenes=1/3 crew=1/7`) and `route_yellow` (end card `scenes=1/3 crew=0/7`) both run to the end.
 - Found, not fixed yet: in THE DARK the body of the creature that carries the glow can be seen clearly; it should be only a faint light in this stage. Not checked in the packaged build.
+
+### 2026-11-13, evening: stage 2 runs to its end card
+
+- Stage 2 has five shots (THE TRENCH, THE LEDGE, THE CURRENT, THE DRIFT, THE LIFT). C on the stage 1 end card goes on to it; `-MCShot=6` starts there with everything stage 1 gives.
+- The diver record is one clip in `film.json` with the seconds Fathom removed marked as cuts. The official version plays it without them (8.5 s), the restored version plays all 17 s. Both creatures are built from engine shapes. No image or sound was generated.
+- GRIPPER: `E` grabs and drops. A heavy lid and a crew unit that cannot swim only come through a cut while they are held.
+- The predator comes only when a shot's marks are showing: warning at the frame edge, then a chase. The only way out is a cut. Caught = static, SIGNAL LOST, the clapper with `TAKE n`. Two shots have it.
+- First version of the diver clip had the predator swimming straight at the camera; in the captures it was a dot. The path now crosses in front of the camera so the long body is seen, and its skin is a little lighter on the old film.
+- THE DRIFT: the first timing had the mark open while the big creature was still over the landing place. The sweep is now wide enough for the body to leave the place before the mark opens.
+- Stage 1: the body that carries the warm glow in THE DARK is no longer shown, only its light.
+- Checked offscreen with the editor build: `stage2` alone and `full12` (stage 1, C, stage 2) both reach `END CARD stage=2 scenes=2/3 crew=2/7`. 99 captures in `docs/captures/stage2/`. Report: `docs/stage2-report.md`.
+- Not done: no human has played stage 2; the clip was looked at as stills, not in motion; sound checked by log only. Missing sounds (a predator sting, diver breathing) use stand-ins from the 13 existing sounds.

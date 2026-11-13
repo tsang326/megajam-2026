@@ -16,6 +16,7 @@ snap t1d_official_signal_lost
 waitstate Playing
 wait 0.8
 snap t1e_official_end_banner
+lamp 0
 wait 6.0
 snap t1f_trench
 # the part: FEATURE CUT -> BUILT: GRIPPER
