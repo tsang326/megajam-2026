@@ -27,6 +27,16 @@ Solo developer + AI agents (Claude Code). Times are Vietnam time (UTC+7).
   - Packaging (Mac, Development) took three tries. The first archive was a bare executable with no data or libraries (the script had no `-package` step) and died at launch on a missing library. The second quit at start: this Mac falls back to Metal SM5 and only SM6 shaders had been cooked. The third starts offscreen, loads the layout from the package, plays the film and reaches shot 1. Nothing past shot 1 was checked in the package, and nobody has seen its screen.
   - Not done: no human has played this build and the keyboard path is untested. Report: `docs/slice-report.md`.
 
+## 2026-11-13
+
+- **Night to ~14:30** Stage 1 (brief 03), greybox, engine shapes only.
+  - Built: tape marks instead of the green area; a shot shows its marks only when its puzzle is solved; six wider shots with depth (Space / Shift); things near the robot come through a cut and can land in a frame of the next shot; R goes back one shot; one camera rail; two cameras with two tape colours in one shot; sound (13 files on four buses); two OFL fonts drawn at run time; shots, film and mixer as JSON; the game mode split into files by job.
+  - Morning change: Unit 0 is a shelved prototype from the first second. The opening is a design-file card with three struck-out features, then a shorter company film (14.9 s together). The feature list stays in the top bar and the headlamp line is rebuilt on pickup. Valves were removed; puzzles are carry across the cut, lamp-reveal, one mark that comes and goes, and one camera choice.
+  - Checked with scripted offscreen runs only. One run goes from the card to the end card and logs a failed take of each kind (not on a mark, too close, restore not lined up, too dark, not yet); every successful cut lands on the same screen position (0.00 px).
+  - Found and fixed: text drawn from a font file alone showed nothing until it was given a run-time font object; a held plate swung with the robot's heading and missed the vent, so it now hangs straight under the robot; a mark outside the rail's middle zone could only be reached at the end of the rail; the opening's "seen before" flag made a scripted run depend on the run before it; an orphaned crash reporter from a morning crash used a third of a core for three hours and slowed every run.
+  - Found, not fixed: the power cell lies inside the carry radius of the yellow mark, so it comes through that cut without being picked up. The mark that comes and goes has no reason in the picture yet. The dark shot's HUD is crowded when the cell is held on the mark. No focus pull on reveal.
+  - Not done: no human has played this build and nobody has heard it; sound is checked by log only. Report: `docs/stage1-report.md`.
+
 ## Declared before the jam
 - Tool setup only: an empty UE smoke-test project and an Unreal MCP test project (no game content), a tools/perks list, and a shelved concept note (*Lost Property*) that this game does not use.
 - No models, images, music, dialogue or prompts for game assets were made before 12/11 12:00.
