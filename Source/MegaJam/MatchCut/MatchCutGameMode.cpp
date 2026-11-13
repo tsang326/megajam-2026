@@ -85,6 +85,26 @@ void AMatchCutGameMode::StartPlay()
 		}
 	}
 
+	// every part brings back its own removed scene; a clip can say which frame has to be matched
+	for (FDCShot& S : Shots)
+	{
+		if (!S.bHasPart)
+		{
+			continue;
+		}
+		if (S.PartClip.IsEmpty())
+		{
+			S.PartClip = FlashClip;
+		}
+		S.RestoreNdc = RestoreNdc;
+		const FDCClip* C = Clips.Find(S.PartClip);
+		if (C && C->bHasMatch)
+		{
+			S.RestoreNdc = C->MatchNdc;
+			S.RestoreT = C->MatchT;
+		}
+	}
+
 	FString CmdLook;
 	if (FParse::Value(FCommandLine::Get(), TEXT("MCLook="), CmdLook))
 	{
@@ -105,6 +125,7 @@ void AMatchCutGameMode::StartPlay()
 		// quick preview of one shot: Tools/preview_shot.sh
 		State = EDCState::Playing;
 		History.Reset();
+		GrantEarlierStages(StartShot); // -MCShot=6 starts stage 2 with what stage 1 gives
 		EnterShot(StartShot, Shots[StartShot].Start, true);
 	}
 	else if (FParse::Param(FCommandLine::Get(), TEXT("MCSkipFilm")))
@@ -139,6 +160,10 @@ void AMatchCutGameMode::PressCut()
 	if (State == EDCState::Playing)
 	{
 		TryCut();
+	}
+	else if (State == EDCState::EndCard && StateTime > 1.0f && HasNextStage())
+	{
+		ContinueStage();
 	}
 }
 
@@ -197,6 +222,7 @@ void AMatchCutGameMode::RestartAll()
 	bFeature[0] = bFeature[1] = bFeature[2] = false;
 	bLampOn = false;
 	bCrewRescued = false;
+	bCaught = false;
 	bDepthUsed = false;
 	bGapFilled[0] = bGapFilled[1] = bGapFilled[2] = false;
 	bThumbTaken = false;
@@ -214,11 +240,16 @@ void AMatchCutGameMode::RestartAll()
 	for (FDCSocket& S : Sockets)
 	{
 		S.bFilled = false;
-		SetPaintEmissive(S.Paint, S.Accepts == TEXT("cell") ? FLinearColor(5.f, 0.6f, 0.3f) : FLinearColor(0.5f, 1.4f, 1.4f));
+		SetPaintEmissive(S.Paint, (S.Accepts == TEXT("cell") || S.Accepts == TEXT("crew")) ? FLinearColor(5.f, 0.6f, 0.3f) : FLinearColor(0.5f, 1.4f, 1.4f));
 	}
 	for (FDCShot& Shot : Shots)
 	{
 		Shot.bGateOpen = false;
+		Shot.bIntroPlayed = false;
+		if (AActor* Part = Shot.PartActor.Get())
+		{
+			Part->SetActorHiddenInGame(false);
+		}
 		Shot.Switch.bOn = false;
 		Shot.Switch.Turn = 0.f;
 		for (FDCSolid& Solid : Shot.Solids)
@@ -230,10 +261,6 @@ void AMatchCutGameMode::RestartAll()
 				A->SetActorLocation(Solid.BaseLoc);
 			}
 		}
-	}
-	if (AActor* A = PartActor.Actor.Get())
-	{
-		A->SetActorHiddenInGame(false);
 	}
 	if (CrewShot != INDEX_NONE)
 	{
@@ -266,6 +293,13 @@ void AMatchCutGameMode::EnterShot(int32 Index, const FVector& HeroAtS, bool bPus
 	HeroS = HeroAtS;
 	HeroPos = ShotToWorld(Cur, HeroS);
 	HeroNdc = ViewNdc(Cur, HeroS, false);
+	ResetPredator();
+	if (Shot.bHasPart)
+	{
+		// the removed scene of this shot, and the frame that has to be matched to bring it back
+		RestoreNdc = Shot.RestoreNdc;
+		FlashClip = Shot.PartClip;
+	}
 	UpdateRail(0.f, true);
 	SetView(Shot.Camera.Get());
 	GhostExit = 0;
@@ -284,6 +318,13 @@ void AMatchCutGameMode::EnterShot(int32 Index, const FVector& HeroAtS, bool bPus
 	{
 		EndTimer = 3.5f;
 	}
+
+	// Fathom's own version of a record plays the first time its shot is entered
+	if (State == EDCState::Playing && !Shot.Intro.IsEmpty() && !Shot.bIntroPlayed && Clips.Contains(Shot.Intro))
+	{
+		Shot.bIntroPlayed = true;
+		StartClip(Shot.Intro, true, INDEX_NONE);
+	}
 }
 
 void AMatchCutGameMode::PointGhost()
@@ -294,10 +335,11 @@ void AMatchCutGameMode::PointGhost()
 	}
 	if (InRestore())
 	{
-		PoseClip(FlashClip, 0.f);
-		if (FlashCam.IsValid())
+		PoseClip(FlashClip, Shots[Cur].RestoreT);
+		if (ACameraActor* Cam = ClipCamera(FlashClip))
 		{
-			GhostCapture->SetActorLocationAndRotation(FlashCam->GetActorLocation(), FRotator::ZeroRotator);
+			const FDCFilmSet* Set = ClipSet(FlashClip);
+			GhostCapture->SetActorLocationAndRotation(Cam->GetActorLocation(), Set && Set->bHeadCam ? Cam->GetActorRotation() : FRotator::ZeroRotator);
 		}
 	}
 	else if (Shots[Cur].Exits.IsValidIndex(GhostExit))
@@ -347,7 +389,7 @@ void AMatchCutGameMode::TickPlaying(float Dt)
 		{
 			State = EDCState::EndCard;
 			StateTime = 0.f;
-			UE_LOG(LogMatchCut, Display, TEXT("END CARD scenes=%d/%d crew=%d/%d"), bGapFilled[0] ? 1 : 0, NumGaps, bCrewRescued ? 1 : 0, CrewTotal);
+			UE_LOG(LogMatchCut, Display, TEXT("END CARD stage=%d scenes=%d/%d crew=%d/%d"), Shots[Cur].Stage, ScenesCount(), NumGaps, CrewCount(), CrewTotal);
 		}
 	}
 }
@@ -467,8 +509,9 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 		TickPlaying(Dt);
 		break;
 	case EDCState::TakeCard:
-		if (StateTime >= DCFlow::TakeSeconds && History.Num() > 0)
+		if (StateTime >= (bCaught ? 1.9f : DCFlow::TakeSeconds) && History.Num() > 0)
 		{
+			bCaught = false;
 			// back to where this shot was entered; loose things and solved puzzles stay as they are
 			State = EDCState::Playing;
 			StateTime = 0.f;
@@ -493,6 +536,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 	UpdateProps(Dt);
 	UpdateCurrents(Dt);
 	UpdateGentle(Dt);
+	UpdatePredator(Dt);
 	UpdateHeroActor(Dt);
 	UpdateMusic();
 	if (Audio)
@@ -528,6 +572,7 @@ void AMatchCutGameMode::UpdateGentle(float Dt)
 	int32 Owner = INDEX_NONE;
 	FVector Want = FVector::ZeroVector;
 	FVector LightS = FVector::ZeroVector;
+	bool bBodyUnseen = false;
 	for (const FDCExit& E : Shot.Exits)
 	{
 		if (E.Period <= 0.f || E.Marks.Num() == 0 || E.When.IsEmpty())
@@ -541,6 +586,7 @@ void AMatchCutGameMode::UpdateGentle(float Dt)
 			Owner = Cur;
 			Want = FVector(M.X + E.Amp * FMath::Sin(UE_PI * U / E.Period), M.Y + 60.0 + 25.0 * FMath::Sin(PlayClock * 0.7), M.Z + GentleBack);
 			LightS = FVector(Want.X, M.Y + 40.0, M.Z + 120.0);
+			bBodyUnseen = Shot.Stage < 2; // stage 1 only ever sees the light, not what carries it
 		}
 		else
 		{
@@ -575,7 +621,7 @@ void AMatchCutGameMode::UpdateGentle(float Dt)
 	FRotator Rot = FRotationMatrix::MakeFromXZ(X, O.AxU).Rotator();
 	Rot.Roll += 4.0 * FMath::Sin(PlayClock * 0.8);
 	A->SetActorHiddenInGame(false);
-	A->SetActorLocationAndRotation(ShotToWorld(Owner, GentleS), FMath::RInterpTo(A->GetActorRotation(), Rot, Dt, 1.5f));
+	A->SetActorLocationAndRotation(ShotToWorld(Owner, GentleS + FVector(0.0, 0.0, bBodyUnseen ? 60000.0 : 0.0)), FMath::RInterpTo(A->GetActorRotation(), Rot, Dt, 1.5f));
 	if (UPointLightComponent* L = GentleLight.Get())
 	{
 		L->SetVisibility(true);

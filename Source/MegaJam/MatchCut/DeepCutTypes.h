@@ -161,6 +161,7 @@ struct FDCShot
 	float PredDelay = 4.f;
 	float PredWarn = 4.f;
 	float PredSpeed = 110.f;
+	float PredAccel = 18.f;
 	// the gentle creature rests here
 	bool bGentle = false;
 	FVector GentleS = FVector::ZeroVector;
@@ -243,6 +244,14 @@ struct FDCTrack
 	TArray<FDCKey> Keys;
 };
 
+struct FDCCaption
+{
+	float T0 = 0.f;
+	float T1 = 0.f;
+	FString Text;
+	int32 Who = 0; // 0 both versions, 1 the official cut only, 2 the restored clip only
+};
+
 struct FDCClip
 {
 	FString Set;
@@ -251,7 +260,8 @@ struct FDCClip
 	TArray<FVector2D> Lamp; // (time, intensity) keys for the set's lamp, if any
 	TArray<FVector2D> Cuts; // (from, to): the seconds the official cut leaves out
 	TArray<FVector2D> Static; // (from, to): no signal
-	TArray<TPair<FVector2D, FString>> Captions; // (from, to), text
+	TArray<struct FDCCaption> Captions;
+	FString After; // one line shown when the restored clip ends
 	bool bHasMatch = false;
 	FVector2D MatchNdc = FVector2D::ZeroVector;
 	float MatchT = 0.f;
@@ -284,8 +294,7 @@ struct FDCFilmSet
 	TWeakObjectPtr<ACameraActor> Camera;
 	bool bOldFilm = false;
 	bool bHeadCam = false; // first-person record: mask frame, bubbles
-	bool bTorch = false;
-	TWeakObjectPtr<class USpotLightComponent> Torch;
+	float TorchPower = 0.f; // a torch on the camera
 };
 
 /** A stretch of the film timeline: a clip of the official film or a removed scene. */
@@ -306,4 +315,5 @@ struct FDCSnap
 	TArray<FDCProp> Props;
 	TArray<bool> Sockets;
 	TArray<bool> Gates;
+	int32 Carried = INDEX_NONE;
 };

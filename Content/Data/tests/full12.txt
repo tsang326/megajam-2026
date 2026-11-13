@@ -1,0 +1,362 @@
+# Stages 1 and 2 in one run: the stage1 script, C on the end card, then the stage2 script. Made from those two files.
+# Editor:   Tools/run_offscreen.sh full12 Saved/DeepCut/full12
+# Packaged: Tools/run_packaged.sh full12 Saved/DeepCut/full12_pkg
+# --- opening: design-file card, then the film (first view: "anykey" must not skip it)
+card
+wait 0.8
+snap f00_design_card
+anykey
+wait 2.6
+filmtime 1.2
+wait 0.4
+snap f01_launch
+filmtime 3.2
+wait 0.4
+snap f02_descent
+filmtime 4.2
+wait 0.3
+snap f03_gap1
+filmtime 6.0
+wait 0.4
+snap f04_seafloor
+filmtime 8.8
+wait 0.4
+snap f05_unit7
+filmtime 10.5
+wait 0.3
+snap f06_end
+waitstate Drop
+wait 0.8
+snap g00_drop
+waitstate Playing
+wait 1.2
+# --- shot 0 DROP ZONE: the mark is there from the start, first cut cannot fail
+snap s0a_mark_from_start
+cut
+wait 0.4
+snap s0b_cut_off_mark_soft
+swimn -0.433 0.0615
+wait 0.4
+snap s0c_on_mark
+cut
+wait 0.15
+snap s1a_after_cut_no_marks
+# --- shot 1 THE SHELF: no gripper yet. Push the plate onto the VENT frame of the next shot (gate), stay close, cut
+wait 0.8
+cut
+wait 0.4
+snap s1b_cut_before_solved
+swimto 420 -100 1050
+swimto 420 -244 1050
+wait 0.3
+snap s1c_beside_plate
+swimto 137 -244 1050
+wait 0.35
+snap s1d_plate_on_frame_marks_reveal
+wait 1.5
+# failed take, mark cut: not on a mark
+cut
+wait 0.3
+snap s1e_FAIL_not_on_mark
+waitstate Playing
+wait 0.6
+# wrong way first: on the mark but too far from the plate (far from the camera). The plate stays behind.
+swimn -0.189 -0.392 1300
+wait 0.5
+snap s1f_on_mark_plate_stays
+cut
+wait 0.6
+snap s2a_vent_no_plate
+move 1 0 0 2.5
+snap s2b_current_pushes_back
+retake
+wait 0.8
+snap s1g_back_one_shot
+# right way: push the plate onto the frame again, rise clear of it, stand on the mark close to it, cut
+swimto 420 -100 1050
+swimto 420 -244 1050
+swimto 137 -244 1050
+swimto 137 -150 1050
+wait 0.3
+snap s1h_plate_on_vent_frame
+swimn -0.189 -0.392 1050
+wait 0.5
+snap s1i_on_mark_plate_fits
+cut
+wait 0.5
+snap s2c_vent_current_stopped
+# --- shot 2 THE VENT: the plate on the vent is the gate; camera rail; mark with a depth
+wait 1.6
+snap s2d_marks_shown
+# failed take, mark cut: right place on screen, wrong depth
+swimto 122 41 1100
+wait 0.4
+snap s2g_on_mark_too_close
+cut
+wait 0.3
+snap s2h_FAIL_too_close
+waitstate Playing
+wait 0.5
+swimto 700 -40 1150
+wait 0.6
+snap s2e_rail_midway
+# the camera has moved along its rail; the mark stays where it is on screen
+wait 1.0
+swimn 0.193 0.114 1350
+wait 0.8
+snap s2i_on_mark_depth_ok
+cut
+wait 0.5
+snap s3a_wreck
+# --- shot 3 THE WRECK: part, restore-by-cut, then two cameras
+swimto -300 30 1150
+wait 0.6
+snap s3b_part_found_restore_frame
+cut
+wait 0.3
+snap s3c_FAIL_restore_not_lined_up
+waitstate Playing
+wait 0.5
+swimn -0.2 -0.15
+wait 0.4
+snap s3d_restore_lined_up
+cut
+wait 1.5
+snap s3e_flashback_1
+wait 4.0
+snap s3f_flashback_2
+waitstate Playing
+wait 0.4
+snap s3g_scene_restored_marks_reveal
+wait 1.6
+snap s3h_two_cameras_lamp_off
+# failed take, dark camera: on the blue mark with the lamp off
+swimn -0.236 0.280 1100
+wait 0.4
+snap s3i_on_dark_mark_lamp_off
+cut
+wait 0.3
+snap s3j_FAIL_too_dark
+waitstate Playing
+wait 0.5
+# the power cell must come too (it has to come through two cuts): push it closer to the blue mark
+swimto 230 -80 1150
+wait 0.3
+snap s3k_beside_cell_stays
+swimto 95 -80 1150
+lamp 1
+swimto 105 60 1150
+swimn -0.236 0.280 1100
+wait 0.6
+snap s3l_blue_mark_lamp_on_cell_comes
+cut
+wait 0.6
+snap s4a_dark_lamp_on
+# --- shot 4 THE DARK: lamp, crew robot, push the cell onto the DOCK frame, the mark holds while the glow is on it
+lamp 0
+wait 0.4
+snap s4b_dark_lamp_off
+lamp 1
+swimto -400 -120 1150
+wait 0.5
+snap s4c_crew_found
+wait 1.5
+swimto -60 -80 1150
+swimto 45 -80 1150
+wait 0.3
+snap s4g_cell_on_dock_frame
+swimto 45 60 1150
+swimto 300 60 1150
+# failed take, timed mark: on the mark while the glow is away (wait until C works, then until it stops working)
+waitok
+waitok 0
+wait 0.3
+snap s4d_on_mark_glow_away
+cut
+wait 0.3
+snap s4e_FAIL_not_yet
+waitstate Playing
+wait 0.5
+swimto 45 60 1150
+swimto 300 60 1150
+# wait for the glow to leave and come back: a full window is ahead
+waitok
+waitok 0
+waitok
+snap s4f_on_mark_glow_on_it
+cut
+wait 0.6
+snap s5a_dock_power_on
+# --- shot 5 THE DOCK: the cell landed in the dock frame through the cut
+waitstate EndCard
+wait 1.2
+snap s5d_end_card
+# --- C on the end card: stage 2
+wait 1.0
+snap s5e_end_card_c_next_stage
+next
+# --- shot 6 THE TRENCH: the diver record as Fathom released it (8.5 s of 17 s)
+wait 1.5
+snap t1a_official_calm
+wait 3.0
+snap t1b_official_creature_comes
+wait 0.7
+snap t1c_official_creature_close
+wait 0.5
+snap t1d_official_signal_lost
+waitstate Playing
+wait 0.8
+snap t1e_official_end_banner
+wait 6.0
+snap t1f_trench
+# the part: FEATURE CUT -> BUILT: GRIPPER
+swimto 350 -40 1150
+wait 0.6
+snap t1g_gripper_built_restore_frame
+# failed take: restore not lined up
+cut
+wait 0.3
+snap t1h_FAIL_restore_not_lined_up
+waitstate Playing
+wait 0.5
+swimn -0.716 0.555 1150
+wait 0.4
+snap t1i_restore_lined_up
+cut
+# the restored record: all 17 s
+wait 1.5
+snap t2a_restored_calm
+wait 3.2
+snap t2b_restored_predator_comes
+wait 0.1
+snap t2c_restored_predator_hits
+wait 1.6
+snap t2d_restored_second_pass
+wait 0.2
+snap t2d2_restored_second_hit
+wait 1.8
+snap t2e_restored_gentle_comes
+wait 2.6
+snap t2f_restored_gentle_pulls_diver
+wait 2.2
+snap t2g_restored_signal_lost
+waitstate Playing
+wait 0.6
+snap t2h_scene_restored_fathom_cut_it_out
+wait 7.0
+snap t2i_marks_next_shot_dark
+# failed take: the next camera is dark and the lamp is off
+swimn 0.301 0.161 1150
+wait 0.4
+cut
+wait 0.3
+snap t2j_FAIL_too_dark
+waitstate Playing
+wait 0.5
+lamp 1
+swimn 0.301 0.161 1150
+wait 0.5
+snap t2k_on_mark_lamp_on
+cut
+wait 0.8
+snap t3a_ledge_dark
+# --- shot 7 THE LEDGE: a heavy lid, two marks
+swimto -200 -100 1200
+swimto -350 -160 1200
+wait 0.4
+snap t3b_at_heavy_lid
+use
+wait 0.6
+snap t3c_lid_held_two_marks
+# failed take: not on a mark
+cut
+wait 0.3
+snap t3d_FAIL_not_on_mark
+waitstate Playing
+wait 0.5
+# wrong mark: the lid comes but lands away from the vent; the current blocks the way
+swimn -0.473 0.224 1100
+wait 0.5
+snap t3e_high_mark_lid_comes
+cut
+wait 1.0
+snap t4a_current_blocks
+swimto 300 80 1100
+wait 0.5
+snap t4b_pushed_back_by_current
+retake
+wait 0.8
+snap t3f_back_one_shot
+swimto -200 -100 1200
+swimto -350 -160 1200
+use
+wait 0.4
+# right mark: the lid lands on the VENT frame
+swimn 0.151 -0.514 1150
+wait 0.6
+snap t3g_low_mark_lid_fits
+cut
+wait 1.0
+snap t4c_lid_on_vent_current_off
+# --- shot 8 THE CURRENT: a crew unit to carry; the predator comes once the mark shows
+swimto 450 -130 1150
+wait 0.3
+snap t4d_at_crew_unit
+use
+wait 0.8
+snap t4e_crew_held_mark_shows
+waitpred 1
+wait 0.8
+snap t4f_predator_warning
+wait 2.5
+snap t4g_predator_eyes_at_edge
+waitpred 2
+wait 1.5
+snap t4h_predator_comes
+wait 2.5
+snap t4i_predator_close
+waitstate TakeCard
+wait 0.4
+snap t4j_CAUGHT_signal_lost
+wait 0.35
+snap t4j2_CAUGHT_take_2
+waitstate Playing
+wait 0.6
+snap t4k_take_again
+# again: grab the crew unit, stand on the mark, cut when it comes
+swimto 450 -150 1150
+use
+wait 0.4
+swimn 0.452 0.268 1150
+wait 0.4
+snap t4l_on_mark_with_crew
+waitpred 2
+wait 1.2
+snap t4m_predator_comes_cut_now
+cut
+wait 0.8
+snap t5a_escaped_drift
+# --- shot 9 THE DRIFT: the mark holds only while the landing place in the next shot is clear
+swimn -0.527 0.0 1150
+waitok 0
+wait 0.2
+snap t5b_on_mark_place_not_clear
+waitok
+wait 0.1
+snap t5c_on_mark_place_clear
+cut
+wait 1.0
+snap t6a_lift
+# --- shot 10 THE LIFT: put the crew unit in the lift
+swimto 250 -100 1200
+wait 0.5
+snap t6b_crew_over_lift
+use
+wait 1.0
+snap t6c_crew_safe
+waitstate EndCard
+wait 1.5
+snap t6d_end_card_stage2
+stat
+quit
+

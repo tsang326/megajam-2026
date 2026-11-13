@@ -38,6 +38,8 @@ private:
 	void DrawFilm(AMatchCutGameMode* GM);
 	void DrawFlashback(AMatchCutGameMode* GM);
 	void DrawClapper(AMatchCutGameMode* GM);
+	void DrawHeadCam(float ClipT);
+	void Noise(float T, float Alpha);
 
 	float K = 1.f;
 	/** Empty runtime-cache font: the canvas needs one to take the Slate text path. */

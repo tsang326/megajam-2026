@@ -83,7 +83,7 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UTextureRenderTarget2D> GhostTarget;
 	UPROPERTY()
-	TObjectPtr<UTextureRenderTarget2D> ThumbTarget;
+	TArray<TObjectPtr<UTextureRenderTarget2D>> ThumbTargets; // one per hole in the reel
 	UPROPERTY()
 	TObjectPtr<ASceneCapture2D> GhostCapture;
 	UPROPERTY()
@@ -141,7 +141,7 @@ private:
 	void MoveHero(const FVector& Delta);
 	void TickMovement(float Dt);
 	void UpdateRail(float Dt, bool bSnap);
-	bool InRestore() const { return bFeature[0] && !bGapFilled[0] && Cur == PartShot; }
+	bool InRestore() const { const FDCShot& S = Shots[Cur]; return S.bHasPart && bFeature[S.PartFeature] && !bGapFilled[S.PartGap]; }
 	bool ShotIsLit(int32 Shot) const { return !Shots[Shot].bDark; }
 
 	// ---- DCPuzzles.cpp
@@ -185,6 +185,20 @@ private:
 	void TickFlashback(float Dt);
 	void PoseClip(const FString& ClipName, float T);
 	FDCRobot* FilmActor(const FString& Name);
+
+	// ---- DCStage2.cpp
+	AActor* SpawnPredator(const FVector& Loc, bool bOnFilm = false);
+	void UpdatePredator(float Dt);
+	void ResetPredator();
+	void PredatorCatch();
+	int32 CrewCount() const;
+	int32 ScenesCount() const;
+	bool HasNextStage() const;
+	void ContinueStage();
+	void GrantEarlierStages(int32 ShotIndex);
+	void StartClip(const FString& ClipName, bool bOfficial, int32 Gap);
+	ACameraActor* ClipCamera(const FString& ClipName) const;
+	const FDCFilmSet* ClipSet(const FString& ClipName) const;
 
 	// ---- MatchCutScript.cpp
 	void LoadScript();
@@ -270,6 +284,16 @@ private:
 	float GentleLightRadius = 1300.f;
 	float GentleBack = 650.f;
 
+	// the predator (stage 2): thin, dark, fast. Only in a shot whose marks are showing; the only way out is to cut.
+	TWeakObjectPtr<AActor> PredActor;
+	int32 PredPhase = 0; // 0 not here, 1 warning at the edge of the frame, 2 coming
+	float PredClock = 0.f;
+	float PredChase = 0.f;
+	FVector PredS = FVector::ZeroVector;
+	bool bCaught = false;
+	float ScriptPredWait = 0.f;
+	TMap<int32, FDCRobot> PropRobots; // crew robots that cannot swim: props that look like a robot
+
 	// ghost
 	int32 GhostMode = 1; // 0 off, 1 flat base-colour capture
 	float GhostTimer = 0.f;
@@ -292,6 +316,9 @@ private:
 	TWeakObjectPtr<ACameraActor> FlashCam;
 	TWeakObjectPtr<USpotLightComponent> FlashLamp;
 	float FlashLength = 12.f;
+	bool bFlashOfficial = false; // the clip plays as Fathom released it: without its cut seconds
+	int32 FlashGap = 0;
+	float FlashClipT = 0.f;      // time inside the clip (the official cut jumps)
 	bool bThumbTaken = false;
 	FVector2D Weave = FVector2D::ZeroVector;
 	float WeaveTimer = 0.f;

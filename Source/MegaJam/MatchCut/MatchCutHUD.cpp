@@ -363,6 +363,18 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 		if (Shot.bGateOpen)
 		{
 			const float Reveal = FMath::Clamp(GM->RevealTime / 1.2f, 0.f, 1.f); // 1 just revealed .. 0 settled
+			for (const FDCExit& Exit : Shot.Exits)
+			{
+				if (Exit.When == TEXT("clear") && GM->GentleShot == Exit.To && Exit.Period > 0.f)
+				{
+					// what is in the next shot's frame right now: the big creature, drawn as a warm shape over the landing place
+					const FVector2D C = NdcToPx(GM->ViewNdc(Exit.To, GM->GentleS, true));
+					if (!Exit.OpenAt(Time))
+					{
+						Text(DCText::NextShotBody, C.X, C.Y - 150.f, 1.1f, FLinearColor(1.f, 0.72f, 0.35f, 0.95f), 1);
+					}
+				}
+			}
 			for (int32 e = 0; e < Shot.Exits.Num(); ++e)
 			{
 				const FDCExit& Exit = Shot.Exits[e];
@@ -440,7 +452,7 @@ void AMatchCutHUD::DrawMarks(AMatchCutGameMode* GM)
 				const float Rad = 62.f * 900.f / (float)FMath::Max(Prop.S.Z, 100.0);
 				const FLinearColor Col = R == 2 ? Green : (R == 1 ? Active.Color : FLinearColor(Dim.R, Dim.G, Dim.B, 0.7f));
 				Ring(P.X, P.Y, Rad, Col, R == 0 ? 2.f : 3.5f);
-				Text(R == 2 ? DCText::PropLands : (R == 1 ? DCText::PropComes : DCText::PropStays), P.X, P.Y + Rad + 6.f, 1.0f, Col, 1);
+				Text(R == 2 ? DCText::PropLands : (R == 1 ? DCText::PropComes : (Prop.bHeavy ? DCText::PropHeavy : DCText::PropStays)), P.X, P.Y + Rad + 6.f, 1.0f, Col, 1);
 			}
 			if (bAnyLoose && Shot.bGateOpen)
 			{
@@ -530,9 +542,9 @@ void AMatchCutHUD::DrawReel(AMatchCutGameMode* GM, float Y, float PlayheadT)
 		}
 		else if (GM->bGapFilled[S.Gap])
 		{
-			if (GM->ThumbTarget && GM->ThumbTarget->GetResource())
+			if (GM->ThumbTargets.IsValidIndex(S.Gap) && GM->ThumbTargets[S.Gap] && GM->ThumbTargets[S.Gap]->GetResource())
 			{
-				FCanvasTileItem Tile(FVector2D((SX + 2.f) * K, Y * K), GM->ThumbTarget->GetResource(), FVector2D((SW - 4.f) * K, H * K), White);
+				FCanvasTileItem Tile(FVector2D((SX + 2.f) * K, Y * K), GM->ThumbTargets[S.Gap]->GetResource(), FVector2D((SW - 4.f) * K, H * K), White);
 				Tile.BlendMode = SE_BLEND_Opaque;
 				Canvas->DrawItem(Tile);
 			}
@@ -541,7 +553,7 @@ void AMatchCutHUD::DrawReel(AMatchCutGameMode* GM, float Y, float PlayheadT)
 		else
 		{
 			Rect(SX + 1.f, Y, SW - 2.f, H, FLinearColor(0.f, 0.f, 0.f, 1.f));
-			const bool bActive = S.Gap == 0 && GM->InRestore();
+			const bool bActive = GM->InRestore() && S.Gap == GM->Shots[GM->Cur].PartGap;
 			const float A = bActive ? 0.55f + 0.45f * FMath::Sin(Time * 6.f) : 0.8f;
 			Frame(SX + 1.f, Y, SW - 2.f, H, FLinearColor(Red.R, Red.G, Red.B, A), bActive ? 4.f : 2.f);
 			Text(DCText::ReelGapLabel, SX + SW * 0.5f, Y + 18.f, 0.85f, FLinearColor(Red.R, Red.G, Red.B, 0.9f), 1);
@@ -577,11 +589,23 @@ void AMatchCutHUD::DrawBars(AMatchCutGameMode* GM, float ReelY)
 		{
 			Playhead = GM->FilmTime;
 		}
-		else if (const FDCReelSeg* First = GM->Reel.FindByPredicate([](const FDCReelSeg& S) { return S.Gap == 0; }))
+		else
 		{
-			// during play the head waits at the first hole in the film
-			const FDCReelSeg& G = *First;
-			Playhead = GM->State == EDCState::Flashback ? FMath::Lerp(G.T0, G.T1, FMath::Clamp(GM->StateTime / GM->FlashLength, 0.f, 1.f)) : (GM->bGapFilled[0] ? G.T1 : G.T0);
+			// during play the head waits at the first hole in the film that is still open
+			int32 Want = 0;
+			while (Want < AMatchCutGameMode::NumGaps - 1 && GM->bGapFilled[Want])
+			{
+				++Want;
+			}
+			const bool bRestoring = GM->State == EDCState::Flashback && !GM->bFlashOfficial;
+			if (bRestoring)
+			{
+				Want = GM->FlashGap;
+			}
+			if (const FDCReelSeg* G = GM->Reel.FindByPredicate([Want](const FDCReelSeg& S) { return S.Gap == Want; }))
+			{
+				Playhead = bRestoring ? FMath::Lerp(G->T0, G->T1, FMath::Clamp(GM->StateTime / GM->FlashLength, 0.f, 1.f)) : (GM->bGapFilled[Want] ? G->T1 : G->T0);
+			}
 		}
 		DrawReel(GM, ReelY, Playhead);
 	}
@@ -590,6 +614,16 @@ void AMatchCutHUD::DrawBars(AMatchCutGameMode* GM, float ReelY)
 void AMatchCutHUD::DrawClapper(AMatchCutGameMode* GM)
 {
 	// a failed take: clapper board, then straight back to the start mark
+	if (GM->bCaught)
+	{
+		// caught by the predator: the signal is lost. No blood, no fight: static, then the clapper.
+		Noise(GM->StateTime, FMath::Clamp(1.3f - GM->StateTime * 0.5f, 0.4f, 1.f));
+		if (GM->StateTime < 0.8f)
+		{
+			Text(DCText::SignalLost, 960.f, 480.f, 4.5f, White, 1);
+			return;
+		}
+	}
 	const float X = 610.f, Y = 330.f, W = 700.f, H = 400.f;
 	Rect(0.f, PicTop, 1920.f, PicBottom - PicTop, FLinearColor(0.f, 0.f, 0.f, 0.55f));
 	Rect(X, Y, W, H, FLinearColor(0.03f, 0.03f, 0.035f, 1.f));
@@ -699,9 +733,73 @@ void AMatchCutHUD::DrawFilm(AMatchCutGameMode* GM)
 	Text(Timecode(GM->FilmLength, 0), 1860.f, 1000.f, 1.6f, Dim, 2);
 }
 
+void AMatchCutHUD::Noise(float T, float Alpha)
+{
+	// no signal: grey bars that change twenty times a second
+	FRandomStream Rand(FMath::FloorToInt(T * 20.f) * 53 + 11);
+	Rect(0.f, PicTop, 1920.f, PicBottom - PicTop, FLinearColor(0.05f, 0.05f, 0.06f, Alpha));
+	for (int32 i = 0; i < 200; ++i)
+	{
+		const float W = Rand.FRandRange(30.f, 420.f), H = Rand.FRandRange(3.f, 16.f);
+		const float G = Rand.FRandRange(0.1f, 0.95f);
+		Rect(Rand.FRandRange(-100.f, 1900.f), Rand.FRandRange(PicTop, PicBottom - H), W, H, FLinearColor(G, G, G * 1.05f, Alpha * Rand.FRandRange(0.25f, 0.9f)));
+	}
+}
+
+void AMatchCutHUD::DrawHeadCam(float ClipT)
+{
+	// a diver's mask in front of the lens: dark rounded corners, the nose piece, breath going up past the glass
+	const FLinearColor Rubber(0.f, 0.f, 0.f, 0.95f);
+	const float H = PicBottom - PicTop;
+	Rect(0.f, PicTop, 70.f, H, Rubber);
+	Rect(1850.f, PicTop, 70.f, H, Rubber);
+	Rect(70.f, PicTop, 1780.f, 26.f, Rubber);
+	Rect(70.f, PicBottom - 30.f, 1780.f, 30.f, Rubber);
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const bool bRight = (i & 1) != 0, bLow = (i & 2) != 0;
+		for (int32 s = 0; s < 10; ++s)
+		{
+			// a stepped corner: ten bars, each shorter than the one before
+			const float W = 260.f * FMath::Square(1.f - s / 10.f);
+			const float Y = bLow ? PicBottom - 30.f - (s + 1) * 20.f : PicTop + 26.f + s * 20.f;
+			Rect(bRight ? 1850.f - W : 70.f, Y, W, 20.f, Rubber);
+		}
+	}
+	Disc(960.f, PicBottom + 90.f, 200.f, Rubber);
+	for (int32 i = 0; i < 14; ++i)
+	{
+		// one breath every 3.4 s
+		FRandomStream Rand(i * 97 + 5);
+		const float Age = FMath::Fmod(ClipT + 0.3f, 3.4f) - Rand.FRandRange(0.f, 0.9f);
+		const float Side = Rand.FRandRange(-260.f, 260.f);
+		const float Rise = Rand.FRandRange(260.f, 420.f);
+		const float Size = Rand.FRandRange(6.f, 22.f);
+		const float Y = PicBottom - 40.f - Age * Rise;
+		if (Age < 0.f || Age > 2.2f || Y < PicTop + 30.f)
+		{
+			continue;
+		}
+		const float X = 960.f + Side + 30.f * FMath::Sin(Age * 5.f + i);
+		const float R = Size * (1.f + 0.2f * Age);
+		const float A = 0.55f * (1.f - Age / 2.2f);
+		Ring(X, Y, R, FLinearColor(0.85f, 0.95f, 1.f, A), 2.5f);
+		Disc(X - R * 0.3f, Y - R * 0.3f, R * 0.2f, FLinearColor(1.f, 1.f, 1.f, A));
+	}
+	if (FMath::Fmod(ClipT, 1.f) < 0.6f)
+	{
+		Disc(112.f, PicTop + 78.f, 8.f, Red);
+	}
+	Text(DCText::DiverCam, 130.f, PicTop + 66.f, 1.4f, White);
+}
+
 void AMatchCutHUD::DrawFlashback(AMatchCutGameMode* GM)
 {
 	const float T = GM->StateTime;
+	const FDCClip* Clip = GM->Clips.Find(GM->FlashClip);
+	const FDCFilmSet* Set = GM->ClipSet(GM->FlashClip);
+	const bool bHead = Set && Set->bHeadCam;
+	const float CT = GM->FlashClipT;
 	// old film: flicker, scratches, dust
 	FRandomStream Rand(FMath::FloorToInt(T * 14.f) * 31 + 7);
 	Rect(0.f, PicTop, 1920.f, PicBottom - PicTop, FLinearColor(0.f, 0.f, 0.f, Rand.FRandRange(0.f, 0.14f)));
@@ -723,8 +821,40 @@ void AMatchCutHUD::DrawFlashback(AMatchCutGameMode* GM)
 	Rect(0.f, PicTop, 26.f, PicBottom - PicTop, FLinearColor(0.f, 0.f, 0.f, 0.85f));
 	Rect(1894.f, PicTop, 26.f, PicBottom - PicTop, FLinearColor(0.f, 0.f, 0.f, 0.85f));
 
-	Text(DCText::Recovered, 70.f, PicTop + 30.f, 1.6f, FLinearColor(1.f, 0.9f, 0.7f, 0.9f));
-	Text(FString::Printf(TEXT("TC %s"), *Timecode(T + 1403.f, 3)), 1850.f, PicBottom - 62.f, 1.6f, FLinearColor(1.f, 0.9f, 0.7f, 0.9f), 2);
+	if (bHead)
+	{
+		DrawHeadCam(CT);
+	}
+	Text(GM->bFlashOfficial ? DCText::OfficialRecord : DCText::Recovered, bHead ? 130.f : 70.f, PicTop + 30.f, 1.6f, FLinearColor(1.f, 0.9f, 0.7f, 0.9f));
+	// the timecode is the clip's own: in the official cut it jumps where seconds were taken out
+	Text(FString::Printf(TEXT("TC %s"), *Timecode(CT + (bHead ? 2710.f : 1403.f), 3)), bHead ? 1800.f : 1850.f, PicBottom - 62.f, 1.6f, FLinearColor(1.f, 0.9f, 0.7f, 0.9f), 2);
+	if (Clip)
+	{
+		for (const FDCCaption& C : Clip->Captions)
+		{
+			if (CT >= C.T0 && CT < C.T1 && (C.Who == 0 || (C.Who == 1) == GM->bFlashOfficial))
+			{
+				Rect(0.f, 838.f, 1920.f, 74.f, FLinearColor(0.f, 0.f, 0.f, 0.55f));
+				Text(C.Text, 960.f, 852.f, 2.6f, White, 1);
+			}
+		}
+		if (!GM->bFlashOfficial && Clip->InCut(CT))
+		{
+			// these seconds were not in the official version
+			const float Blink = FMath::Fmod(T, 0.9f) < 0.6f ? 1.f : 0.45f;
+			Frame(8.f, PicTop + 4.f, 1904.f, PicBottom - PicTop - 8.f, FLinearColor(Amber.R, Amber.G, Amber.B, 0.85f * Blink), 5.f);
+			Rect(760.f, PicTop + 24.f, 400.f, 44.f, FLinearColor(0.f, 0.f, 0.f, 0.6f));
+			Text(DCText::CutByFathom, 960.f, PicTop + 30.f, 1.8f, FLinearColor(Amber.R, Amber.G, Amber.B, Blink), 1);
+		}
+		for (const FVector2D& S : Clip->Static)
+		{
+			if (CT >= S.X && CT < S.Y)
+			{
+				Noise(T, 1.f);
+				Text(DCText::SignalLost, 960.f, 480.f, 4.5f, White, 1);
+			}
+		}
+	}
 
 	// burn in at the start, fade out at the end
 	if (T < 0.35f)
@@ -738,7 +868,7 @@ void AMatchCutHUD::DrawFlashback(AMatchCutGameMode* GM)
 	}
 
 	DrawBars(GM, 40.f);
-	Text(FString::Printf(TEXT("SCENE 1/%d"), AMatchCutGameMode::NumGaps), 960.f, 985.f, 1.8f, Amber, 1);
+	Text(GM->bFlashOfficial ? FString(DCText::OfficialTag) : FString::Printf(TEXT("SCENE %d/%d"), GM->FlashGap + 1, AMatchCutGameMode::NumGaps), 960.f, 985.f, 1.8f, GM->bFlashOfficial ? Dim : Amber, 1);
 }
 
 void AMatchCutHUD::DrawHUD()
@@ -770,6 +900,15 @@ void AMatchCutHUD::DrawHUD()
 		DrawGhost(GM);
 		DrawMarks(GM);
 	}
+	if (GM->PredPhase > 0 && GM->State == EDCState::Playing)
+	{
+		// the predator: which side it comes from, and where it is. Slow blink = warning, fast = it is coming.
+		const bool bLeft = GM->PredS.X < GM->HeroS.X;
+		const float A = 0.30f + 0.25f * FMath::Sin(Time * (GM->PredPhase == 2 ? 11.f : 4.5f));
+		Rect(bLeft ? 0.f : 1896.f, PicTop, 24.f, PicBottom - PicTop, FLinearColor(Red.R, Red.G, Red.B, A));
+		const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, GM->PredS, false));
+		Brackets(FMath::Clamp((float)P.X, 70.f, 1850.f), FMath::Clamp((float)P.Y, PicTop + 70.f, PicBottom - 70.f), 78.f, FLinearColor(Red.R, Red.G, Red.B, 0.45f + A), 3.f);
+	}
 	if (GM->CutFlash > 0.f)
 	{
 		Rect(0.f, PicTop, 1920.f, PicBottom - PicTop, FLinearColor(1.f, 1.f, 1.f, FMath::Clamp(GM->CutFlash * 1.2f - 0.25f, 0.f, 0.5f)));
@@ -787,9 +926,9 @@ void AMatchCutHUD::DrawHUD()
 	if (GM->State == EDCState::EndCard)
 	{
 		Rect(0.f, PicTop, 1920.f, PicBottom - PicTop, FLinearColor(0.f, 0.f, 0.f, FMath::Clamp(GM->StateTime, 0.f, 0.72f)));
-		Text(DCText::EndTitle, 960.f, 400.f, 6.f, White, 1);
-		Text(FString::Printf(DCTEXT_END_LINE, GM->bGapFilled[0] ? 1 : 0, AMatchCutGameMode::NumGaps, GM->bCrewRescued ? 1 : 0, GM->CrewTotal), 960.f, 560.f, 2.2f, Amber, 1);
-		Text(DCText::EndKeys, 960.f, 640.f, 1.8f, Dim, 1);
+		Text(FString::Printf(DCTEXT_END_TITLE, GM->Shots[GM->Cur].Stage), 960.f, 400.f, 6.f, White, 1);
+		Text(FString::Printf(DCTEXT_END_LINE, GM->ScenesCount(), AMatchCutGameMode::NumGaps, GM->CrewCount(), GM->CrewTotal), 960.f, 560.f, 2.2f, Amber, 1);
+		Text(GM->HasNextStage() ? DCText::EndKeysNext : DCText::EndKeys, 960.f, 640.f, 1.8f, GM->HasNextStage() ? White : Dim, 1);
 	}
 
 	// the film's timeline slides from the player bar at the bottom to the top bar when the film lets go
@@ -803,7 +942,7 @@ void AMatchCutHUD::DrawHUD()
 
 	// top bar: scene/take on the left, crew on the right
 	Text(FString::Printf(TEXT("%s   %s"), *FString::Printf(DCTEXT_SCENE, GM->Cur + 1), *FString::Printf(DCTEXT_TAKE, GM->Take)), 60.f, 52.f, 1.5f, Dim);
-	Text(FString::Printf(DCTEXT_CREW, GM->bCrewRescued ? 1 : 0, GM->CrewTotal), 1860.f, 52.f, 1.7f, GM->bCrewRescued ? Amber : Dim, 2);
+	Text(FString::Printf(DCTEXT_CREW, GM->CrewCount(), GM->CrewTotal), 1860.f, 52.f, 1.7f, GM->CrewCount() > 0 ? Amber : Dim, 2);
 	Text(DCText::HudUnit, 60.f, 96.f, 1.0f, Dim);
 	DrawFeatures(GM, 136.f, 96.f, 1.0f, false);
 
@@ -826,6 +965,11 @@ void AMatchCutHUD::DrawHUD()
 		if (GM->State == EDCState::TakeCard || GM->State == EDCState::EndCard || GM->State == EDCState::Drop)
 		{
 			Hint.Empty();
+		}
+		else if (GM->PredPhase > 0)
+		{
+			Hint = DCText::PredHint;
+			HintCol = Red;
 		}
 		else if (GM->SoftFailTime > 0.f)
 		{

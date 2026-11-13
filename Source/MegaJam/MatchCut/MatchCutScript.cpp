@@ -211,13 +211,52 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 			PressLamp();
 		}
 	}
+	else if (Cmd == TEXT("next"))
+	{
+		ContinueStage(); // C on the end card
+	}
+	else if (Cmd == TEXT("skipto"))
+	{
+		// start at shot N with everything the earlier stages give
+		const int32 N = FMath::Clamp((int32)Num(1), 0, Shots.Num() - 1);
+		if (State == EDCState::Film)
+		{
+			EndFilm();
+		}
+		GrantEarlierStages(N);
+		State = EDCState::Playing;
+		StateTime = 0.f;
+		History.Reset();
+		EnterShot(N, Shots[N].Start, true);
+		return false;
+	}
+	else if (Cmd == TEXT("waitpred"))
+	{
+		// wait until the predator is at least in phase N (1 warning, 2 coming), at most 40 s
+		if (PredPhase < (int32)Num(1) && ScriptPredWait < 40.f)
+		{
+			ScriptPredWait += 0.1f;
+			ScriptWait = 0.1f;
+			--ScriptPc;
+			return false;
+		}
+		ScriptPredWait = 0.f;
+	}
 	else if (Cmd == TEXT("givepart"))
 	{
-		bFeature[0] = true;
-		bGapFilled[0] = true; // skip the restore as well
-		if (AActor* A = PartActor.Actor.Get())
+		// "givepart" = the headlamp, "givepart 1" = the gripper; the restore is skipped as well
+		const int32 Feature = FMath::Clamp((int32)Num(1), 0, 2);
+		bFeature[Feature] = true;
+		for (FDCShot& S : Shots)
 		{
-			A->SetActorHiddenInGame(true);
+			if (S.bHasPart && S.PartFeature == Feature)
+			{
+				bGapFilled[S.PartGap] = true;
+				if (AActor* A = S.PartActor.Get())
+				{
+					A->SetActorHiddenInGame(true);
+				}
+			}
 		}
 		UpdateGate(Cur, true);
 		PointGhost();

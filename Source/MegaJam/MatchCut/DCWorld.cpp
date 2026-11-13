@@ -334,9 +334,28 @@ void AMatchCutGameMode::SpawnFilmSets()
 				SpawnSolid(Solid, Set.Origin, FRotator::ZeroRotator, true);
 			}
 		}
+		if (Set.TorchPower > 0.f)
+		{
+			// a torch on the head camera
+			USpotLightComponent* L = NewObject<USpotLightComponent>(Set.Camera.Get());
+			L->SetMobility(EComponentMobility::Movable);
+			L->SetupAttachment(Set.Camera->GetRootComponent());
+			L->RegisterComponent();
+			L->SetRelativeLocation(FVector(10.0, 18.0, -12.0));
+			L->SetIntensityUnits(ELightUnits::Unitless);
+			L->SetIntensity(Set.TorchPower);
+			L->SetLightColor(FLinearColor(0.85f, 0.95f, 1.f));
+			L->SetInnerConeAngle(10.f);
+			L->SetOuterConeAngle(26.f);
+			L->SetAttenuationRadius(3200.f);
+			L->SetVolumetricScatteringIntensity(3.f);
+		}
 		if (Set.bOldFilm)
 		{
-			FlashCam = Set.Camera;
+			if (!FlashCam.IsValid())
+			{
+				FlashCam = Set.Camera;
+			}
 			FPostProcessSettings& PP = Set.Camera->GetCameraComponent()->PostProcessSettings;
 			PP.bOverride_ColorSaturation = true;
 			PP.ColorSaturation = FVector4(0.18, 0.18, 0.18, 1.0);
@@ -356,12 +375,32 @@ void AMatchCutGameMode::SpawnFilmSets()
 		const FVector Origin = Set ? Set->Origin : FVector::ZeroVector;
 		for (const FDCTrack& Track : Pair.Value.Tracks)
 		{
-			if (FilmActors.Contains(Track.Actor))
+			if (FilmActors.Contains(Track.Actor) || Track.Actor == TEXT("cam"))
 			{
 				continue;
 			}
 			FDCRobot Robot;
-			if (Track.Actor.StartsWith(TEXT("cable")))
+			if (Track.Actor.StartsWith(TEXT("gentle")))
+			{
+				// the same body as in play; its light rides with it here
+				const TWeakObjectPtr<UPointLightComponent> Keep = GentleLight;
+				Robot.Actor = SpawnGentle(Origin);
+				if (UPointLightComponent* L = GentleLight.Get())
+				{
+					L->SetAbsolute(false, false, false);
+					L->SetRelativeLocation(FVector(260.0, 0.0, 0.0));
+					L->SetAttenuationRadius(1600.f);
+					L->SetIntensity(16000.f);
+				}
+				GentleLight = Keep;
+				Robot.bCreature = true;
+			}
+			else if (Track.Actor.StartsWith(TEXT("predator")))
+			{
+				Robot.Actor = SpawnPredator(Origin, true);
+				Robot.bCreature = true;
+			}
+			else if (Track.Actor.StartsWith(TEXT("cable")))
 			{
 				Robot.Actor = SpawnBox(Origin, FRotator::ZeroRotator, FVector(6.0, 6.0, 700.0), DCColor::DarkMetal, true);
 				Robot.bPlain = true;
@@ -438,7 +477,23 @@ void AMatchCutGameMode::SpawnWorld()
 	{
 		AActor* A = SpawnGroup(ShotToWorld(Prop.Shot, Prop.S));
 		A->SetActorRotation(Shots[Prop.Shot].CamRot);
-		if (Prop.Kind == TEXT("cell"))
+		if (Prop.Kind == TEXT("crew"))
+		{
+			// a crew robot that cannot swim: carried like any heavy thing
+			A->Destroy();
+			const FDCRobot Robot = SpawnRobot(ShotToWorld(Prop.Shot, Prop.S), DCColor::Crew, DCColor::EyeWarm, false);
+			PropRobots.Add((int32)(&Prop - Props.GetData()), Robot);
+			Prop.Actor = Robot.Actor;
+			continue;
+		}
+		if (Prop.Kind == TEXT("weight"))
+		{
+			// a heavy lid: too heavy to push, it needs the gripper
+			AddPart(A, CubeMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(1.3, 1.5, 0.42), DCColor::DarkMetal, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(0, 0, 22), FRotator::ZeroRotator, FVector(1.32, 0.34, 0.04), FLinearColor(0.9f, 0.7f, 0.1f), FLinearColor(0.9f, 0.7f, 0.1f) * 0.6f);
+			AddPart(A, CubeMesh, FVector(0, 0, 30), FRotator::ZeroRotator, FVector(0.5, 0.12, 0.12), DCColor::Hull, FLinearColor::Black);
+		}
+		else if (Prop.Kind == TEXT("cell"))
 		{
 			AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(0.42, 0.42, 0.62), DCColor::DarkMetal, FLinearColor::Black);
 			AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(0.46, 0.46, 0.22), FLinearColor(0.2f, 1.f, 0.5f), FLinearColor(0.6f, 3.5f, 1.4f));
@@ -463,6 +518,17 @@ void AMatchCutGameMode::SpawnWorld()
 			AddPart(A, SphereMesh, FVector(40, 0, 70), FRotator::ZeroRotator, FVector(0.2, 0.2, 0.2), FLinearColor(1.f, 0.2f, 0.1f), FLinearColor(5.f, 0.6f, 0.3f));
 			Socket.Paint = Paints.Num() - 1;
 		}
+		else if (Socket.Accepts == TEXT("crew"))
+		{
+			// a lift cradle: a base, two posts, a cable up out of the frame and a light that turns green when a unit is in
+			AddPart(A, CubeMesh, FVector(0, 0, -62), FRotator::ZeroRotator, FVector(1.3, 1.7, 0.14), DCColor::DarkMetal, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(0, -80, 0), FRotator::ZeroRotator, FVector(0.12, 0.12, 1.4), DCColor::Hull, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(0, 80, 0), FRotator::ZeroRotator, FVector(0.12, 0.12, 1.4), DCColor::Hull, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(0, 0, 72), FRotator::ZeroRotator, FVector(0.12, 1.72, 0.12), DCColor::Hull, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(0, 0, 1080), FRotator::ZeroRotator, FVector(0.05, 0.05, 20.0), DCColor::DarkMetal, FLinearColor::Black);
+			AddPart(A, SphereMesh, FVector(-20, 0, 92), FRotator::ZeroRotator, FVector(0.2, 0.2, 0.2), FLinearColor(1.f, 0.2f, 0.1f), FLinearColor(5.f, 0.6f, 0.3f));
+			Socket.Paint = Paints.Num() - 1;
+		}
 		else
 		{
 			// a vent: a long slot in the floor that runs away from the camera
@@ -475,6 +541,8 @@ void AMatchCutGameMode::SpawnWorld()
 
 	GentleActor = SpawnGentle(Shots[0].CamPos - FVector(0.0, 0.0, 90000.0));
 	GentleActor->SetActorHiddenInGame(true);
+	PredActor = SpawnPredator(Shots[0].CamPos - FVector(0.0, 0.0, 95000.0));
+	PredActor->SetActorHiddenInGame(true);
 
 	// the player's robot: battered, one thruster missing, number plate scraped off
 	Hero = SpawnRobot(Shots[0].CamPos, DCColor::Hero, DCColor::EyeCyan, true);
@@ -508,14 +576,30 @@ void AMatchCutGameMode::SpawnWorld()
 		LampGlow = G;
 	}
 
-	if (PartShot != INDEX_NONE)
+	for (int32 i = 0; i < Shots.Num(); ++i)
 	{
-		// the part: Unit 7's headlamp
-		AActor* A = SpawnGroup(ShotToWorld(PartShot, Shots[PartShot].PartS));
-		AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator(90, 0, 0), FVector(0.30, 0.30, 0.34), DCColor::Unit7, FLinearColor::Black);
-		AddPart(A, SphereMesh, FVector(18, 0, 0), FRotator::ZeroRotator, FVector(0.26, 0.26, 0.26), FLinearColor(1.f, 0.85f, 0.4f), FLinearColor(6.f, 4.5f, 1.2f));
-		PartActor.EyePaint = Paints.Num() - 1;
-		PartActor.Actor = A;
+		// the parts: features that were cut from Unit 0 and built into Unit 7
+		FDCShot& S = Shots[i];
+		if (!S.bHasPart)
+		{
+			continue;
+		}
+		AActor* A = SpawnGroup(ShotToWorld(i, S.PartS));
+		if (S.PartFeature == 1)
+		{
+			// the gripper: a wrist and two fingers
+			AddPart(A, CylinderMesh, FVector(-16, 0, 0), FRotator(90, 0, 0), FVector(0.22, 0.22, 0.30), DCColor::Unit7, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(24, 0, 15), FRotator(25, 0, 0), FVector(0.44, 0.12, 0.08), DCColor::Unit7, FLinearColor::Black);
+			AddPart(A, CubeMesh, FVector(24, 0, -15), FRotator(-25, 0, 0), FVector(0.44, 0.12, 0.08), DCColor::Unit7, FLinearColor::Black);
+			AddPart(A, SphereMesh, FVector(2, 0, 0), FRotator::ZeroRotator, FVector(0.2, 0.2, 0.2), FLinearColor(1.f, 0.85f, 0.4f), FLinearColor(6.f, 4.5f, 1.2f));
+		}
+		else
+		{
+			// the headlamp
+			AddPart(A, CylinderMesh, FVector(0, 0, 0), FRotator(90, 0, 0), FVector(0.30, 0.30, 0.34), DCColor::Unit7, FLinearColor::Black);
+			AddPart(A, SphereMesh, FVector(18, 0, 0), FRotator::ZeroRotator, FVector(0.26, 0.26, 0.26), FLinearColor(1.f, 0.85f, 0.4f), FLinearColor(6.f, 4.5f, 1.2f));
+		}
+		S.PartActor = A;
 	}
 	if (CrewShot != INDEX_NONE)
 	{
@@ -544,16 +628,20 @@ void AMatchCutGameMode::SpawnWorld()
 		Cap->PostProcessBlendWeight = 1.f;
 	}
 
-	ThumbTarget = NewObject<UTextureRenderTarget2D>(this);
-	ThumbTarget->RenderTargetFormat = RTF_RGBA8_SRGB;
-	ThumbTarget->ClearColor = FLinearColor::Black;
-	ThumbTarget->InitAutoFormat(256, 144);
-	ThumbTarget->UpdateResourceImmediate(true);
+	for (int32 i = 0; i < NumGaps; ++i)
+	{
+		UTextureRenderTarget2D* Thumb = NewObject<UTextureRenderTarget2D>(this);
+		Thumb->RenderTargetFormat = RTF_RGBA8_SRGB;
+		Thumb->ClearColor = FLinearColor::Black;
+		Thumb->InitAutoFormat(256, 144);
+		Thumb->UpdateResourceImmediate(true);
+		ThumbTargets.Add(Thumb);
+	}
 	const FVector FlashPos = FlashCam.IsValid() ? FlashCam->GetActorLocation() : FVector::ZeroVector;
 	ThumbCapture = World->SpawnActor<ASceneCapture2D>(FlashPos, FRotator::ZeroRotator);
 	{
 		USceneCaptureComponent2D* Cap = ThumbCapture->GetCaptureComponent2D();
-		Cap->TextureTarget = ThumbTarget;
+		Cap->TextureTarget = ThumbTargets[0];
 		Cap->FOVAngle = Fov;
 		Cap->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
 		Cap->bCaptureEveryFrame = false;
@@ -608,7 +696,13 @@ void AMatchCutGameMode::ApplyLook(const FString& Name)
 	}
 	for (const TWeakObjectPtr<ACameraActor>& Cam : AllCameras)
 	{
-		if (Cam.IsValid() && Cam.Get() != FlashCam.Get())
+		const ACameraActor* CamPtr = Cam.Get();
+		bool bOld = false;
+		for (const auto& SetPair : FilmSets)
+		{
+			bOld |= SetPair.Value.bOldFilm && SetPair.Value.Camera.Get() == CamPtr;
+		}
+		if (Cam.IsValid() && !bOld)
 		{
 			FPostProcessSettings& PP = Cam->GetCameraComponent()->PostProcessSettings;
 			PP.VignetteIntensity = Look.Vignette;

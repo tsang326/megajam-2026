@@ -342,9 +342,9 @@ int32 AMatchCutGameMode::PropAfterCut(const FDCProp& Prop, const FDCExit& Exit, 
 	{
 		return 0;
 	}
-	if (!Prop.bCarried && FVector::Dist(Prop.S, HeroS) > CarryRadius)
+	if (!Prop.bCarried && (Prop.bHeavy || FVector::Dist(Prop.S, HeroS) > CarryRadius))
 	{
-		return 0;
+		return 0; // too far, or too heavy to drift along: a heavy thing has to be held
 	}
 	const FDCShot& B = Shots[Exit.To];
 	const FVector S = NdcToShot(Exit.To, ViewNdc(Cur, Prop.S, false), FMath::Clamp(Prop.S.Z, B.VolMin.Z - 200.0, B.VolMax.Z + 200.0), true);
@@ -443,6 +443,10 @@ bool AMatchCutGameMode::TryCut()
 		}
 	}
 
+	if (PredPhase > 0)
+	{
+		UE_LOG(LogMatchCut, Display, TEXT("PREDATOR escaped by the cut in shot %d: phase=%d, %.0f cm away, %.1fs after the warning began"), Cur, PredPhase, FVector::Dist(PredS, HeroS), PredClock - A.PredDelay);
+	}
 	bFirstCutDone = true;
 	SoftFailTime = 0.f;
 	CutFlash = 0.5f;

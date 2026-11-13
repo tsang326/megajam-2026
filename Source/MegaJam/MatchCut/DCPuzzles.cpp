@@ -55,7 +55,7 @@ void AMatchCutGameMode::UpdateGate(int32 ShotIndex, bool bQuiet)
 	}
 	else if (Shot.Gate == TEXT("restore"))
 	{
-		bOpen = bGapFilled[0];
+		bOpen = bGapFilled[Shot.bHasPart ? Shot.PartGap : 0];
 	}
 	else if (Shot.Gate == TEXT("crew"))
 	{
@@ -96,7 +96,7 @@ void AMatchCutGameMode::FillSocket(int32 SocketIndex, int32 PropIndex, bool bQui
 	Prop.Socket = SocketIndex;
 	Prop.bLocked = true;
 	Prop.bCarried = false;
-	if (Socket.Accepts == TEXT("cell"))
+	if (Socket.Accepts == TEXT("cell") || Socket.Accepts == TEXT("crew"))
 	{
 		SetPaintEmissive(Socket.Paint, FLinearColor(0.4f, 5.f, 1.2f));
 	}
@@ -120,7 +120,16 @@ void AMatchCutGameMode::FillSocket(int32 SocketIndex, int32 PropIndex, bool bQui
 			Audio->Play(TEXT("plate_lift"), 0.9f, 0.7f);
 		}
 	}
-	if (Socket.bEnds)
+	if (Socket.Accepts == TEXT("crew"))
+	{
+		ShowBanner(DCText::CrewSafe, FString::Printf(DCTEXT_CREW, CrewCount(), CrewTotal), 4.f);
+		UE_LOG(LogMatchCut, Display, TEXT("RESCUE crew robot %s is in the lift in shot %d: CREW %d/%d"), *Prop.Id, Socket.Shot, CrewCount(), CrewTotal);
+		if (Socket.bEnds)
+		{
+			EndTimer = 3.0f;
+		}
+	}
+	else if (Socket.bEnds)
 	{
 		ShowBanner(DCText::PowerOn, TEXT(""), 3.f);
 		EndTimer = 3.0f;
@@ -308,6 +317,10 @@ void AMatchCutGameMode::PressUse()
 	if (P != INDEX_NONE)
 	{
 		Props[P].bCarried = true;
+		if (Props[P].Kind == TEXT("crew") && !Props[P].bEverGrabbed)
+		{
+			ShowBanner(DCText::CrewFound, DCText::CrewCarry, 5.f);
+		}
 		Props[P].bEverGrabbed = true;
 		UE_LOG(LogMatchCut, Display, TEXT("PROP %s grabbed in shot %d"), *Props[P].Id, Cur);
 		if (Audio)
@@ -327,6 +340,13 @@ void AMatchCutGameMode::UpdateProps(float Dt)
 			// held just under the robot
 			const FVector Want = HeroS + FVector(0.0, -70.0, 0.0);
 			P.S = FMath::VInterpTo(P.S, Want, Dt, 9.f);
+		}
+		if (const FDCRobot* Robot = PropRobots.Find((int32)(&P - Props.GetData())))
+		{
+			// a crew robot that is carried: lying on its side until it is picked up
+			const FDCShot& In = Shots[P.Shot];
+			PlaceRobot(*Robot, ShotToWorld(P.Shot, P.S), FVector2D(1.0, (P.bCarried || P.bLocked) ? 0.0 : -0.3), In.CamRot, (P.bCarried || P.bLocked) ? 0.f : 35.f);
+			continue;
 		}
 		if (AActor* A = P.Actor.Get())
 		{
@@ -417,17 +437,17 @@ void AMatchCutGameMode::TickPuzzles(float Dt)
 		}
 	}
 
-	// the part
-	if (Cur == PartShot && !bFeature[0] && PartActor.Actor.IsValid())
+	// the part: a feature that was cut from Unit 0. Touching it builds the feature again.
+	if (Shot.bHasPart && !bFeature[Shot.PartFeature] && Shot.PartActor.IsValid())
 	{
 		PartPulse += Dt;
-		PartActor.Actor->SetActorLocationAndRotation(ShotToWorld(Cur, Shot.PartS) + FVector(0, 0, 8.0 * FMath::Sin(PartPulse * 2.5f)), FRotator(0.0, PartPulse * 60.0, 0.0));
+		Shot.PartActor->SetActorLocationAndRotation(ShotToWorld(Cur, Shot.PartS) + FVector(0, 0, 8.0 * FMath::Sin(PartPulse * 2.5f)), FRotator(0.0, PartPulse * 60.0, 0.0));
 		if (FVector::Dist(Shot.PartS, HeroS) < HeroRadius + 50.f)
 		{
-			bFeature[0] = true;
-			PartActor.Actor->SetActorHiddenInGame(true);
-			ShowBanner(DCText::PartFound, DCText::PartHow, 5.f);
-			UE_LOG(LogMatchCut, Display, TEXT("PART picked up in shot %d: lamp granted, restore-by-cut armed"), Cur);
+			bFeature[Shot.PartFeature] = true;
+			Shot.PartActor->SetActorHiddenInGame(true);
+			ShowBanner(FString::Printf(DCTEXT_PART_FOUND, DCText::Features[Shot.PartFeature]), Shot.PartFeature == 1 ? DCText::PartHowGrip : DCText::PartHow, 5.f);
+			UE_LOG(LogMatchCut, Display, TEXT("PART picked up in shot %d: %s built, restore-by-cut armed (clip \"%s\", frame (%.3f,%.3f))"), Cur, DCText::Features[Shot.PartFeature], *Shot.PartClip, Shot.RestoreNdc.X, Shot.RestoreNdc.Y);
 			if (Audio)
 			{
 				Audio->Play(TEXT("part_pickup"));

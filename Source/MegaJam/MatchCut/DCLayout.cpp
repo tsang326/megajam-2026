@@ -195,6 +195,27 @@ bool AMatchCutGameMode::LoadLayout()
 		S->TryGetStringField(TEXT("hintSolved"), Shot.HintSolved);
 		S->TryGetStringField(TEXT("gate"), Shot.Gate);
 		S->TryGetBoolField(TEXT("dark"), Shot.bDark);
+		double StageNum = 1.0;
+		if (S->TryGetNumberField(TEXT("stage"), StageNum))
+		{
+			Shot.Stage = (int32)StageNum;
+		}
+		S->TryGetStringField(TEXT("intro"), Shot.Intro);
+		const TSharedPtr<FJsonObject>* Pred = nullptr;
+		if (S->TryGetObjectField(TEXT("predator"), Pred) && Pred)
+		{
+			Shot.bPredator = true;
+			Shot.PredFrom = ReadVec(*Pred, TEXT("from"));
+			ReadFloat(*Pred, TEXT("delay"), Shot.PredDelay);
+			ReadFloat(*Pred, TEXT("warn"), Shot.PredWarn);
+			ReadFloat(*Pred, TEXT("speed"), Shot.PredSpeed);
+			ReadFloat(*Pred, TEXT("accel"), Shot.PredAccel);
+		}
+		if (HasField(S, TEXT("gentle")))
+		{
+			Shot.bGentle = true;
+			Shot.GentleS = ReadVec(S, TEXT("gentle"));
+		}
 		Shot.Start = ReadVec(S, TEXT("start"), Shot.Start);
 		Shot.VolMin = ReadVec(S, TEXT("volMin"), Shot.VolMin);
 		Shot.VolMax = ReadVec(S, TEXT("volMax"), Shot.VolMax);
@@ -204,7 +225,20 @@ bool AMatchCutGameMode::LoadLayout()
 		{
 			Shot.bHasPart = true;
 			Shot.PartS = ReadVec(S, TEXT("part"));
-			PartShot = Index;
+			double Num = 0.0;
+			if (S->TryGetNumberField(TEXT("partFeature"), Num))
+			{
+				Shot.PartFeature = FMath::Clamp((int32)Num, 0, 2);
+			}
+			if (S->TryGetNumberField(TEXT("partGap"), Num))
+			{
+				Shot.PartGap = FMath::Clamp((int32)Num, 0, 2);
+			}
+			S->TryGetStringField(TEXT("partClip"), Shot.PartClip);
+			if (PartShot == INDEX_NONE)
+			{
+				PartShot = Index;
+			}
 		}
 		if (HasField(S, TEXT("crew")))
 		{
@@ -371,6 +405,8 @@ bool AMatchCutGameMode::LoadFilm()
 			if (S.IsValid())
 			{
 				S->TryGetBoolField(TEXT("oldFilm"), Set.bOldFilm);
+				S->TryGetBoolField(TEXT("headCam"), Set.bHeadCam);
+				ReadFloat(S, TEXT("torch"), Set.TorchPower);
 				ReadSolids(S, FilmSetSolids.Add(FString(Pair.Key)));
 			}
 		}
@@ -401,6 +437,46 @@ bool AMatchCutGameMode::LoadFilm()
 					}
 				}
 			}
+			// the seconds the official cut leaves out, where the signal is lost, captions, the frame to match
+			if (C->TryGetArrayField(TEXT("cuts"), Arr) && Arr)
+			{
+				for (const TSharedPtr<FJsonValue>& V : *Arr)
+				{
+					const TArray<TSharedPtr<FJsonValue>>& K = V->AsArray();
+					if (K.Num() >= 2)
+					{
+						Clip.Cuts.Add(FVector2D(K[0]->AsNumber(), K[1]->AsNumber()));
+					}
+				}
+			}
+			if (C->TryGetArrayField(TEXT("static"), Arr) && Arr && Arr->Num() >= 2)
+			{
+				Clip.Static.Add(FVector2D((*Arr)[0]->AsNumber(), (*Arr)[1]->AsNumber()));
+			}
+			if (C->TryGetArrayField(TEXT("captions"), Arr) && Arr)
+			{
+				for (const TSharedPtr<FJsonValue>& V : *Arr)
+				{
+					const TArray<TSharedPtr<FJsonValue>>& K = V->AsArray();
+					if (K.Num() >= 3)
+					{
+						FDCCaption& Cap = Clip.Captions.AddDefaulted_GetRef();
+						Cap.T0 = (float)K[0]->AsNumber();
+						Cap.T1 = (float)K[1]->AsNumber();
+						Cap.Text = K[2]->AsString();
+						const FString Who = K.Num() >= 4 ? K[3]->AsString() : FString();
+						Cap.Who = Who == TEXT("o") ? 1 : (Who == TEXT("r") ? 2 : 0);
+					}
+				}
+			}
+			if (C->TryGetArrayField(TEXT("match"), Arr) && Arr && Arr->Num() >= 2)
+			{
+				Clip.bHasMatch = true;
+				Clip.MatchNdc = FVector2D((*Arr)[0]->AsNumber(), (*Arr)[1]->AsNumber());
+			}
+			ReadFloat(C, TEXT("matchT"), Clip.MatchT);
+			ReadFloat(C, TEXT("thumbT"), Clip.ThumbT);
+			C->TryGetStringField(TEXT("after"), Clip.After);
 			const TSharedPtr<FJsonObject>* Tracks = nullptr;
 			if (C->TryGetObjectField(TEXT("tracks"), Tracks) && Tracks)
 			{

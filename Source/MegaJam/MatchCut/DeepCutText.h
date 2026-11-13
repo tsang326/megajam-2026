@@ -13,6 +13,8 @@
 #define DCTEXT_RESTORED TEXT("SCENE RESTORED  %d/%d")
 #define DCTEXT_CREW TEXT("CREW %d/%d")
 #define DCTEXT_END_LINE TEXT("Scenes restored %d/%d.   Crew found %d/%d.")
+#define DCTEXT_END_TITLE TEXT("END OF STAGE %d")           // NEW (brief 04)
+#define DCTEXT_PART_FOUND TEXT("FEATURE CUT -> BUILT: %s") // NEW (brief 04): one line for every feature
 #define DCTEXT_MARK_CAM TEXT("CAM %02d  %s") // label next to a tape mark when a shot has two cameras: camera number, shot name (brief 04)
 
 namespace DCText
@@ -66,7 +68,6 @@ namespace DCText
 	static const TCHAR* MarksUp = TEXT("MARKS SET");              // NEW: shown for a moment when tape marks appear
 
 	// part, restore, rescue
-	static const TCHAR* PartFound = TEXT("FEATURE CUT -> BUILT: HEADLAMP"); // NEW (was HEADLAMP FOUND)
 	static const TCHAR* PartHow = TEXT("F: lamp on / off");
 	static const TCHAR* RestoreHint = TEXT("A removed scene. Line up with the frame. Press C.");
 	static const TCHAR* RestoreMark = TEXT("MATCH");
@@ -80,6 +81,22 @@ namespace DCText
 	static const TCHAR* ControlsGrab = TEXT("   E grab");
 	static const TCHAR* ControlsLampKey = TEXT("   F lamp");
 	static const TCHAR* ControlsEnd = TEXT("   C cut   R back one shot   ESC quit");
-	static const TCHAR* EndTitle = TEXT("END OF STAGE 1"); // NEW (was END OF SLICE)
 	static const TCHAR* EndKeys = TEXT("R: play again     ESC: quit");
+	static const TCHAR* EndKeysNext = TEXT("C: next stage     R: play again     ESC: quit"); // NEW
+
+	// stage 2 (brief 04). All NEW.
+	static const TCHAR* PartHowGrip = TEXT("E: grab / drop. Now you can carry heavy things.");
+	static const TCHAR* PropHeavy = TEXT("HEAVY - E");                 // a thing that only comes through the cut when it is held
+	static const TCHAR* CrewCarry = TEXT("It cannot swim. Carry it: E.");
+	static const TCHAR* CrewSafe = TEXT("CREW SAFE");
+	static const TCHAR* PredHint = TEXT("Something is coming. You cannot fight it. Cut away: C.");
+	static const TCHAR* ReasonCaught = TEXT("CAUGHT - CUT AWAY SOONER");
+	static const TCHAR* SignalLost = TEXT("SIGNAL LOST");
+	static const TCHAR* NextShotBody = TEXT("IN THE NEXT SHOT");
+	static const TCHAR* OfficialRecord = TEXT("FATHOM DYNAMICS  /  DIVE RECORD  /  OFFICIAL RELEASE");
+	static const TCHAR* OfficialTag = TEXT("OFFICIAL VERSION");
+	static const TCHAR* OfficialEnd = TEXT("END OF RECORD");
+	static const TCHAR* OfficialEndHint = TEXT("That is the official record. Some seconds are missing.");
+	static const TCHAR* CutByFathom = TEXT("RESTORED SECONDS");
+	static const TCHAR* DiverCam = TEXT("DIVER CAM  REC");
 }

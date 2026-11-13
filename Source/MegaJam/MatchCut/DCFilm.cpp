@@ -8,6 +8,7 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/SpotLightComponent.h"
 #include "Engine/SceneCapture2D.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -45,8 +46,7 @@ void AMatchCutGameMode::PoseClip(const FString& ClipName, float T)
 	}
 	for (const FDCTrack& Track : Clip->Tracks)
 	{
-		const FDCRobot* Robot = FilmActor(Track.Actor);
-		if (!Robot || Track.Keys.Num() == 0)
+		if (Track.Keys.Num() == 0)
 		{
 			continue;
 		}
@@ -55,13 +55,48 @@ void AMatchCutGameMode::PoseClip(const FString& ClipName, float T)
 		{
 			++i;
 		}
+		const int32 Last = Track.Keys.Num() - 1;
 		const FDCKey& A = Track.Keys[i];
-		const FDCKey& B = Track.Keys[FMath::Min(i + 1, Track.Keys.Num() - 1)];
+		const FDCKey& B = Track.Keys[FMath::Min(i + 1, Last)];
 		const float Alpha = B.T > A.T ? FMath::Clamp((T - A.T) / (B.T - A.T), 0.f, 1.f) : 0.f;
 		const FVector P = FMath::Lerp(A.P, B.P, (double)Alpha);
 		const FVector2D Head = FMath::Lerp(A.Head, B.Head, (double)Alpha);
+		const float Roll = FMath::Lerp(A.Roll, B.Roll, Alpha);
 		// set space (x right, y up, z away) to world: the set camera looks down +X
-		PlaceRobot(*Robot, Origin + FVector(P.Z, P.X, P.Y), Head, FRotator::ZeroRotator, FMath::Lerp(A.Roll, B.Roll, Alpha));
+		const FVector Loc = Origin + FVector(P.Z, P.X, P.Y);
+		if (Track.Actor == TEXT("cam"))
+		{
+			// a head camera: the key is [t, x, y, z, yaw, pitch, roll]
+			if (ACameraActor* Cam = Set ? Set->Camera.Get() : nullptr)
+			{
+				Cam->SetActorLocationAndRotation(Loc, FRotator(Head.Y, Head.X, Roll));
+			}
+			continue;
+		}
+		const FDCRobot* Robot = FilmActor(Track.Actor);
+		if (!Robot)
+		{
+			continue;
+		}
+		if (Robot->bCreature)
+		{
+			// a creature faces the way it moves
+			if (AActor* Body = Robot->Actor.Get())
+			{
+				const FVector D0 = B.P - A.P;
+				const FVector D1 = Track.Keys[FMath::Min(i + 2, Last)].P - B.P;
+				const FVector D = FMath::Lerp(D0, D1.IsNearlyZero() ? D0 : D1, (double)Alpha);
+				FRotator Rot = Body->GetActorRotation();
+				if (D.SizeSquared() > 0.25)
+				{
+					Rot = FRotationMatrix::MakeFromXZ(FVector(D.Z, D.X, D.Y), FVector::UpVector).Rotator();
+					Rot.Roll += Roll;
+				}
+				Body->SetActorLocationAndRotation(Loc, Rot);
+			}
+			continue;
+		}
+		PlaceRobot(*Robot, Loc, Head, FRotator::ZeroRotator, Roll);
 		if (Robot->EyePaint != INDEX_NONE && !Robot->bPlain)
 		{
 			SetPaintEmissive(Robot->EyePaint, FLinearColor(4.0f, 2.6f, 0.6f) * FMath::Lerp(A.Eye, B.Eye, Alpha));
@@ -137,52 +172,107 @@ void AMatchCutGameMode::TickFilm(float Dt)
 	}
 }
 
-void AMatchCutGameMode::StartFlashback()
+void AMatchCutGameMode::StartClip(const FString& ClipName, bool bOfficial, int32 Gap)
 {
+	// A clip is played either whole (a removed scene that comes back) or as Fathom released it (without its cut seconds).
+	const FDCClip* Clip = Clips.Find(ClipName);
+	if (!Clip)
+	{
+		return;
+	}
+	FlashClip = ClipName;
+	bFlashOfficial = bOfficial;
+	FlashGap = Gap;
+	FlashLength = bOfficial ? Clip->OfficialLength() : Clip->Length;
+	FlashClipT = 0.f;
 	State = EDCState::Flashback;
 	StateTime = 0.f;
 	bThumbTaken = false;
-	SetView(FlashCam.Get());
+	PoseClip(ClipName, 0.f);
+	SetView(ClipCamera(ClipName));
 	ApplyLighting();
 	if (Audio)
 	{
-		Audio->Play(TEXT("reel_restore"));
+		Audio->Play(bOfficial ? TEXT("cam_rec") : TEXT("reel_restore"));
 	}
-	UE_LOG(LogMatchCut, Display, TEXT("FLASHBACK start (removed scene 1, clip \"%s\", %.0fs)"), *FlashClip, FlashLength);
+	UE_LOG(LogMatchCut, Display, TEXT("CLIP start \"%s\" version=%s gap=%d plays %.1fs of %.1fs (%d cuts)"), *ClipName, bOfficial ? TEXT("official") : TEXT("restored"), Gap + 1, FlashLength, Clip->Length, Clip->Cuts.Num());
+}
+
+void AMatchCutGameMode::StartFlashback()
+{
+	const FDCShot& Shot = Shots[Cur];
+	const FString ClipName = Shot.bHasPart && !Shot.PartClip.IsEmpty() ? Shot.PartClip : FlashClip;
+	UE_LOG(LogMatchCut, Display, TEXT("FLASHBACK start (removed scene %d, clip \"%s\")"), Shot.PartGap + 1, *ClipName);
+	StartClip(ClipName, false, Shot.bHasPart ? Shot.PartGap : 0);
 }
 
 void AMatchCutGameMode::EndFlashback()
 {
-	bGapFilled[0] = true;
+	const bool bOfficial = bFlashOfficial;
+	const FDCClip* Clip = Clips.Find(FlashClip);
+	const FDCFilmSet* Set = ClipSet(FlashClip);
+	if (ACameraActor* Cam = ClipCamera(FlashClip))
+	{
+		if (!Set || !Set->bHeadCam)
+		{
+			Cam->SetActorRotation(FRotator::ZeroRotator);
+		}
+	}
+	if (!bOfficial && FlashGap >= 0 && FlashGap < NumGaps)
+	{
+		bGapFilled[FlashGap] = true;
+	}
+	bFlashOfficial = false;
 	State = EDCState::Playing;
 	StateTime = 0.f;
-	if (FlashCam.IsValid())
+	if (Shots[Cur].bHasPart)
 	{
-		FlashCam->SetActorRotation(FRotator::ZeroRotator);
+		FlashClip = Shots[Cur].PartClip;
 	}
 	SetView(Shots[Cur].Camera.Get());
 	PointGhost();
 	ApplyLighting();
-	ShowBanner(FString::Printf(DCTEXT_RESTORED, 1, NumGaps), TEXT(""), 5.f);
-	UE_LOG(LogMatchCut, Display, TEXT("FLASHBACK end: gap 1 filled"));
+	if (bOfficial)
+	{
+		ShowBanner(DCText::OfficialEnd, DCText::OfficialEndHint, 6.f);
+		UE_LOG(LogMatchCut, Display, TEXT("CLIP official version ended"));
+	}
+	else
+	{
+		ShowBanner(FString::Printf(DCTEXT_RESTORED, ScenesCount(), NumGaps), Clip ? Clip->After : FString(), 7.f);
+		UE_LOG(LogMatchCut, Display, TEXT("FLASHBACK end: gap %d filled"), FlashGap + 1);
+	}
 	UpdateGate(Cur, false);
 }
 
 void AMatchCutGameMode::TickFlashback(float Dt)
 {
-	PoseClip(FlashClip, StateTime);
-	// gate weave: the frame jitters a little, twelve times a second
+	const FDCClip* Clip = Clips.Find(FlashClip);
+	const FDCFilmSet* Set = ClipSet(FlashClip);
+	ACameraActor* Cam = ClipCamera(FlashClip);
+	const float Prev = FlashClipT;
+	FlashClipT = (Clip && bFlashOfficial) ? Clip->OfficialToClip(StateTime) : StateTime;
+	PoseClip(FlashClip, FlashClipT);
+	if (bFlashOfficial && FlashClipT - Prev > 1.f && Audio)
+	{
+		Audio->Play(TEXT("cut_splice"), 0.5f, 1.2f); // the join where seconds were taken out
+	}
+	// gate weave: the frame jitters a little, twelve times a second (a head camera moves by its own keys)
 	WeaveTimer -= Dt;
-	if (WeaveTimer <= 0.f && FlashCam.IsValid())
+	if (WeaveTimer <= 0.f && Cam && (!Set || !Set->bHeadCam))
 	{
 		WeaveTimer = 1.f / 12.f;
 		Weave = FVector2D(FMath::FRandRange(-1.f, 1.f), FMath::FRandRange(-1.f, 1.f));
-		FlashCam->SetActorRotation(FRotator(Weave.Y * 0.10, Weave.X * 0.10, Weave.X * 0.12));
+		Cam->SetActorRotation(FRotator(Weave.Y * 0.10, Weave.X * 0.10, Weave.X * 0.12));
 	}
-	if (!bThumbTaken && StateTime > 4.0f)
+	if (!bFlashOfficial && !bThumbTaken && Clip && Cam && FlashClipT > Clip->ThumbT && ThumbTargets.IsValidIndex(FlashGap))
 	{
+		// the thumbnail that fills the gap in the reel
 		bThumbTaken = true;
-		ThumbCapture->GetCaptureComponent2D()->CaptureScene(); // the thumbnail that fills the gap in the reel
+		USceneCaptureComponent2D* Cap = ThumbCapture->GetCaptureComponent2D();
+		Cap->TextureTarget = ThumbTargets[FlashGap];
+		ThumbCapture->SetActorLocationAndRotation(Cam->GetActorLocation(), Cam->GetActorRotation());
+		Cap->CaptureScene();
 	}
 	if (StateTime >= FlashLength)
 	{
