@@ -20,8 +20,9 @@ enter
 wait 0.3
 stat4
 # headlamp: swim onto the wreck
-swim3 3300 -700 1000
-swim3 3300 -700 760
+swim3 1900 -700 1250
+swim3 3300 -700 1250
+swim3 3300 -700 880
 wait 0.5
 snap b01_headlamp_found
 stat4
@@ -111,7 +112,7 @@ wait 3.0
 snap e07_film_6
 wait 3.2
 snap e08_credits
-wait 6.0
+wait 7.0
 snap e09_rating
 stat4
 enter

@@ -26,6 +26,7 @@ namespace DCDocText
 
 	static const TCHAR* NoGood = TEXT("NO GOOD");
 	static const TCHAR* Nothing = TEXT("Nothing in frame");
+	static const TCHAR* Few = TEXT("Too few of them in frame");
 	static const TCHAR* TooFar = TEXT("Too far");
 	static const TCHAR* CutOff = TEXT("Subject cut off");
 	static const TCHAR* Missed = TEXT("Missed the moment");

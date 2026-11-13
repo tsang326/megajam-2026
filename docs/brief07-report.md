@@ -2,7 +2,7 @@
 
 Working notes, one section per checkpoint. The final summary is at the end once checkpoint 4 is done.
 
-## Checkpoints 1 and 2 (2026-11-14, ~06:30)
+## Checkpoints 1 and 2 (2026-11-14, ~05:15)
 
 What runs (editor build, offscreen script runs, captures looked at):
 
@@ -24,3 +24,19 @@ Known problems at this point:
 - With frames that slow the test script ran ahead of the game: the jellyfish take ended after the script had moved on, so that run shows 5 of 6 shots and no rating card. The cutting room, the title card, film playback and the credits are in the captures.
 - Hard rectangular shadows on the sea floor, weak light shafts, flat floor: checkpoint 4.
 - Mouse and gamepad feel have not been tried by hand.
+
+## Checkpoint 3 (2026-11-14, ~06:40)
+
+`Content/Data/tests/d3_film.txt` runs the whole game offscreen in the editor build: start, two takes of the crewmate, headlamp picked up on the wreck, manta, jellyfish, anglerfish, shoal, turtle, ENTER to the cutting room, choosing takes, ENTER to play the film (title card, six takes played back from the stored camera path, credits), rating card, back. Log of the last run: 6 of 6 shots, 17 of 18 stars, states 1 (cutting room), 2 (film), 3 (rating), 1, 0 reached in order.
+
+- The two problems of the earlier run (lost jellyfish take, no rating card) were the test script running ahead of slow frames. Fixed in the script clock, not by loosening the game.
+- New line: `Too few of them in frame` (a take that holds only part of the shoal or the jellyfish).
+- Jellyfish shot needs two in frame (was three); their column is shorter.
+- Visible light columns in the water (additive), one upright in the clearing.
+- Floor dapple is off by default (`-MCDapple=9000` shows the last version).
+- Frame time, `d3_film` alone, editor build, background priority: median 28 ms, 90th percentile 66 ms, average 42 ms (the average includes 21 screenshots). With the dapple on the median was 35 ms.
+- 52 ambient creatures from 15 models.
+
+Captures: `docs/captures/brief07/cp3_shooting.jpg`, `cp3_cut_film_rating.jpg`.
+
+Still open: packaged build and a packaged run of `d3_film`; jellyfish read dark and glossy; the columns of the clearing show their edges from close by; the sea floor is flat and plain; the long lens and the vent plume have not been looked at; nothing has been played by hand.

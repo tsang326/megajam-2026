@@ -32,7 +32,7 @@ namespace DCD
 	const int32 NumFish = 130, NumJelly = 7;
 	const float Aspect = 16.f / 9.f;
 	const float MaxDist[DCSub::Num] = { 3600.f, 2200.f, 1500.f, 2600.f, 5200.f, 1800.f };
-	const int32 Need[DCSub::Num] = { 1, 12, 1, 3, 1, 1 };
+	const int32 Need[DCSub::Num] = { 1, 12, 1, 2, 1, 1 };
 
 	float Ease(float Current, float Target, float Rate, float Dt)
 	{
@@ -43,6 +43,8 @@ namespace DCD
 // ---------------------------------------------------------------------------------------------
 // spawning
 // ---------------------------------------------------------------------------------------------
+
+static int32 GFewFrames = 0; // frames of the running take with some of a group in the picture, but too few
 
 AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, bool bLampOnly, float* OutHalfHeight)
 {
@@ -215,6 +217,12 @@ void FDCDoc::SpawnAmbient()
 			FAmbient One;
 			float Half = 0.f;
 			One.Actor = SpawnCreature(Row.Id, Row.Length * Rand.FRandRange(0.85f, 1.15f), Front, false, &Half);
+			// ambient life casts no shadow: 20k triangles each, and every caster is drawn again for each shadow cascade
+			TInlineComponentArray<UStaticMeshComponent*> Parts; One.Actor->GetComponents(Parts);
+			for (UStaticMeshComponent* Part : Parts)
+			{
+				Part->SetCastShadow(false);
+			}
 			One.Ra = Rand.FRandRange(Row.RMin, Row.RMax);
 			One.Rb = Row.Kind == 2 ? One.Ra : One.Ra * Rand.FRandRange(0.5f, 1.f);
 			One.Phase = Rand.FRandRange(0.f, 2.f * PI);
@@ -426,7 +434,7 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 			const double Ph = i * 0.9;
 			const double Rad = 110.0 + 55.0 * (i % 4);
 			const FVector P = DCD::Shaft + FVector(Rad * FMath::Cos(i * 2.4 + T * 0.05), Rad * FMath::Sin(i * 2.4 + T * 0.05),
-				330.0 + 65.0 * i + 260.0 * (0.5 + 0.5 * FMath::Sin(T * 0.22 + Ph)));
+				330.0 + 42.0 * i + 200.0 * (0.5 + 0.5 * FMath::Sin(T * 0.22 + Ph)));
 			JellyPos[i] = P;
 			Sum += P;
 			if (AActor* A = Jellies[i].Get())
@@ -577,6 +585,7 @@ void FDCDoc::Look(const FVector& P, const FRotator& R, float Fov)
 			}
 			if (Count < DCD::Need[s])
 			{
+				GFewFrames += bRecording && Count > 0 ? 1 : 0;
 				continue;
 			}
 			Mid = Sum / Count;
@@ -667,6 +676,8 @@ void FDCDoc::Say(const FString& Line, float Seconds)
 void FDCDoc::EndTake()
 {
 	bRecording = false;
+	const int32 Few = GFewFrames;
+	GFewFrames = 0;
 	const int32 N = FMath::Max(1, RecFrames);
 	int32 Sub = INDEX_NONE;
 	for (int32 s = 0; s < DCSub::Num; ++s)
@@ -681,7 +692,7 @@ void FDCDoc::EndTake()
 	ResultStars = 0;
 	if (Sub == INDEX_NONE)
 	{
-		ResultReason = DCDocText::Nothing;
+		ResultReason = Few * 3 > N ? DCDocText::Few : DCDocText::Nothing; // one fish of a shoal is not the shoal
 	}
 	else
 	{

@@ -1,0 +1,32 @@
+# brief 07 checkpoint 4: the look of the world from eight places
+wait 1.0
+snap l01_start
+tp -400 -400 1500 20 -25
+wait 1.0
+snap l02_over_site
+tp -1300 -2000 500 -150 0
+wait 1.0
+snap l03_clearing_shaft
+tp -2300 1500 500 135 -5
+wait 1.0
+snap l04_reef
+tp 600 -2000 450 -50 -5
+wait 1.0
+snap l05_vents
+tp 2300 -1900 900 50 -10
+wait 1.0
+snap l06_wreck
+tp 600 2390 350 0 0
+wait 1.0
+snap l07_trench_mouth
+tp 2200 600 700 20 5
+wait 1.0
+snap l08_open_water
+tp -400 -1200 700 -120 10
+wait 1.0
+snap l09_hatchet
+tp 0 0 300 90 60
+wait 1.0
+snap l10_up
+stat
+quit

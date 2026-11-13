@@ -488,12 +488,34 @@ void AMatchCutGameMode::UpdateMusic()
 	Audio->SetDuck(bFlash); // the gameplay music goes under the recovered film
 }
 
+static int32 GFrameHist[201] = {}; // frames per millisecond of frame time since the last report
+
 void AMatchCutGameMode::ReportFrameTime()
 {
 	if (FrameCount > 0)
 	{
-		UE_LOG(LogMatchCut, Display, TEXT("FRAMETIME shot=%d look=%s state=%s ghost=%d lamp=%d frames=%d avg=%.2fms max=%.2fms"),
-			Cur, *LookName, StateName(), GhostMode, bLampOn ? 1 : 0, FrameCount, FrameAccum / FrameCount * 1000.0, FrameMax * 1000.0);
+		// the average carries the hitches of every screenshot of a test run: the median and the 90th percentile say how it plays
+		int32 Median = 0, P90 = 0, Sum = 0, Total = 0;
+		for (int32 i = 0; i <= 200; ++i)
+		{
+			Total += GFrameHist[i];
+		}
+		for (int32 i = 0; i <= 200; ++i)
+		{
+			const int32 Before = Sum;
+			Sum += GFrameHist[i];
+			if (Before * 2 < Total && Sum * 2 >= Total)
+			{
+				Median = i;
+			}
+			if (Before * 10 < Total * 9 && Sum * 10 >= Total * 9)
+			{
+				P90 = i;
+			}
+			GFrameHist[i] = 0;
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("FRAMETIME shot=%d look=%s state=%s ghost=%d lamp=%d frames=%d avg=%.2fms max=%.2fms median=%dms p90=%dms"),
+			Cur, *LookName, StateName(), GhostMode, bLampOn ? 1 : 0, FrameCount, FrameAccum / FrameCount * 1000.0, FrameMax * 1000.0, Median, P90);
 	}
 	FrameAccum = 0.0;
 	FrameMax = 0.0;
@@ -529,6 +551,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 		if (ShotElapsed > 1.f)
 		{
 			FrameAccum += DeltaSeconds;
+		++GFrameHist[FMath::Clamp(FMath::RoundToInt(DeltaSeconds * 1000.f), 0, 200)];
 			FrameMax = FMath::Max(FrameMax, (double)DeltaSeconds);
 			++FrameCount;
 		}
@@ -551,6 +574,7 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 	if (ShotElapsed > 1.f)
 	{
 		FrameAccum += DeltaSeconds;
+		++GFrameHist[FMath::Clamp(FMath::RoundToInt(DeltaSeconds * 1000.f), 0, 200)];
 		FrameMax = FMath::Max(FrameMax, (double)DeltaSeconds);
 		++FrameCount;
 	}

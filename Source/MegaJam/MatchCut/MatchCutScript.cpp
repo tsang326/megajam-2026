@@ -81,7 +81,8 @@ void AMatchCutGameMode::TickScript(float DeltaSeconds)
 	}
 	if (ScriptWait > 0.f)
 	{
-		ScriptWait -= DeltaSeconds;
+		// the 3D game steps at most 0.05 s a frame: wait in the same time, or a slow frame lets the script run ahead of it
+		ScriptWait -= D3 ? FMath::Min(DeltaSeconds, 0.05f) : DeltaSeconds;
 		return;
 	}
 	if (State == EDCState::TakeCard && ScriptPc < ScriptLines.Num() && !ScriptLines[ScriptPc].StartsWith(TEXT("snap")) && !ScriptLines[ScriptPc].StartsWith(TEXT("wait")))

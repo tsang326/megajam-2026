@@ -470,5 +470,103 @@
    ],
    "emissive": "none"
   }
+ ],
+ "creature:hatchet": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_hatchet/creature_hatchet/StaticMeshes/creature_hatchet.creature_hatchet",
+   "yaw": 0,
+   "file": "creature_hatchet.glb",
+   "triangles": 3408,
+   "sizeCm": [
+    153,
+    190,
+    90
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:frilled": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_frilled/creature_frilled/StaticMeshes/creature_frilled.creature_frilled",
+   "yaw": 0,
+   "file": "creature_frilled.glb",
+   "triangles": 2324,
+   "sizeCm": [
+    49,
+    190,
+    76
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:seapig": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_seapig/creature_seapig/StaticMeshes/creature_seapig.creature_seapig",
+   "yaw": 0,
+   "file": "creature_seapig.glb",
+   "triangles": 4602,
+   "sizeCm": [
+    128,
+    190,
+    106
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:coelacanth": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_coelacanth/creature_coelacanth/StaticMeshes/creature_coelacanth.creature_coelacanth",
+   "yaw": 0,
+   "file": "creature_coelacanth.glb",
+   "triangles": 5052,
+   "sizeCm": [
+    113,
+    190,
+    63
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:oarfish": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_oarfish/creature_oarfish/StaticMeshes/creature_oarfish.creature_oarfish",
+   "yaw": 0,
+   "file": "creature_oarfish.glb",
+   "triangles": 3336,
+   "sizeCm": [
+    39,
+    189,
+    116
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:stingray": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_stingray/creature_stingray/StaticMeshes/creature_stingray.creature_stingray",
+   "yaw": 0,
+   "file": "creature_stingray.glb",
+   "triangles": 1900,
+   "sizeCm": [
+    146,
+    190,
+    25
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:cuttle": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_cuttle/creature_cuttle/StaticMeshes/creature_cuttle.creature_cuttle",
+   "yaw": 0,
+   "file": "creature_cuttle.glb",
+   "triangles": 4936,
+   "sizeCm": [
+    157,
+    190,
+    35
+   ],
+   "emissive": "none"
+  }
  ]
 }

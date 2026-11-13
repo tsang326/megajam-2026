@@ -125,7 +125,7 @@ All three use rules the game already had (near things come through the cut, a th
 - 03:40: the hero is now a diver in a hard suit (new `ArtDrop/hero.glb`); imported with `DC_ART_ONLY=hero Tools/import_art.sh`. The robot model is no longer used.
 - Six creature models from the art drop imported (manta, anglerfish, jellyfish, turtle, eel, fish) for brief 07; not used yet.
 
-### 2026-11-14, ~06:30: the documentary: camera, takes, creatures, a new world (brief 07, checkpoints 1 and 2)
+### 2026-11-14, ~05:15: the documentary: camera, takes, creatures, a new world (brief 07, checkpoints 1 and 2)
 
 - New `DCDoc.cpp`: camera mode (viewfinder, zoom, focus, depth of field), 3 second takes, a score of 0 to 3 stars with one named reason per take, six shots on a list.
 - The world is rebuilt in code from eight realistic scene models (boulder, arch, ledge, wreck, debris, vent, station, coral). The stylised props of the 2D game are no longer placed.
@@ -135,3 +135,13 @@ All three use rules the game already had (near things come through the cut, a th
 - Eight more creature models imported and set swimming or crawling as ambient life (30 creatures). Frame time went from about 30-35 ms to 48 ms with them; not acceptable yet.
 - Cutting room, title card, film playback and credits run in the `d3_film` script. The rating card was not reached in that run because the script outran the slow frames.
 - Rule for this repo from now on: scripts move files to `Saved/_trash/` and never delete.
+
+### 2026-11-14, ~06:40: shot list to finished film in one scripted run (brief 07, checkpoint 3)
+
+- `d3_film` offscreen, editor build: start, two takes of the crewmate, headlamp from the wreck, manta, jellyfish, anglerfish, shoal, turtle, cutting room, title card, six takes played back, credits, rating card (`FESTIVAL OPENER`, 17 / 18 stars), back to the cutting room, back to shooting. All six shots registered.
+- The earlier run lost the jellyfish take and never reached the rating card. Cause: the test script counted its waits in real time while the game steps at most 0.05 s a frame, so on slow frames the script ran ahead. Script waits now use the game's step.
+- Jellyfish: the column was 650 cm tall, so a normal lens rarely held three at once. Now 440 cm and two are enough. A take with only part of a group in frame says `Too few of them in frame`.
+- Light in the water: faint additive columns along the key light, and one upright in the clearing. They replace the volumetric shaft that never showed. The first try came out as solid black columns: parts made with `AddPart` get the look's material again later, so the columns are made without it.
+- The unseen shadow casters that dappled the floor are off by default. Bars drew hard rectangles, round blots drew polka dots, 9000 small pieces drew camouflage; all of them fought the creatures for the eye.
+- Seven more creature models imported (vampire squid, hatchetfish, frilled shark, sea pig, coelacanth, oarfish, stingray): 52 ambient creatures, none casting shadows.
+- Frame time report now carries median and 90th percentile, because the average of a test run includes the hitch of every screenshot. `d3_film` alone, editor build at background priority: median 28 ms, p90 66 ms, average 42 ms over 3062 frames.

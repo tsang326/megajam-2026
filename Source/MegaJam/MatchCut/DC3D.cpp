@@ -323,6 +323,47 @@ void FDC3D::BuildArea()
 		L->MarkRenderStateDirty();
 	}
 
+	// light you can see in the water: faint additive columns. One stands in the clearing, the rest lean the way the key light falls.
+	if (UMaterialInterface* AddMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Add.M_DC_Add")))
+	{
+		float Rays = 1.f;
+		FParse::Value(FCommandLine::Get(), TEXT("-MCRays="), Rays);
+		auto Beam = [this, AddMat](const FVector& Mid, const FVector& Axis, float Wide, float Len, const FLinearColor& Col)
+		{
+			AActor* A = GM->SpawnGroup(Mid);
+			// not AddPart: that paints the part, and painted parts get the look's material again later
+			UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(A);
+			C->SetMobility(EComponentMobility::Movable);
+			C->SetStaticMesh(GM->CylinderMesh);
+			C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			C->SetCastShadow(false);
+			C->SetupAttachment(A->GetRootComponent());
+			UMaterialInstanceDynamic* M = UMaterialInstanceDynamic::Create(AddMat, C);
+			M->SetVectorParameterValue(TEXT("Color"), Col);
+			C->SetMaterial(0, M);
+			C->RegisterComponent();
+			C->SetRelativeRotation(FRotationMatrix::MakeFromZ(Axis).Rotator());
+			C->SetRelativeScale3D(FVector(Wide / 50.0, Wide / 50.0, Len / 100.0));
+		};
+		const FLinearColor Sun(0.030f, 0.075f, 0.085f);
+		Beam(FVector(-2500.0, -2700.0, 1500.0), FVector::UpVector, 170.f, 3000.f, Sun * 0.8f * Rays);
+		Beam(FVector(-2500.0, -2700.0, 1500.0), FVector::UpVector, 300.f, 3000.f, Sun * 0.5f * Rays);
+		Beam(FVector(-2500.0, -2700.0, 1500.0), FVector::UpVector, 430.f, 3000.f, Sun * 0.35f * Rays);
+		const FVector Down = FRotator(-62.0, 25.0, 0.0).Vector();
+		FRandomStream RayRand(4127);
+		for (int32 i = 0; i < 16; ++i)
+		{
+			const FVector Foot(RayRand.FRandRange(-5200.f, 5200.f), RayRand.FRandRange(-5200.f, 5200.f), 0.0);
+			if (Foot.Y > 1300.0 && Foot.Y < 3500.0 && Foot.X > 800.0)
+			{
+				continue; // no sun in the trench
+			}
+			const float R = RayRand.FRandRange(110.f, 300.f);
+			Beam(Foot - Down * 1900.0, -Down, R, 4000.f, Sun * RayRand.FRandRange(0.35f, 0.7f) * Rays);
+			Beam(Foot - Down * 1900.0, -Down, R * 1.9f, 4000.f, Sun * 0.22f * Rays);
+		}
+	}
+
 	// a stack of rock to swim round and over
 	Place(Boulder, 0, FVector(-1500.0, 900.0, -100.0), FRotator(0.f, 40.f, 0.f), 7.f);
 	Place(Ledge, 0, FVector(-1450.0, 850.0, 600.0), FRotator(0.f, 10.f, 0.f), 5.f);
@@ -459,21 +500,31 @@ void FDC3D::Start()
 	// shafts of light: long bars high above, never seen, that cut the key light. They sway, so the light on the floor moves.
 	{
 		// flat pieces scattered high above, never seen: their shadows dapple the floor and cut the light into shafts
+		// thousands of small flat pieces in one instanced mesh, not a few long bars: a bar's shadow is a hard rectangle on the floor,
+		// small overlapping pieces read as light broken up by the water above. The whole sheet drifts.
 		FRandomStream Rand(77);
-		for (int32 i = 0; i < 150; ++i)
+		AActor* A = GM->SpawnGroup(FVector(0.0, 0.0, 3700.0));
+		UInstancedStaticMeshComponent* C = NewObject<UInstancedStaticMeshComponent>(A);
+		C->SetMobility(EComponentMobility::Movable);
+		C->SetStaticMesh(GM->CubeMesh);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetupAttachment(A->GetRootComponent());
+		C->RegisterComponent();
+		// off unless asked for (-MCDapple=9000): every version tried drew a pattern on the floor that fought the creatures for the eye
+		int32 Dapple = 0;
+		FParse::Value(FCommandLine::Get(), TEXT("-MCDapple="), Dapple);
+		for (int32 i = 0; i < Dapple; ++i)
 		{
-			const FVector At(Rand.FRandRange(-8500.f, 8500.f), Rand.FRandRange(-8500.f, 8500.f), 3600.0 + Rand.FRandRange(0.f, 500.f));
-			AActor* A = GM->SpawnBox(At, FRotator(0.f, Rand.FRandRange(0.f, 180.f), 0.f), FVector(Rand.FRandRange(500.f, 1700.f), Rand.FRandRange(160.f, 420.f), 30.0), FLinearColor::Black, false);
-			if (AStaticMeshActor* SMA = Cast<AStaticMeshActor>(A))
-			{
-				SMA->GetStaticMeshComponent()->SetCastShadow(true);
-				SMA->GetStaticMeshComponent()->bCastHiddenShadow = true;
-				SMA->GetStaticMeshComponent()->MarkRenderStateDirty();
-			}
-			A->SetActorHiddenInGame(true);
-			Slats.Add(A);
-			SlatBase.Add(A->GetActorLocation());
+			C->AddInstance(FTransform(FRotator(0.f, Rand.FRandRange(0.f, 360.f), 0.f),
+				FVector(Rand.FRandRange(-8800.f, 8800.f), Rand.FRandRange(-8800.f, 8800.f), Rand.FRandRange(-250.f, 250.f)),
+				FVector(Rand.FRandRange(0.9f, 3.0f), Rand.FRandRange(0.6f, 1.7f), 0.1)));
 		}
+		C->SetCastShadow(true);
+		C->bCastHiddenShadow = true;
+		C->MarkRenderStateDirty();
+		A->SetActorHiddenInGame(true);
+		Slats.Add(A);
+		SlatBase.Add(A->GetActorLocation());
 	}
 	SpawnHero();
 	SpawnFlecks();
