@@ -214,8 +214,16 @@ struct FDCPaint
 };
 
 /** A robot made of engine shapes. */
+/** One imported model of the art drop: index into the game mode's mesh list, and a turn about the up axis. */
+struct FDCArtRef
+{
+	int32 Mesh = 0;
+	float Yaw = 0.f;
+};
+
 struct FDCRobot
 {
+	bool bArt = false; // an imported model stands in for the code-built body
 	TWeakObjectPtr<AActor> Actor;
 	int32 EyePaint = INDEX_NONE;
 	bool bPlain = false; // not a robot (a cable, a crate): position only

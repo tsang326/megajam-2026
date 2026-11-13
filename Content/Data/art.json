@@ -1,0 +1,16 @@
+{
+ "hero": [
+  {
+   "mesh": "/Game/DeepCut/Art/hero/hero/StaticMeshes/hero.hero",
+   "yaw": -90,
+   "file": "hero.glb",
+   "triangles": 7542,
+   "sizeCm": [
+    134,
+    116,
+    190
+   ],
+   "emissive": "wired into model.EmissiveTexture"
+  }
+ ]
+}

@@ -79,3 +79,10 @@ The first person to play stage 1 by hand got stuck in THE SHELF: the plate was u
 - A press of C before the marks show answers with the shot's own instruction. The clapper of a failed take has a second line that says what to do. After 20 s without progress the thing to use gets an arrow and a pulse, and an arrow to where it goes.
 - THE VENT lost its camera rail; the way on is now behind the current, at a mark with a depth.
 - Checked offscreen with the editor build: `stage1`, `route_yellow` and `stage2` reach their end cards. Captures: `docs/captures/brief05/partA/`. Not yet run after this change: `full12`, the packaged build. No human has played it.
+
+### 2026-11-13, late: models from the art drop can replace the code-built shapes (brief 05, part C1-C3)
+
+- `Tools/import_art.sh` imports every entry of `ArtDrop/manifest.json` into `Content/DeepCut/Art/<id>/` with a headless editor and writes `Content/Data/art.json`. The game reads that list at start: a thing with a listed id uses the model, everything else keeps its shapes. Sizes for the rules do not change; a model is scaled evenly, centred and stood on the bottom of the box its shapes used. Rock boxes pick one of several models by a hash of their place.
+- Tested first with a rounded box written by `Tools/make_test_glb.py` (`-MCArt=art_test.json` shows it as the plate), then with the hero model. Capture: `docs/captures/brief05/art/`.
+- Hero: one mesh without a rig, so it swims by code (bob, lean into the move, turn through facing the camera, small bank). First capture showed it facing backwards: fixed with a -90 degree turn in the list. It came out black because the game draws no reflections: models are now drawn non-metal, and Unit 0 has a soft light only it takes. The model has no separate parts, so the headlamp, gripper and pods cannot be shown or hidden by stage.
+- Not done yet: the eleven prop and rock models (imported after the puzzle work). The hero's colours look washed out in the green fog; the emissive map is wired in but does not show in captures.

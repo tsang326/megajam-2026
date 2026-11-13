@@ -406,11 +406,35 @@ void AMatchCutGameMode::UpdateHeroActor(float Dt)
 		return;
 	}
 	const FDCShot& Shot = Shots[Cur];
-	PlaceRobot(Hero, HeroPos, Heading, Shot.CamRot, 0.f);
+	if (Hero.bArt && Hero.Actor.IsValid())
+	{
+		// No rig: the model swims by code. It bobs, leans into the way it moves, turns through "facing the camera"
+		// and banks a little while it turns.
+		const float Speed = FMath::Clamp((float)FVector2D(VelS.X, VelS.Y).Size() / 430.f, 0.f, 1.f);
+		const float FaceWant = Heading.X >= 0.0 ? 0.f : 180.f;
+		HeroBank = FMath::FInterpTo(HeroBank, FMath::Clamp((FaceWant - HeroFace) / 180.f, -1.f, 1.f) * 22.f, Dt, 6.f);
+		HeroFace = FMath::FInterpTo(HeroFace, FaceWant, Dt, 7.f);
+		HeroLean = FMath::FInterpTo(HeroLean, 12.f + 38.f * Speed, Dt, 4.f);
+		const double A = FMath::DegreesToRadians(HeroFace);
+		const double Tilt = FMath::Clamp(Heading.Y, -0.6, 0.6);
+		const FVector Flat = Shot.AxR * FMath::Cos(A) - Shot.AxF * FMath::Sin(A);
+		const FVector X = (Flat * FMath::Sqrt(1.0 - Tilt * Tilt) + Shot.AxU * Tilt).GetSafeNormal();
+		const FQuat Q = FRotationMatrix::MakeFromXZ(X, Shot.AxU).ToQuat() * FQuat(FRotator(-HeroLean, 0.f, HeroBank));
+		const double Bob = 3.5 * FMath::Sin(PlayClock * 2.3) * (1.0 - 0.6 * Speed);
+		Hero.Actor->SetActorLocationAndRotation(HeroPos + Shot.AxU * Bob, Q);
+	}
+	else
+	{
+		PlaceRobot(Hero, HeroPos, Heading, Shot.CamRot, 0.f);
+	}
 	const bool bLamp = bLampOn && (State == EDCState::Playing || State == EDCState::TakeCard || State == EDCState::EndCard);
 	if (USpotLightComponent* L = LampSpot.Get())
 	{
 		L->SetVisibility(bLamp);
+	}
+	if (UPointLightComponent* Rim = HeroRim.Get())
+	{
+		Rim->SetWorldLocation(HeroPos - Shot.AxF * 260.0 + Shot.AxU * 150.0 + Shot.AxR * (Heading.X >= 0.0 ? 60.0 : -60.0));
 	}
 	if (UPointLightComponent* G = LampGlow.Get())
 	{

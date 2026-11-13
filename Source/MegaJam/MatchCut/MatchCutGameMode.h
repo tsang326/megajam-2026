@@ -71,6 +71,8 @@ public:
 
 protected:
 	UPROPERTY()
+	TArray<TObjectPtr<UStaticMesh>> ArtMeshes;
+	UPROPERTY()
 	TObjectPtr<UStaticMesh> CubeMesh;
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> SphereMesh;
@@ -119,7 +121,11 @@ private:
 	AActor* SpawnBox(const FVector& Center, const FRotator& Rot, const FVector& Size, const FLinearColor& Color, bool bHideFromGhost);
 	AActor* SpawnGroup(const FVector& Loc);
 	AActor* SpawnGentle(const FVector& Loc);
-	FDCRobot SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered);
+	FDCRobot SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered, const TCHAR* ArtId = TEXT(""));
+	// ---- DCArt.cpp: imported models, with the code-built shapes as the fallback
+	void LoadArt();
+	/** Adds the model for Id fitted into a box given in the owner's axes. Null when there is no model for Id. */
+	UStaticMeshComponent* AddArt(AActor* Owner, const FString& Id, const FVector& Centre, const FVector& Size, uint32 Hash = 0, bool bFill = false);
 	UStaticMeshComponent* AddPart(AActor* Owner, UStaticMesh* Mesh, const FVector& Loc, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, const FLinearColor& Emissive);
 	int32 AddPaint(UStaticMeshComponent* Comp, const FLinearColor& Color, const FLinearColor& Emissive);
 	void SetPaintEmissive(int32 Paint, const FLinearColor& Emissive);
@@ -272,6 +278,14 @@ private:
 	bool bDepthUsed = false;
 	TArray<FDCSnap> History;
 	TArray<int32> Visited;
+
+	TMap<FString, TArray<FDCArtRef>> Art;
+	TSet<FString> bArtParamsLogged;
+	TWeakObjectPtr<UPointLightComponent> HeroRim;
+	float HeroFace = 0.f;  // 0 = faces right, 180 = faces left; turns through "faces the camera"
+	float HeroLean = 0.f;
+	float HeroRimPower = 2500.f;
+	float HeroBank = 0.f;
 
 	// teaching (brief 05)
 	bool bTaught[DCTeach::Num] = { false, false, false, false, false, false, false };

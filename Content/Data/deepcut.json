@@ -1566,5 +1566,6 @@
  "gentleLight": 14000,
  "gentleLightRadius": 560,
  "gentleBack": 1500,
- "floorY": -215
+ "floorY": -215,
+ "heroRim": 600
 }

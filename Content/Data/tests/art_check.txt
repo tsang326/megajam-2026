@@ -1,0 +1,28 @@
+# Models from the art drop in the game: the hero at rest, swimming right, turning, swimming left, and a pushed thing.
+#   Tools/run_offscreen.sh art_check Saved/DeepCut/art_check                       (ArtDrop models, Content/Data/art.json)
+#   MC_EXTRA=-MCArt=art_test.json Tools/run_offscreen.sh art_check Saved/DeepCut/art_test   (pipeline test box as the plate)
+skipfilm
+wait 1.0
+goto 1
+wait 1.5
+snap a1_shelf_entry
+move 1 0.3 0 0.6
+snap a2_swim_right
+move -1 0 0 0.12
+snap a3_turning
+move -1 0 0 0.7
+snap a4_swim_left
+wait 1.2
+snap a5_rest_facing_left
+swimrel plate -150 60 0
+move 1 0 0 0.4
+snap a6_push_plate
+goto 3
+wait 1.0
+givepart
+wait 1.0
+lamp 1
+wait 0.6
+snap a7_wreck_lamp_on
+stat
+quit

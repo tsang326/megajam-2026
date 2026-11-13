@@ -127,6 +127,7 @@ bool AMatchCutGameMode::LoadLayout()
 	ReadFloat(Root, TEXT("markRadius"), MarkRadius);
 	ReadFloat(Root, TEXT("markDepthTol"), MarkDepthTol);
 	ReadFloat(Root, TEXT("carryRadius"), CarryRadius);
+	ReadFloat(Root, TEXT("heroRim"), HeroRimPower);
 	ReadFloat(Root, TEXT("socketRadius"), SocketRadius);
 	ReadFloat(Root, TEXT("reachRadius"), ReachRadius);
 	Root->TryGetNumberField(TEXT("crewTotal"), CrewTotal);

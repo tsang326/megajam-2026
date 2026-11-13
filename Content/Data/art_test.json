@@ -1,0 +1,16 @@
+{
+ "plate": [
+  {
+   "mesh": "/Game/DeepCut/ArtTest/plate/testbox/StaticMeshes/testbox.testbox",
+   "yaw": 0,
+   "file": "testbox.glb",
+   "triangles": 256,
+   "sizeCm": [
+    130,
+    150,
+    24
+   ],
+   "emissive": "none"
+  }
+ ]
+}

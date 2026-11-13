@@ -182,11 +182,19 @@ AActor* AMatchCutGameMode::SpawnGentle(const FVector& Loc)
 	return A;
 }
 
-FDCRobot AMatchCutGameMode::SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered)
+FDCRobot AMatchCutGameMode::SpawnRobot(const FVector& Loc, const FLinearColor& Body, const FLinearColor& Eye, bool bBattered, const TCHAR* ArtId)
 {
 	FDCRobot Robot;
 	AActor* A = SpawnGroup(Loc);
 	const FLinearColor DarkMetal = DCColor::DarkMetal;
+	// a model from the art drop stands upright in a box around the centre: about 96 cm tall, a little bigger than the
+	// 36 cm ball that is Unit 0 for the rules
+	if (ArtId[0] && AddArt(A, ArtId, FVector::ZeroVector, FVector(84.0, 84.0, 96.0)))
+	{
+		Robot.bArt = true;
+		Robot.Actor = A;
+		return Robot;
+	}
 
 	// local frame: +X is forward. About 72 units across.
 	AddPart(A, SphereMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(0.80, 0.68, 0.68), Body, FLinearColor::Black);
@@ -239,7 +247,23 @@ void AMatchCutGameMode::SpawnSolid(FDCSolid& Solid, const FVector& CamPos, const
 	const FQuat Q = CamRot.Quaternion() * Solid.Rot.Quaternion();
 	// actor axes: X = away from the camera, Y = right, Z = up
 	const FVector Size(Solid.Size.Z, Solid.Size.X, Solid.Size.Y);
-	Solid.Actor = SpawnBox(Center, Q.Rotator(), Size, DCColor::ForKind(Solid.Kind), !bInGhost);
+	const FString ArtId = FString(TEXT("solid:")) + (Solid.Kind.IsNone() ? FString(TEXT("rock")) : Solid.Kind.ToString());
+	if (Size.GetMax() < 2000.0 && Art.Contains(ArtId))
+	{
+		// a model stretched over the box, picked and turned by a hash of the place so shots do not look tiled
+		AActor* A = SpawnGroup(Center);
+		A->SetActorRotation(Q);
+		AddArt(A, ArtId, FVector::ZeroVector, Size, GetTypeHash(FIntVector(FMath::RoundToInt(Solid.C.X), FMath::RoundToInt(Solid.C.Y), FMath::RoundToInt(Solid.C.Z))), true);
+		if (!bInGhost)
+		{
+			GhostHidden.Add(A);
+		}
+		Solid.Actor = A;
+	}
+	else
+	{
+		Solid.Actor = SpawnBox(Center, Q.Rotator(), Size, DCColor::ForKind(Solid.Kind), !bInGhost);
+	}
 	Solid.World = FTransform(Q, Center);
 	Solid.Half = Size * 0.5;
 	Solid.BaseLoc = Center;
@@ -450,6 +474,7 @@ void AMatchCutGameMode::SpawnFilmSets()
 void AMatchCutGameMode::SpawnWorld()
 {
 	UWorld* World = GetWorld();
+	LoadArt();
 
 	KeyLight = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 5000), FRotator(-68.0, 25.0, 0.0));
 	if (UDirectionalLightComponent* DLC = Cast<UDirectionalLightComponent>(KeyLight->GetLightComponent()))
@@ -481,12 +506,16 @@ void AMatchCutGameMode::SpawnWorld()
 		{
 			// a crew robot that cannot swim: carried like any heavy thing
 			A->Destroy();
-			const FDCRobot Robot = SpawnRobot(ShotToWorld(Prop.Shot, Prop.S), DCColor::Crew, DCColor::EyeWarm, false);
+			const FDCRobot Robot = SpawnRobot(ShotToWorld(Prop.Shot, Prop.S), DCColor::Crew, DCColor::EyeWarm, false, TEXT("crew"));
 			PropRobots.Add((int32)(&Prop - Props.GetData()), Robot);
 			Prop.Actor = Robot.Actor;
 			continue;
 		}
-		if (Prop.Kind == TEXT("weight"))
+		if (AddArt(A, Prop.Kind.ToString(), FVector::ZeroVector, Prop.Kind == TEXT("cell") ? FVector(64.0, 64.0, 88.0) : FVector(130.0, 150.0, Prop.Kind == TEXT("weight") ? 42.0 : 24.0)))
+		{
+			// the model; its box is the one the shapes below fill
+		}
+		else if (Prop.Kind == TEXT("weight"))
 		{
 			// a heavy lid: too heavy to push, it needs the gripper
 			AddPart(A, CubeMesh, FVector(0, 0, 0), FRotator::ZeroRotator, FVector(1.3, 1.5, 0.42), DCColor::DarkMetal, FLinearColor::Black);
@@ -510,7 +539,17 @@ void AMatchCutGameMode::SpawnWorld()
 		const FDCShot& Shot = Shots[Socket.Shot];
 		AActor* A = SpawnGroup(ShotToWorld(Socket.Shot, Socket.S));
 		A->SetActorRotation(Shot.CamRot);
-		if (Socket.Accepts == TEXT("cell"))
+		const FString SocketArt = TEXT("socket:") + Socket.Label;
+		const bool bSocketArt = Art.Contains(SocketArt);
+		if (bSocketArt)
+		{
+			// the model, with the small light the game switches from red to green
+			const bool bDock = Socket.Accepts == TEXT("cell"), bLift = Socket.Accepts == TEXT("crew");
+			AddArt(A, SocketArt, bDock ? FVector(45, 0, -5) : (bLift ? FVector(0, 0, 5) : FVector(0, 0, 30)), bDock ? FVector(130, 130, 170) : (bLift ? FVector(130, 180, 150) : FVector(220, 200, 60)));
+			AddPart(A, SphereMesh, bDock ? FVector(40, 0, 90) : (bLift ? FVector(-20, 0, 92) : FVector(-80, 0, 20)), FRotator::ZeroRotator, FVector(0.2, 0.2, 0.2), FLinearColor(1.f, 0.2f, 0.1f), FLinearColor(5.f, 0.6f, 0.3f));
+			Socket.Paint = Paints.Num() - 1;
+		}
+		else if (Socket.Accepts == TEXT("cell"))
 		{
 			// a dock: a dark block with a light that turns green when the cell is in
 			AddPart(A, CubeMesh, FVector(30, 0, -60), FRotator::ZeroRotator, FVector(1.0, 1.3, 0.5), DCColor::DarkMetal, FLinearColor::Black);
@@ -545,14 +584,15 @@ void AMatchCutGameMode::SpawnWorld()
 	PredActor->SetActorHiddenInGame(true);
 
 	// the player's robot: battered, one thruster missing, number plate scraped off
-	Hero = SpawnRobot(Shots[0].CamPos, DCColor::Hero, DCColor::EyeCyan, true);
+	Hero = SpawnRobot(Shots[0].CamPos, DCColor::Hero, DCColor::EyeCyan, true, TEXT("hero"));
 	if (AActor* A = Hero.Actor.Get())
 	{
 		USpotLightComponent* L = NewObject<USpotLightComponent>(A);
 		L->SetMobility(EComponentMobility::Movable);
 		L->SetupAttachment(A->GetRootComponent());
 		L->RegisterComponent();
-		L->SetRelativeLocation(FVector(36.0, 0.0, 8.0));
+		// the lamp sits at the head: for the model, a little under the top of its box and at its front
+		L->SetRelativeLocation(Hero.bArt ? FVector(22.0, 0.0, 36.0) : FVector(36.0, 0.0, 8.0));
 		L->SetIntensityUnits(ELightUnits::Unitless);
 		L->SetLightColor(FLinearColor(1.f, 0.93f, 0.75f));
 		L->SetInnerConeAngle(14.f);
@@ -574,6 +614,27 @@ void AMatchCutGameMode::SpawnWorld()
 		G->SetCastShadows(false);
 		G->SetVisibility(false);
 		LampGlow = G;
+
+		// a soft light that only Unit 0 takes (lighting channel 1), from the camera side and above: it reads against
+		// dark rock in every shot, lamp or no lamp (brief 05)
+		TArray<UStaticMeshComponent*> Parts;
+		A->GetComponents(Parts);
+		for (UStaticMeshComponent* Part : Parts)
+		{
+			Part->SetLightingChannels(true, true, false);
+		}
+		UPointLightComponent* Rim = NewObject<UPointLightComponent>(A);
+		Rim->SetMobility(EComponentMobility::Movable);
+		Rim->SetupAttachment(A->GetRootComponent());
+		Rim->RegisterComponent();
+		Rim->SetAbsolute(false, true, false);
+		Rim->SetIntensityUnits(ELightUnits::Unitless);
+		Rim->SetIntensity(HeroRimPower);
+		Rim->SetLightColor(FLinearColor(0.75f, 0.95f, 1.f));
+		Rim->SetAttenuationRadius(700.f);
+		Rim->SetCastShadows(false);
+		Rim->SetLightingChannels(false, true, false);
+		HeroRim = Rim;
 	}
 
 	for (int32 i = 0; i < Shots.Num(); ++i)
@@ -604,7 +665,7 @@ void AMatchCutGameMode::SpawnWorld()
 	if (CrewShot != INDEX_NONE)
 	{
 		CrewPos = ShotToWorld(CrewShot, Shots[CrewShot].CrewS);
-		Crew = SpawnRobot(CrewPos, DCColor::Crew, DCColor::EyeWarm, false);
+		Crew = SpawnRobot(CrewPos, DCColor::Crew, DCColor::EyeWarm, false, TEXT("crew"));
 		PlaceRobot(Crew, CrewPos, FVector2D(1.0, -0.3), Shots[CrewShot].CamRot, 35.f);
 	}
 

@@ -1,0 +1,8 @@
+[
+ {
+  "id": "plate",
+  "file": "testbox.glb",
+  "yUp": true,
+  "notes": "Pipeline test: rounded box 1.3 x 0.24 x 1.5 m, made by Tools/make_test_glb.py."
+ }
+]
