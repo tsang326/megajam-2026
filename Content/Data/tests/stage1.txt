@@ -42,69 +42,75 @@ cut
 wait 0.15
 snap s1a_after_cut_no_marks
 # --- shot 1 THE SHELF: no gripper yet. Push the plate onto the VENT frame of the next shot (gate), stay close, cut
-wait 0.8
+wait 1.6
+snap s1a2_push_prompt
 cut
 wait 0.4
-snap s1b_cut_before_solved
-swimto 420 -100 1050
-swimto 420 -244 1050
-wait 0.3
-snap s1c_beside_plate
-swimto 137 -244 1050
+snap s1b_cut_before_solved_says_what_to_do
+# 20 s without progress: the plate is pointed at, with an arrow to the frame
+stuck 21
+wait 0.6
+snap s1b2_stuck_hint_arrow
+# pushing is forgiving: from well above the floor and at another depth
+swimrel plate -150 110 -120
+wait 0.2
+snap s1c_beside_plate_high_and_nearer
+move 1 0 0 0.35
+snap s1c2_push_cue
+swimsock vent -101 80 1050
 wait 0.35
 snap s1d_plate_on_frame_marks_reveal
 wait 1.5
 # failed take, mark cut: not on a mark
 cut
 wait 0.3
-snap s1e_FAIL_not_on_mark
+snap s1e_FAIL_not_on_mark_says_what_to_do
 waitstate Playing
 wait 0.6
 # wrong way first: on the mark but too far from the plate (far from the camera). The plate stays behind.
-swimn -0.189 -0.392 1300
+swimmark 0 0 1300
 wait 0.5
 snap s1f_on_mark_plate_stays
 cut
 wait 0.6
 snap s2a_vent_no_plate
+wait 2.6
+snap s2a2_back_prompt
 move 1 0 0 2.5
 snap s2b_current_pushes_back
 retake
 wait 0.8
 snap s1g_back_one_shot
-# right way: push the plate onto the frame again, rise clear of it, stand on the mark close to it, cut
-swimto 420 -100 1050
-swimto 420 -244 1050
-swimto 137 -244 1050
-swimto 137 -150 1050
+# R put the plate back where it was when the shot began. Right way: push it onto the frame again, stand on the mark close to it, cut
+swimrel plate -150 80 0
+swimsock vent -101 80 1050
 wait 0.3
 snap s1h_plate_on_vent_frame
-swimn -0.189 -0.392 1050
+swimmark 0 0 1050
 wait 0.5
 snap s1i_on_mark_plate_fits
 cut
 wait 0.5
 snap s2c_vent_current_stopped
-# --- shot 2 THE VENT: the plate on the vent is the gate; camera rail; mark with a depth
+# --- shot 2 THE VENT: the plate on the vent is the gate; the first mark with a depth
 wait 1.6
-snap s2d_marks_shown
+snap s2d_marks_shown_depth_prompt
 # failed take, mark cut: right place on screen, wrong depth
-swimto 122 41 1100
+swimmark 0 0 1100
 wait 0.4
 snap s2g_on_mark_too_close
 cut
 wait 0.3
-snap s2h_FAIL_too_close
+snap s2h_FAIL_too_close_says_what_to_do
 waitstate Playing
 wait 0.5
-swimto 700 -40 1150
-wait 0.6
-snap s2e_rail_midway
-# the camera has moved along its rail; the mark stays where it is on screen
-wait 1.0
-swimn 0.193 0.114 1350
+# depth by the mouse wheel: steps farther until the ring fits
+swimmark 0 0 1100
+wheel 2
+wait 0.5
+wheel 2
 wait 0.8
-snap s2i_on_mark_depth_ok
+snap s2i_on_mark_depth_ok_by_wheel
 cut
 wait 0.5
 snap s3a_wreck

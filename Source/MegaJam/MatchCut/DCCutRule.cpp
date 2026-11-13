@@ -179,10 +179,26 @@ void AMatchCutGameMode::TickMovement(float Dt)
 	{
 		In.Normalize();
 	}
+	if (FMath::Abs(In.X) + FMath::Abs(In.Y) > 0.3)
+	{
+		MovedFor += Dt;
+	}
+	// mouse wheel: each step is a stretch of depth still to swim
+	const bool bWheel = FMath::Abs(In.Z) < 0.1 && FMath::Abs(DepthQueue) > 4.f;
+	if (bWheel)
+	{
+		In.Z = DepthQueue > 0.f ? 1.0 : -1.0;
+	}
+	else if (FMath::Abs(In.Z) >= 0.1)
+	{
+		DepthQueue = 0.f;
+	}
 	if (FMath::Abs(In.Z) > 0.3)
 	{
 		bDepthUsed = true;
 	}
+	const double ZBefore = HeroS.Z;
+	const FVector2D NdcBefore = ViewNdc(Cur, HeroS, false);
 
 	VelS += FVector(In.X * DCMove::Accel, In.Y * DCMove::Accel, In.Z * DCMove::AccelDepth) * Dt;
 	for (const FDCCurrent& C : Shots[Cur].Currents)
@@ -200,6 +216,47 @@ void AMatchCutGameMode::TickMovement(float Dt)
 		VelS = VelS.GetSafeNormal() * DCMove::MaxSpeed * 1.4f;
 	}
 	MoveHero(VelS * Dt);
+	if (FMath::Abs(In.X) + FMath::Abs(In.Y) < 0.1 && FMath::Abs(HeroS.Z - ZBefore) > 0.01)
+	{
+		// depth alone: Unit 0 keeps its place on screen and only its size changes (brief 05)
+		const FVector Keep = NdcToShot(Cur, NdcBefore, HeroS.Z, false);
+		if (!Blocked(Cur, Keep, HeroRadius))
+		{
+			HeroS.X = Keep.X;
+			HeroS.Y = Keep.Y;
+		}
+	}
+	if (bWheel)
+	{
+		const double Went = HeroS.Z - ZBefore;
+		DepthQueue = (FMath::Abs(Went) < 0.05 || FMath::Abs(Went) >= FMath::Abs(DepthQueue)) ? 0.f : DepthQueue - (float)Went;
+	}
+	else if (FMath::Abs(In.Z) < 0.1 && FMath::Abs(In.X) > 0.2)
+	{
+		// depth is hard to read from the side: next to a loose thing Unit 0 lines up with it by itself
+		for (const FDCProp& P : Props)
+		{
+			if (P.Shot != Cur || P.bLocked || P.bCarried || (P.bHeavy && !bFeature[1]))
+			{
+				continue;
+			}
+			const FVector H = PropHalf(P);
+			const FVector D = P.S - HeroS;
+			// only while swimming towards it, beside it
+			if (In.X * D.X > 0.0 && FMath::Abs(D.X) < H.X + HeroRadius + 90.0 && -D.Y < 150.0 && D.Y < H.Y + HeroRadius && FMath::Abs(D.Z) < 300.0 && FMath::Abs(D.Z) > 1.0)
+			{
+				const double Z = FMath::FInterpTo(HeroS.Z, P.S.Z, Dt, 5.f);
+				FVector Try = HeroS;
+				Try.Z = Z;
+				if (!Blocked(Cur, Try, HeroRadius))
+				{
+					HeroS.Z = Z;
+					VelS.Z = 0.0;
+				}
+				break;
+			}
+		}
+	}
 
 	if (!In.IsNearlyZero(0.05))
 	{
@@ -394,6 +451,7 @@ bool AMatchCutGameMode::TryCut()
 		}
 		UE_LOG(LogMatchCut, Display, TEXT("RESTORE OK ndc=(%.4f,%.4f) target=(%.4f,%.4f) off=%.0fpx@1080p"), HeroNdc.X, HeroNdc.Y, RestoreNdc.X, RestoreNdc.Y, ErrPx);
 		Take = 1;
+		Progress();
 		StartFlashback();
 		return true;
 	}
@@ -411,7 +469,7 @@ bool AMatchCutGameMode::TryCut()
 		if (!bFirstCutDone || !A.bGateOpen)
 		{
 			// the first cut cannot be failed, and a press before any mark shows only gets the hint
-			SoftFailTime = 2.5f;
+			SoftFailTime = 4.5f;
 			return false;
 		}
 		FailTake(E.Reason);
@@ -483,6 +541,8 @@ void AMatchCutGameMode::FailTake(const TCHAR* Reason)
 	State = EDCState::TakeCard;
 	StateTime = 0.f;
 	TakeReason = Reason;
+	TakeHow = FailHow(Reason);
+	Teach(DCTeach::Back);
 	++Take;
 	VelS = FVector::ZeroVector;
 	if (Audio)

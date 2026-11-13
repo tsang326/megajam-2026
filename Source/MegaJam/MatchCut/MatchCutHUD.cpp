@@ -637,6 +637,122 @@ void AMatchCutHUD::DrawClapper(AMatchCutGameMode* GM)
 	Text(FString::Printf(DCTEXT_CAM_TAG, GM->Cur + 1), X + W - 40.f, Y + 96.f, 2.0f, Dim, 2);
 	Text(FString::Printf(DCTEXT_TAKE, GM->Take), X + W * 0.5f, Y + 165.f, 7.0f, White, 1);
 	Text(GM->TakeReason, X + W * 0.5f, Y + 322.f, 2.2f, Red, 1);
+	// what to do next (brief 05)
+	const FString How = GM->TakeHow;
+	if (!How.IsEmpty())
+	{
+		Rect(960.f - How.Len() * 9.5f - 24.f, Y + H + 22.f, How.Len() * 19.f + 48.f, 50.f, FLinearColor(0.f, 0.f, 0.f, 0.8f));
+		Text(How, 960.f, Y + H + 30.f, 1.7f, White, 1);
+	}
+}
+
+void AMatchCutHUD::Arrow(const FVector2D& From, const FVector2D& To, const FLinearColor& Color, float Thick)
+{
+	const FVector2D D = (To - From).GetSafeNormal();
+	const FVector2D N(-D.Y, D.X);
+	Line(From.X, From.Y, To.X, To.Y, Color, Thick);
+	const FVector2D B = To - D * 22.0;
+	Line(To.X, To.Y, B.X + N.X * 13.0, B.Y + N.Y * 13.0, Color, Thick);
+	Line(To.X, To.Y, B.X - N.X * 13.0, B.Y - N.Y * 13.0, Color, Thick);
+}
+
+void AMatchCutHUD::DrawTeach(AMatchCutGameMode* GM)
+{
+	const FDCShot& Shot = GM->Shots[GM->Cur];
+	const float Time = GM->PlayClock;
+	const FVector2D HeroPx = NdcToPx(GM->HeroNdc);
+
+	// depth can be read: a soft shadow on the floor under Unit 0, with a thin line down to it
+	{
+		const FVector F(GM->HeroS.X, GM->HeroFloorY, GM->HeroS.Z);
+		const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, F, false));
+		const float W = (float)(GM->HeroRadius / (GM->TanH * FMath::Max(GM->HeroS.Z, 100.0)) * 960.0) * 1.25f;
+		if (P.Y < PicBottom - 4.f && P.Y > HeroPx.Y)
+		{
+			const int32 N = 28;
+			Rect(P.X - W * 0.7f, P.Y - W * 0.12f, W * 1.4f, W * 0.24f, FLinearColor(0.f, 0.f, 0.f, 0.35f));
+			for (int32 i = 0; i < N; ++i)
+			{
+				const float A0 = 2.f * UE_PI * i / N, A1 = 2.f * UE_PI * (i + 1) / N;
+				Line(P.X + W * FMath::Cos(A0), P.Y + W * 0.28f * FMath::Sin(A0), P.X + W * FMath::Cos(A1), P.Y + W * 0.28f * FMath::Sin(A1), FLinearColor(0.55f, 0.95f, 1.f, 0.55f), 2.f);
+			}
+			for (float Y = HeroPx.Y + W; Y < P.Y - 6.f; Y += 14.f)
+			{
+				Rect(P.X - 1.f, Y, 2.f, 6.f, FLinearColor(0.55f, 0.95f, 1.f, 0.25f));
+			}
+		}
+	}
+
+	// loose things read at a glance: a thin ring until the marks show (then the STAYS / COMES / FITS ring takes over)
+	if (!GM->InRestore())
+	{
+		for (const FDCProp& Prop : GM->Props)
+		{
+			if (Prop.Shot == GM->Cur && !Prop.bLocked && !Prop.bCarried && !Shot.bGateOpen)
+			{
+				const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, Prop.S, false));
+				const float Rad = 62.f * 900.f / (float)FMath::Max(Prop.S.Z, 100.0);
+				Ring(P.X, P.Y, Rad * (1.f + 0.04f * FMath::Sin(Time * 3.f)), FLinearColor(1.f, 1.f, 1.f, 0.55f), 2.f);
+			}
+		}
+	}
+
+	// PUSH cue on contact
+	if (GM->PushCue > 0.f && GM->Props.IsValidIndex(GM->PushProp))
+	{
+		const FDCProp& Prop = GM->Props[GM->PushProp];
+		const FVector2D P = NdcToPx(GM->ViewNdc(GM->Cur, Prop.S, false));
+		const float A = FMath::Clamp(GM->PushCue * 3.f, 0.f, 1.f);
+		Rect(P.X - 44.f, P.Y - 96.f, 88.f, 30.f, FLinearColor(0.f, 0.f, 0.f, 0.6f * A));
+		Text(DCText::PushCue, P.X, P.Y - 94.f, 1.25f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+		Arrow(FVector2D(P.X + GM->PushDir * 60.f, P.Y - 46.f), FVector2D(P.X + GM->PushDir * 110.f, P.Y - 46.f), FLinearColor(1.f, 1.f, 1.f, A), 3.f);
+	}
+
+	// the one-time prompt for a control
+	if (GM->PromptTime > 0.f && GM->PromptId != INDEX_NONE)
+	{
+		const FString S = DCText::Prompts[GM->PromptId];
+		const float A = FMath::Clamp(GM->PromptTime * 2.f, 0.f, 1.f);
+		const float W = S.Len() * 21.f + 60.f;
+		const float Y = PicTop + 150.f;
+		Rect(960.f - W * 0.5f, Y, W, 58.f, FLinearColor(0.f, 0.f, 0.f, 0.72f * A));
+		Frame(960.f - W * 0.5f, Y, W, 58.f, FLinearColor(1.f, 1.f, 1.f, 0.8f * A), 2.f);
+		Text(S, 960.f, Y + 10.f, 1.9f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+		if (GM->PromptId == DCTeach::Depth)
+		{
+			Text(DCText::DepthFirst, 960.f, Y + 70.f, 1.3f, FLinearColor(Amber.R, Amber.G, Amber.B, A), 1);
+		}
+	}
+
+	// stuck for 20 s: point at the thing to use, and where it goes
+	if (GM->bStuckShown && GM->PredPhase == 0)
+	{
+		FVector2D A, B;
+		bool bTo = false;
+		const float Ph = FMath::Fmod(Time, 1.1f) / 1.1f;
+		if (GM->StuckTarget(A, B, bTo))
+		{
+			const FVector2D P = NdcToPx(A);
+			const float Bob = 10.f * FMath::Sin(Time * 6.f);
+			Ring(P.X, P.Y, 50.f + 60.f * Ph, FLinearColor(1.f, 1.f, 1.f, 0.9f * (1.f - Ph)), 4.f);
+			Ring(P.X, P.Y, 50.f, White, 3.f);
+			Arrow(FVector2D(P.X, P.Y - 190.f + Bob), FVector2D(P.X, P.Y - 70.f + Bob), White, 6.f);
+			if (bTo)
+			{
+				const FVector2D Q = NdcToPx(B);
+				const FVector2D D = (Q - P).GetSafeNormal();
+				if (FVector2D::Distance(P, Q) > 150.0)
+				{
+					Arrow(P + D * 70.0, Q - D * 70.0, FLinearColor(Amber.R, Amber.G, Amber.B, 0.6f + 0.4f * FMath::Sin(Time * 6.f)), 4.f);
+				}
+			}
+		}
+		else
+		{
+			Rect(660.f, PicTop + 220.f, 600.f, 50.f, FLinearColor(0.f, 0.f, 0.f, 0.7f));
+			Text(DCText::StuckBack, 960.f, PicTop + 228.f, 1.7f, White, 1);
+		}
+	}
 }
 
 void AMatchCutHUD::DrawFeatures(AMatchCutGameMode* GM, float X, float Y, float Scale, bool bCard)
@@ -899,6 +1015,10 @@ void AMatchCutHUD::DrawHUD()
 	{
 		DrawGhost(GM);
 		DrawMarks(GM);
+		if (GM->State == EDCState::Playing)
+		{
+			DrawTeach(GM);
+		}
 	}
 	if (GM->PredPhase > 0 && GM->State == EDCState::Playing)
 	{
@@ -973,8 +1093,10 @@ void AMatchCutHUD::DrawHUD()
 		}
 		else if (GM->SoftFailTime > 0.f)
 		{
-			Hint = Shot.bGateOpen ? DCText::SoftFail : DCText::SoftFailNoMark;
+			// the reason and the next action: the shot's own hint says what to do (brief 05)
+			Hint = Shot.bGateOpen ? FString(DCText::SoftFail) : FString(DCText::SoftFailNoMark) + TEXT(" ") + Shot.Hint;
 			HintCol = Amber;
+			HintScale = Hint.Len() > 70 ? 1.45f : 1.7f;
 		}
 		else if (GM->BannerTime > 0.f && !GM->Banner2.IsEmpty())
 		{
@@ -991,6 +1113,6 @@ void AMatchCutHUD::DrawHUD()
 			HintCol = FLinearColor(1.f, 1.f, 1.f, 0.8f + 0.2f * FMath::Sin(Time * 4.f));
 		}
 		Text(Hint, 960.f, 962.f, HintScale, HintCol, 1);
-		Text(FString(DCText::ControlsMove) + (GM->bFeature[1] ? DCText::ControlsGrab : TEXT("")) + (GM->bFeature[0] ? DCText::ControlsLampKey : TEXT("")) + DCText::ControlsEnd, 960.f, 1040.f, 1.0f, Dim, 1);
+		Text(GM->ControlsLine(), 960.f, 1040.f, 1.0f, Dim, 1);
 	}
 }

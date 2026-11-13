@@ -126,6 +126,7 @@ void AMatchCutGameMode::StartPlay()
 		State = EDCState::Playing;
 		History.Reset();
 		GrantEarlierStages(StartShot); // -MCShot=6 starts stage 2 with what stage 1 gives
+		TeachUpTo(StartShot);
 		EnterShot(StartShot, Shots[StartShot].Start, true);
 	}
 	else if (FParse::Param(FCommandLine::Get(), TEXT("MCSkipFilm")))
@@ -293,6 +294,8 @@ void AMatchCutGameMode::EnterShot(int32 Index, const FVector& HeroAtS, bool bPus
 	HeroS = HeroAtS;
 	HeroPos = ShotToWorld(Cur, HeroS);
 	HeroNdc = ViewNdc(Cur, HeroS, false);
+	Progress();
+	DepthQueue = 0.f;
 	ResetPredator();
 	if (Shot.bHasPart)
 	{
@@ -375,6 +378,8 @@ void AMatchCutGameMode::TickPlaying(float Dt)
 	TickMovement(Dt);
 	TickPuzzles(Dt);
 	CurEval = EvalCut();
+	HeroFloorY = FloorUnder(Cur, HeroS);
+	TickTeach(Dt);
 	if (!InRestore() && Shots[Cur].Exits.IsValidIndex(CurEval.Exit) && CurEval.Exit != GhostExit)
 	{
 		// two cameras: the ghost shows the one whose mark is nearest

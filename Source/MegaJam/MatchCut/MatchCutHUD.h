@@ -28,6 +28,8 @@ private:
 
 	void DrawGhost(AMatchCutGameMode* GM);
 	void DrawMarks(AMatchCutGameMode* GM);
+	void DrawTeach(AMatchCutGameMode* GM);
+	void Arrow(const FVector2D& From, const FVector2D& To, const FLinearColor& Color, float Thick);
 	void Quad(const FVector2D& C, float AngleDeg, float HalfLen, float HalfWidth, const FLinearColor& Color);
 	void Tape(const FVector2D& C, int32 Shape, float Size, const FLinearColor& Color, float Tilt);
 	void Brackets(float X, float Y, float R, const FLinearColor& Color, float Thick);

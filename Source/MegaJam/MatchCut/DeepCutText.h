@@ -5,6 +5,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "DeepCutTypes.h"
 
 // lines with numbers in them (FString::Printf needs a literal format)
 #define DCTEXT_CAM_TAG TEXT("FATHOM CAM %02d")
@@ -42,8 +43,8 @@ namespace DCText
 	static const TCHAR* Rec = TEXT("REC");
 
 	// cut preview and failed takes
-	static const TCHAR* SoftFail = TEXT("Not here. Swim onto a tape mark.");              // NEW (was "Move to the green area.")
-	static const TCHAR* SoftFailNoMark = TEXT("No tape mark yet. Solve this shot first."); // NEW
+	static const TCHAR* SoftFail = TEXT("Not here. Swim onto the tape mark. Then press C.");
+	static const TCHAR* SoftFailNoMark = TEXT("No tape mark yet."); // followed by the shot's own hint (brief 05)
 	static const TCHAR* RingOk = TEXT("C: CUT");
 	static const TCHAR* ReasonRock = TEXT("ROCK IN THE WAY");
 	static const TCHAR* ReasonDarkLamp = TEXT("TOO DARK - F: LAMP");
@@ -51,8 +52,8 @@ namespace DCText
 	static const TCHAR* ReasonLast = TEXT("NO NEXT SHOT");
 	static const TCHAR* ReasonNoMark = TEXT("NO MARK YET");       // NEW
 	static const TCHAR* ReasonOffMark = TEXT("NOT ON A MARK");    // NEW
-	static const TCHAR* ReasonTooClose = TEXT("TOO CLOSE - SHIFT"); // NEW: nearer to the camera than the mark
-	static const TCHAR* ReasonTooFar = TEXT("TOO FAR - SPACE");     // NEW
+	static const TCHAR* ReasonTooClose = TEXT("TOO CLOSE - Q"); // NEW: nearer to the camera than the mark
+	static const TCHAR* ReasonTooFar = TEXT("TOO FAR - Z");     // NEW
 	static const TCHAR* ReasonWait = TEXT("NOT YET - WAIT");         // NEW: a mark that comes and goes
 	static const TCHAR* CutFlash = TEXT("CUT");
 
@@ -76,11 +77,33 @@ namespace DCText
 	static const TCHAR* CrewFound = TEXT("CREW FOUND");
 
 	// general
-	// the controls line is put together from these: a key only shows once its feature is built (brief 04)
-	static const TCHAR* ControlsMove = TEXT("WASD swim   SPACE / SHIFT closer / farther");
-	static const TCHAR* ControlsGrab = TEXT("   E grab");
-	static const TCHAR* ControlsLampKey = TEXT("   F lamp");
-	static const TCHAR* ControlsEnd = TEXT("   C cut   R back one shot   ESC quit");
+	// the controls line is put together from these: a key only shows once it has been taught (brief 05)
+	static const TCHAR* Controls[DCTeach::Num] = { TEXT("WASD swim"), TEXT("C cut"), TEXT("R back one shot"), TEXT("swim into things: push"),
+		TEXT("WHEEL or Q / Z farther / closer"), TEXT("F lamp"), TEXT("E grab") };
+	static const TCHAR* ControlsQuit = TEXT("ESC quit");
+	// one-time prompt, shown the first time the level needs the control (brief 05). All NEW.
+	static const TCHAR* Prompts[DCTeach::Num] = {
+		TEXT("W A S D  or arrow keys: swim"),
+		TEXT("On the tape mark:  C  cuts to the next shot"),
+		TEXT("R: go back one shot"),
+		TEXT("Swim into a loose thing to push it"),
+		TEXT("Mouse wheel or  Q / Z: farther / closer"),
+		TEXT("F: lamp on / off"),
+		TEXT("E: grab / drop. Now you can carry heavy things") };
+	static const TCHAR* PushCue = TEXT("PUSH");
+	static const TCHAR* DepthFirst = TEXT("Depth only matters at a mark with a white ring.");
+	// a failed take says what to do next (brief 05). All NEW.
+	static const TCHAR* HowOffMark = TEXT("Swim onto the tape mark. Then press C.");
+	static const TCHAR* HowTooClose = TEXT("Go farther: wheel up or Q, until your ring fits the white ring.");
+	static const TCHAR* HowTooFar = TEXT("Come closer: wheel down or Z, until your ring fits the white ring.");
+	static const TCHAR* HowWait = TEXT("Wait until the mark is bright. Then press C.");
+	static const TCHAR* HowDark = TEXT("Press F for the lamp. Then press C.");
+	static const TCHAR* HowLineUp = TEXT("Swim into the MATCH ring. Then press C.");
+	static const TCHAR* HowRock = TEXT("Rock is in the way in the next shot. Move a little on the mark.");
+	static const TCHAR* HowCaught = TEXT("Get to the tape mark and press C before it reaches you.");
+	static const TCHAR* ReasonCame = TEXT("IT CAME WITH YOU");
+	static const TCHAR* HowCame = TEXT("Cut while it is outside your circle. Then it stays behind.");
+	static const TCHAR* StuckBack = TEXT("Nothing more to do here. R: back one shot.");
 	static const TCHAR* EndKeys = TEXT("R: play again     ESC: quit");
 	static const TCHAR* EndKeysNext = TEXT("C: next stage     R: play again     ESC: quit"); // NEW
 

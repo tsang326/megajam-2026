@@ -21,6 +21,12 @@ namespace DC
 	const double FrameY = 0.64;
 }
 
+/** Controls, in the order they are taught. */
+namespace DCTeach
+{
+	enum { Move, Cut, Back, Push, Depth, Lamp, Grab, Num };
+}
+
 /** A box of rock or metal. The collision box is read from the same transform that draws the mesh. */
 struct FDCSolid
 {

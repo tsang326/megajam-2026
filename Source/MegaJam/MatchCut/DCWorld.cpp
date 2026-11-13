@@ -23,7 +23,7 @@ namespace DCColor
 {
 	const FLinearColor Rock(0.30f, 0.28f, 0.25f);
 	const FLinearColor RockDark(0.20f, 0.20f, 0.19f);
-	const FLinearColor Plate(0.50f, 0.26f, 0.10f);
+	const FLinearColor Plate(0.95f, 0.50f, 0.06f); // safety orange: a loose thing never reads as rock (brief 05)
 	const FLinearColor Hull(0.26f, 0.30f, 0.33f);
 	const FLinearColor Decor(0.10f, 0.12f, 0.13f);
 	const FLinearColor Hero(0.36f, 0.45f, 0.42f);
@@ -36,7 +36,7 @@ namespace DCColor
 
 	FLinearColor ForKind(FName Kind)
 	{
-		if (Kind == TEXT("plate")) { return Plate; }
+		if (Kind == TEXT("plate")) { return FLinearColor(0.50f, 0.26f, 0.10f); } // rusty metal scenery, not the loose plate
 		if (Kind == TEXT("hull")) { return Hull; }
 		if (Kind == TEXT("metal")) { return DarkMetal; }
 		if (Kind == TEXT("dark")) { return RockDark; }
@@ -500,7 +500,7 @@ void AMatchCutGameMode::SpawnWorld()
 		}
 		else
 		{
-			AddPart(A, CubeMesh, FVector(0, 0, 0), FRotator(0, 0, 0), FVector(1.3, 1.5, 0.16), DCColor::Plate, DCColor::Plate * 0.25f);
+			AddPart(A, CubeMesh, FVector(0, 0, 0), FRotator(0, 0, 0), FVector(1.3, 1.5, 0.24), DCColor::Plate, DCColor::Plate * 0.45f);
 			AddPart(A, CubeMesh, FVector(0, 0, 10), FRotator(0, 0, 0), FVector(0.2, 1.1, 0.08), DCColor::DarkMetal, FLinearColor::Black);
 		}
 		Prop.Actor = A;

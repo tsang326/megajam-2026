@@ -60,6 +60,8 @@ public:
 	void PressUse();
 	void PressRetake();
 	void PressAnyKey();
+	/** Mouse wheel: one step farther (+) or closer (-). */
+	void AddDepthStep(float Steps);
 	bool IsScriptActive() const { return bScriptActive; }
 
 	/** The cut. Returns true when the take succeeded. */
@@ -159,6 +161,18 @@ private:
 	void UpdateGentle(float Dt);
 	bool SwitchInReach() const;
 	FString UsePrompt(FVector& OutS) const;
+	FVector PropHalf(const FDCProp& Prop) const;
+	/** Height of the ground under a shot-space point (the highest solid below it). */
+	double FloorUnder(int32 Shot, const FVector& S) const;
+	// ---- DCTeach.cpp: controls are taught when they are first needed; a stronger hint after 20 s without progress
+	void Teach(int32 Control);
+	void TeachUpTo(int32 ShotIndex);
+	void TickTeach(float Dt);
+	void Progress() { StuckTime = 0.f; }
+	FString ControlsLine() const;
+	/** The thing a stuck player should use: its place on screen, and where it has to go (if it has to go somewhere). */
+	bool StuckTarget(FVector2D& OutNdc, FVector2D& OutToNdc, bool& bHasTo) const;
+	const TCHAR* FailHow(const TCHAR* Reason) const;
 	void TakeSnap(FDCSnap& Out) const;
 	void RestoreSnap(const FDCSnap& Snap);
 
@@ -258,6 +272,20 @@ private:
 	bool bDepthUsed = false;
 	TArray<FDCSnap> History;
 	TArray<int32> Visited;
+
+	// teaching (brief 05)
+	bool bTaught[DCTeach::Num] = { false, false, false, false, false, false, false };
+	int32 PromptId = INDEX_NONE;
+	float PromptTime = 0.f;
+	float StuckTime = 0.f;     // seconds in this shot without progress
+	bool bStuckShown = false;
+	float MovedFor = 0.f;
+	float DepthQueue = 0.f;    // cm still to travel from mouse-wheel steps
+	int32 PushProp = INDEX_NONE;
+	float PushCue = 0.f;
+	float PushDir = 1.f;
+	double HeroFloorY = -215.0;
+	const TCHAR* TakeHow = TEXT("");
 
 	// hero
 	FDCRobot Hero;

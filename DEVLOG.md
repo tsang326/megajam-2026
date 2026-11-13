@@ -67,3 +67,15 @@ Solo developer + AI agents (Claude Code). Times are Vietnam time (UTC+7).
 - Checked offscreen with the editor build: `stage2` alone and `full12` (stage 1, C, stage 2) both reach `END CARD stage=2 scenes=2/3 crew=2/7`. 99 captures in `docs/captures/stage2/`. Report: `docs/stage2-report.md`.
 - Not done: no human has played stage 2; the clip was looked at as stills, not in motion; sound checked by log only. Missing sounds (a predator sting, diver breathing) use stand-ins from the 13 existing sounds.
 - Packaged Mac Development build made again; `full12` runs in it from the design-file card to the stage 2 end card (99 captures, 13 of 13 sounds load). `route_yellow` still passes in the editor build. `-MCShot=6` starts at stage 2 and plays the official record first.
+
+### 2026-11-13, night: fixes after the first hand playtest (brief 05, part A)
+
+The first person to play stage 1 by hand got stuck in THE SHELF: the plate was under the bottom bar, pushing needed floor height and the right depth, and the screen only said "No tape mark yet".
+
+- Every floor is 65 cm higher, so things that lie on it are inside the picture. The plate is safety orange with a thin ring until the marks show. The VENT frame is 400 px away from where Unit 0 arrives.
+- Pushing works from beside a thing at any height up to 150 cm above it and at any depth within 300 cm; Unit 0 lines up in depth by itself while it swims at the thing. A `PUSH` label and arrow show on contact.
+- Depth is on the mouse wheel and Q / Z (SPACE and SHIFT are gone). Depth alone keeps Unit 0's place on screen, so only its ring changes size. A shadow ring on the floor under Unit 0 shows where it is.
+- Controls are taught one at a time: a boxed prompt the first time the level needs a key, and only taught keys are listed in the bottom line. `-MCShot=N` counts what earlier shots teach as taught.
+- A press of C before the marks show answers with the shot's own instruction. The clapper of a failed take has a second line that says what to do. After 20 s without progress the thing to use gets an arrow and a pulse, and an arrow to where it goes.
+- THE VENT lost its camera rail; the way on is now behind the current, at a mark with a depth.
+- Checked offscreen with the editor build: `stage1`, `route_yellow` and `stage2` reach their end cards. Captures: `docs/captures/brief05/partA/`. Not yet run after this change: `full12`, the packaged build. No human has played it.

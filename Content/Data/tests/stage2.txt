@@ -102,7 +102,7 @@ swimto -350 -160 1200
 use
 wait 0.4
 # right mark: the lid lands on the VENT frame
-swimn 0.151 -0.514 1150
+swimmark 0 0
 wait 0.6
 snap t3g_low_mark_lid_fits
 cut

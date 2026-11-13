@@ -143,7 +143,66 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 		const int32 N = FMath::Clamp((int32)Num(1), 0, Shots.Num() - 1);
 		State = EDCState::Playing;
 		StateTime = 0.f;
+		TeachUpTo(N);
 		EnterShot(N, Shots[N].Start, true);
+	}
+	else if (Cmd == TEXT("swimrel") || Cmd == TEXT("swimmark") || Cmd == TEXT("swimsock"))
+	{
+		// swimrel ID DX DY [DZ]: to a point beside a loose thing.   swimsock ID DX DY [DZ]: beside the place of a socket
+		// (seen from this shot).   swimmark EXIT MARK [Z]: onto a tape mark, at its depth unless Z is given.
+		bool bFound = false;
+		if (Cmd == TEXT("swimmark"))
+		{
+			const int32 e = (int32)Num(1), m = (int32)Num(2);
+			if (Shots[Cur].Exits.IsValidIndex(e) && Shots[Cur].Exits[e].Marks.IsValidIndex(m))
+			{
+				const FDCExit& Exit = Shots[Cur].Exits[e];
+				ScriptSwimTarget = NdcToShot(Cur, ViewNdc(Exit.To, Exit.Marks[m], true), T.IsValidIndex(3) ? Num(3) : Exit.Marks[m].Z, false);
+				bFound = true;
+			}
+		}
+		else if (Cmd == TEXT("swimrel"))
+		{
+			for (const FDCProp& P : Props)
+			{
+				if (T.IsValidIndex(1) && P.Id == T[1] && P.Shot == Cur)
+				{
+					ScriptSwimTarget = P.S + FVector(Num(2), Num(3), Num(4));
+					bFound = true;
+				}
+			}
+		}
+		else
+		{
+			for (const FDCSocket& S : Sockets)
+			{
+				if (T.IsValidIndex(1) && S.Id == T[1])
+				{
+					// where the socket's place in its own frame is in this shot, at the depth given (default: the socket's)
+					const double Z = T.IsValidIndex(4) ? Num(4) : S.S.Z;
+					ScriptSwimTarget = NdcToShot(Cur, ViewNdc(S.Shot, S.S, S.Shot != Cur), Z, false) + FVector(Num(2), Num(3), 0.0);
+					bFound = true;
+				}
+			}
+		}
+		if (bFound)
+		{
+			ScriptSwimTime = 0.f;
+			bScriptSwimming = true;
+		}
+		else
+		{
+			UE_LOG(LogMatchCut, Warning, TEXT("SCRIPT target not found: %s"), *Line);
+		}
+	}
+	else if (Cmd == TEXT("wheel"))
+	{
+		bScriptHold = false;
+		AddDepthStep(Num(1));
+	}
+	else if (Cmd == TEXT("stuck"))
+	{
+		StuckTime = Num(1); // jump the no-progress clock
 	}
 	else if (Cmd == TEXT("tp") || Cmd == TEXT("tpn"))
 	{
@@ -224,6 +283,7 @@ bool AMatchCutGameMode::RunScriptLine(const FString& Line)
 			EndFilm();
 		}
 		GrantEarlierStages(N);
+		TeachUpTo(N);
 		State = EDCState::Playing;
 		StateTime = 0.f;
 		History.Reset();

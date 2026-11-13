@@ -17,10 +17,11 @@ retake
 wait 0.8
 snap y4_back_in_wreck
 # push the cell to the right until it sits on the DOCK frame, rise clear of it, stand on the yellow mark
-swimto -20 -80 1150
-swimto 85 -80 1150
-swimto 85 40 1150
-swimto 400 -50 1150
+swimrel cell -150 130
+swimrel cell -110 0
+swimsock dock -70 21 1150
+swimrel cell -70 130
+swimmark 0 0
 wait 0.5
 snap y5_on_yellow_cell_fits
 cut

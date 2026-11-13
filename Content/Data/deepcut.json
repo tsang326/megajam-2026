@@ -153,7 +153,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -247,7 +247,7 @@
    "name": "THE SHELF",
    "gate": "fits:vent",
    "hint": "Push the loose plate onto the VENT frame.",
-   "hintSolved": "Near things come with you through the cut. Stay close to the plate. Then cut.",
+   "hintSolved": "Near things come with you through the cut. Stay close to the plate. Swim onto the tape mark.",
    "cam": {
     "pos": [
      -900,
@@ -279,7 +279,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -345,8 +345,8 @@
      "id": "plate",
      "kind": "plate",
      "p": [
-      250,
-      -262,
+      -60,
+      -203,
       1050
      ]
     }
@@ -358,8 +358,8 @@
      "anyDepth": true,
      "marks": [
       [
-       -120,
-       -140,
+       63,
+       -42,
        1100
       ]
      ]
@@ -370,8 +370,8 @@
    "id": "vent",
    "name": "THE VENT",
    "gate": "socket:vent",
-   "hint": "The current is too strong. No plate on the vent? R: back one shot.",
-   "hintSolved": "Make your ring the same size as the mark. SPACE closer, SHIFT farther.",
+   "hint": "The current is too strong. The vent needs the plate. R: back one shot.",
+   "hintSolved": "This mark has a depth. Make your ring the same size as the white ring.",
    "cam": {
     "pos": [
      -900,
@@ -385,8 +385,8 @@
     ]
    },
    "start": [
-    -120,
-    -140,
+    63,
+    -42,
     1100
    ],
    "volMin": [
@@ -395,24 +395,24 @@
     800
    ],
    "volMax": [
-    1500,
+    700,
     330,
     1500
    ],
    "rail": [
     0,
-    900,
+    0,
     0
    ],
    "solids": [
     {
      "p": [
-      700,
-      -430,
+      0,
+      -365,
       1300
      ],
      "s": [
-      6000,
+      4400,
       300,
       2600
      ]
@@ -467,36 +467,6 @@
       0,
       -6
      ]
-    },
-    {
-     "p": [
-      1250,
-      -175,
-      1240
-     ],
-     "s": [
-      70,
-      230,
-      70
-     ],
-     "kind": "metal"
-    },
-    {
-     "p": [
-      1680,
-      0,
-      1400
-     ],
-     "s": [
-      260,
-      760,
-      700
-     ],
-     "r": [
-      0,
-      12,
-      0
-     ]
     }
    ],
    "sockets": [
@@ -505,8 +475,8 @@
      "label": "VENT",
      "accepts": "plate",
      "p": [
-      40,
-      -280,
+      200,
+      -215,
       1150
      ]
     }
@@ -514,7 +484,7 @@
    "currents": [
     {
      "p": [
-      30,
+      200,
       50,
       1150
      ],
@@ -537,7 +507,7 @@
      "color": "yellow",
      "marks": [
       [
-       150,
+       390,
        50,
        1350
       ]
@@ -550,7 +520,7 @@
    "name": "THE WRECK",
    "gate": "restore",
    "hint": "Something is shining in the wreck. Swim to it.",
-   "hintSolved": "Yellow: the dock. Blue: a crew signal in the dark (F: lamp). Push the power cell along.",
+   "hintSolved": "Two cameras. Yellow: the dock. Blue: a crew signal in the dark (F: lamp). Push the power cell along.",
    "cam": {
     "pos": [
      -900,
@@ -564,7 +534,7 @@
     ]
    },
    "start": [
-    150,
+    390,
     50,
     1350
    ],
@@ -587,7 +557,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -730,7 +700,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -844,7 +814,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -958,7 +928,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -1075,7 +1045,7 @@
    "stage": 2,
    "dark": true,
    "gate": "grab",
-   "hint": "Dark. F: lamp. Something heavy is here. E: grab.",
+   "hint": "Dark. F: lamp. Something heavy is here. Swim to it. E: grab.",
    "hintSolved": "Two marks. Hold the lid so it lands on the VENT frame (FITS). Then cut.",
    "cam": {
     "pos": [
@@ -1108,7 +1078,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -1178,7 +1148,7 @@
      "kind": "weight",
      "p": [
       -350,
-      -255,
+      -194,
       1200
      ]
     }
@@ -1190,7 +1160,7 @@
      "marks": [
       [
        100,
-       -192,
+       -165,
        1150
       ],
       [
@@ -1251,7 +1221,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -1313,7 +1283,7 @@
      "kind": "crew",
      "p": [
       450,
-      -215,
+      -180,
       1150
      ]
     }
@@ -1325,7 +1295,7 @@
      "accepts": "weight",
      "p": [
       100,
-      -262,
+      -215,
       1150
      ]
     }
@@ -1412,7 +1382,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -1534,7 +1504,7 @@
     {
      "p": [
       0,
-      -430,
+      -365,
       1300
      ],
      "s": [
@@ -1586,7 +1556,7 @@
      "ends": true,
      "p": [
       250,
-      -180,
+      -150,
       1200
      ]
     }
@@ -1595,5 +1565,6 @@
  ],
  "gentleLight": 14000,
  "gentleLightRadius": 560,
- "gentleBack": 1500
+ "gentleBack": 1500,
+ "floorY": -215
 }

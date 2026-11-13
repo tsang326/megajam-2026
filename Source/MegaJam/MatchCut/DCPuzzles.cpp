@@ -74,6 +74,7 @@ void AMatchCutGameMode::UpdateGate(int32 ShotIndex, bool bQuiet)
 void AMatchCutGameMode::RevealMarks(int32 ShotIndex)
 {
 	RevealTime = 1.2f;
+	Progress();
 	int32 Marks = 0;
 	for (const FDCExit& E : Shots[ShotIndex].Exits)
 	{
@@ -91,6 +92,7 @@ void AMatchCutGameMode::FillSocket(int32 SocketIndex, int32 PropIndex, bool bQui
 	FDCSocket& Socket = Sockets[SocketIndex];
 	FDCProp& Prop = Props[PropIndex];
 	Socket.bFilled = true;
+	Progress();
 	Prop.Shot = Socket.Shot;
 	Prop.S = Socket.S + (Prop.Kind == TEXT("plate") ? FVector(0.0, 12.0, 0.0) : FVector::ZeroVector);
 	Prop.Socket = SocketIndex;
@@ -174,14 +176,27 @@ bool AMatchCutGameMode::PropFitsSocket(const FDCProp& Prop, int32 SocketIndex) c
 	return FVector2D((N.X - SN.X) * 960.0, (N.Y - SN.Y) * 540.0).Size() <= SocketRadius * 1080.0 && FMath::Abs(Prop.S.Z - Socket.S.Z) <= 300.0;
 }
 
+FVector AMatchCutGameMode::PropHalf(const FDCProp& Prop) const
+{
+	// half extents in shot space: x across, y up, z into the picture
+	if (Prop.Kind == TEXT("plate")) { return FVector(65.0, 12.0, 75.0); }
+	if (Prop.Kind == TEXT("long")) { return FVector(95.0, 12.0, 34.0); }
+	if (Prop.Kind == TEXT("round")) { return FVector(58.0, 12.0, 58.0); }
+	if (Prop.Kind == TEXT("crate")) { return FVector(44.0, 44.0, 44.0); }
+	if (Prop.Kind == TEXT("weight")) { return FVector(75.0, 21.0, 65.0); }
+	return FVector(34.0, 46.0, 34.0); // cell, crew
+}
+
 void AMatchCutGameMode::NudgeProps()
 {
 	// The gripper is a cut feature until it is built again: before that, loose things are pushed by contact.
-	// The thing is a box; it moves along the face the robot touches, so a push is straight and does not slip off.
+	// Pushing is forgiving (brief 05): a thing that lies on the floor is pushed from beside it at any height up to
+	// PushHigh above it, and depth does not have to match (Unit 0 lines up with it by itself, see TickMovement).
 	if (State != EDCState::Playing)
 	{
 		return;
 	}
+	const double PushHigh = 150.0;
 	const FDCShot& Shot = Shots[Cur];
 	for (FDCProp& P : Props)
 	{
@@ -189,34 +204,45 @@ void AMatchCutGameMode::NudgeProps()
 		{
 			continue;
 		}
-		const bool bFlat = P.Kind == TEXT("plate");
-		const FVector H = bFlat ? FVector(65.0, 12.0, 75.0) : FVector(34.0, 46.0, 34.0);
+		const bool bFloor = P.Kind != TEXT("cell");
+		const FVector H = PropHalf(P);
 		const FVector D = P.S - HeroS;
-		const FVector O(H.X + HeroRadius - FMath::Abs(D.X), H.Y + HeroRadius - FMath::Abs(D.Y), H.Z + HeroRadius - FMath::Abs(D.Z));
-		if (O.X <= 0.0 || O.Y <= 0.0 || O.Z <= 0.0)
+		const double OX = H.X + HeroRadius - FMath::Abs(D.X);
+		const double OY = H.Y + HeroRadius - FMath::Abs(D.Y);
+		const bool bBand = bFloor ? (-D.Y < PushHigh && D.Y < H.Y + HeroRadius) : OY > 0.0;
+		if (OX <= 0.0 || !bBand || FMath::Abs(D.Z) > 300.0)
 		{
 			continue;
 		}
 		const FVector Before = P.S;
-		if (!bFlat && O.Y < O.X && O.Y < O.Z)
+		if (!bFloor && OY < OX)
 		{
-			P.S.Y += (D.Y >= 0.0 ? O.Y : -O.Y);
+			P.S.Y += (D.Y >= 0.0 ? OY : -OY);
 		}
-		else if (O.X <= O.Z)
+		else if (OX <= 46.0)
 		{
-			P.S.X += (D.X >= 0.0 ? O.X : -O.X);
+			// from the side. A deep overlap means Unit 0 came down on top of it: that does not push.
+			P.S.X += (D.X >= 0.0 ? OX : -OX);
 		}
 		else
 		{
-			P.S.Z += (D.Z >= 0.0 ? O.Z : -O.Z);
+			continue;
 		}
-		PushOut(Cur, P.S, bFlat ? 14.0 : 32.0, nullptr);
+		PushOut(Cur, P.S, bFloor ? 14.0 : 32.0, nullptr);
 		P.S.X = FMath::Clamp(P.S.X, Shot.VolMin.X, Shot.VolMax.X);
 		P.S.Y = FMath::Clamp(P.S.Y, Shot.VolMin.Y - 60.0, Shot.VolMax.Y);
 		P.S.Z = FMath::Clamp(P.S.Z, Shot.VolMin.Z, Shot.VolMax.Z);
-		if (bFlat)
+		if (bFloor)
 		{
-			P.S.Y = Before.Y; // a plate stays on the floor it lies on
+			P.S.Y = Before.Y; // it stays on the floor it lies on
+			P.S.Z = Before.Z;
+		}
+		if (FVector::Dist(Before, P.S) > 0.05)
+		{
+			PushProp = (int32)(&P - Props.GetData());
+			PushCue = 0.6f;
+			PushDir = P.S.X >= Before.X ? 1.f : -1.f;
+			Progress();
 		}
 		if (!P.bEverGrabbed && FVector::Dist(Before, P.S) > 0.5)
 		{
@@ -322,6 +348,7 @@ void AMatchCutGameMode::PressUse()
 			ShowBanner(DCText::CrewFound, DCText::CrewCarry, 5.f);
 		}
 		Props[P].bEverGrabbed = true;
+		Progress();
 		UE_LOG(LogMatchCut, Display, TEXT("PROP %s grabbed in shot %d"), *Props[P].Id, Cur);
 		if (Audio)
 		{
@@ -337,9 +364,10 @@ void AMatchCutGameMode::UpdateProps(float Dt)
 	{
 		if (P.bCarried && P.Shot == Cur)
 		{
-			// held just under the robot
+			// held just under the robot, and never inside the floor
 			const FVector Want = HeroS + FVector(0.0, -70.0, 0.0);
 			P.S = FMath::VInterpTo(P.S, Want, Dt, 9.f);
+			PushOut(Cur, P.S, PropHalf(P).Y, nullptr);
 		}
 		if (const FDCRobot* Robot = PropRobots.Find((int32)(&P - Props.GetData())))
 		{
@@ -446,7 +474,8 @@ void AMatchCutGameMode::TickPuzzles(float Dt)
 		{
 			bFeature[Shot.PartFeature] = true;
 			Shot.PartActor->SetActorHiddenInGame(true);
-			ShowBanner(FString::Printf(DCTEXT_PART_FOUND, DCText::Features[Shot.PartFeature]), Shot.PartFeature == 1 ? DCText::PartHowGrip : DCText::PartHow, 5.f);
+			ShowBanner(FString::Printf(DCTEXT_PART_FOUND, DCText::Features[Shot.PartFeature]), TEXT(""), 5.f);
+			Progress();
 			UE_LOG(LogMatchCut, Display, TEXT("PART picked up in shot %d: %s built, restore-by-cut armed (clip \"%s\", frame (%.3f,%.3f))"), Cur, DCText::Features[Shot.PartFeature], *Shot.PartClip, Shot.RestoreNdc.X, Shot.RestoreNdc.Y);
 			if (Audio)
 			{

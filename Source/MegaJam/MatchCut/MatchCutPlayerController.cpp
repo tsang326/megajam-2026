@@ -35,8 +35,11 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 	FVector Move(0.0, 0.0, 0.0);
 	Move.X += (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left) ? 1.f : 0.f);
 	Move.Y += (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.f : 0.f) - (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down) ? 1.f : 0.f);
-	Move.Z += (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift) || IsInputKeyDown(EKeys::Gamepad_RightShoulder) ? 1.f : 0.f)
-		- (IsInputKeyDown(EKeys::SpaceBar) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder) ? 1.f : 0.f);
+	// depth: Q / wheel up = farther from the camera, Z / wheel down = closer (brief 05; SPACE and SHIFT read as up and down)
+	Move.Z += (IsInputKeyDown(EKeys::Q) || IsInputKeyDown(EKeys::Gamepad_RightShoulder) ? 1.f : 0.f)
+		- (IsInputKeyDown(EKeys::Z) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder) ? 1.f : 0.f);
+	if (WasInputKeyJustPressed(EKeys::MouseScrollUp)) { GM->AddDepthStep(1.f); }
+	if (WasInputKeyJustPressed(EKeys::MouseScrollDown)) { GM->AddDepthStep(-1.f); }
 	const float PadX = GetInputAnalogKeyState(EKeys::Gamepad_LeftX);
 	const float PadY = GetInputAnalogKeyState(EKeys::Gamepad_LeftY);
 	if (FMath::Abs(PadX) > 0.2f) { Move.X += PadX; }
