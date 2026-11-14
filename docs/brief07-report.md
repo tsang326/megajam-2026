@@ -50,3 +50,63 @@ Still open: packaged build and a packaged run of `d3_film`; jellyfish read dark 
 - `d3_film` alone in the editor build: 6 of 6 shots, 18 of 18 stars, median 25 ms, p90 48 ms.
 
 Captures: `docs/captures/brief07/cp4_look_a.jpg`, `cp4_look_b.jpg`.
+
+## Summary so far (2026-11-14, ~10:50)
+
+The game is playable from the start of the dive to the rating card, and the packaged Mac build runs the same scripted run: `Tools/run_packaged.sh d3_film Saved/DeepCut/d3_pkg` gave 6 of 6 shots, 18 of 18 stars, cutting room, film, rating card, back; median frame 23 ms, 90th percentile 47 ms, average 31.6 ms over 3570 frames (background priority, the Mac in use). Capture: `docs/captures/brief07/cp4_packaged.jpg`. The packaged app is `Saved/Package/Mac/MegaJam.app` (1.2 GB).
+
+### Play
+
+    cd /Users/os/Documents/side-gigs/itch/megajam-2026/MegaJam
+    Tools/play.sh                 # opens a 1600x900 window
+    Tools/play.sh 1920 1080
+    Tools/play.sh 1600 900 -MCLife=0.5      # half the ambient life
+    Tools/play.sh 1600 900 -MCRays=0.6      # fainter light columns
+
+Keys: mouse look, W A S D swim, SPACE up, X or Q down, SHIFT boost. Hold RIGHT MOUSE (or press C) to raise the camera; WHEEL (or 1 / 2) zooms; LEFT MOUSE (or E) records a 3 second take; F switches the headlamp once it is found on top of the wreck; ENTER ends the shoot when four shots have a take; in the cutting room A / D choose the shot, W / S the take, ENTER plays the film, BACKSPACE goes back to shooting. Gamepad: LB camera, RB record.
+
+### Every new English line
+
+Shot list: `The manta glides over the wreck`, `The shoal splits around you`, `The anglerfish's light in the trench`, `Jellyfish rise in the light shaft`, `The giant passes overhead`, `Your crewmate waves`.
+Film captions: `THE MANTA`, `THE SHOAL`, `THE ANGLERFISH`, `THE JELLYFISH`, `THE GIANT`, `THE CREW`.
+HUD: `SHOT LIST`, `STBY`, `REC`, `DEPTH`, `HDG`, `FOCUS`, `TAKE n / m`, `n / m STARS`, `NO TAKE`, `NO GOOD`.
+Teaching lines: `Hold RIGHT MOUSE to raise the camera     (or press C)`, `LEFT MOUSE record a take     WHEEL zoom     (or E, and 1 / 2)`, `ENTER  end the shoot and cut your film`, `Headlamp fitted.  F switches it.`, `Long lens fitted.  The zoom goes further.`, `Something big is passing overhead. Look up.`, `That is every shot.  ENTER: cut your film.`
+Verdicts: `Nothing in frame`, `Too few of them in frame`, `Too far`, `Subject lost`, `Subject cut off`, `Missed the moment`, `Too dark. It needs a lamp.`, `Too shaky`, `Off centre`, `A perfect take`.
+Cutting room and film: `THE CUTTING ROOM`, `A / D  shot     W / S  take     ENTER  play the film     BACKSPACE  keep shooting`, `DEEP CUT`, `a documentary from 212 metres down`, `Camera, direction and cut:  you`, `Filmed on location.  No animal was asked to do it twice.`, `ENTER  back to the cutting room     ESC  quit`.
+Rating: `STRAIGHT TO THE ARCHIVE`, `A LATE-NIGHT SLOT`, `PRIME TIME`, `FESTIVAL OPENER`.
+
+### Frame times (all at background priority with the Mac in use, so upper bounds)
+
+| run | median | p90 | average |
+| --- | --- | --- | --- |
+| `d3_film`, editor, 67 ambient creatures, full dressing | 25 ms | 48 ms | 33.8 ms |
+| `d3_film`, packaged, same content | 23 ms | 47 ms | 31.6 ms |
+| `d4_look`, editor, caustics light function on (first run with it) | 152 ms | 200 ms | 186.7 ms |
+| `d3_film`, editor, 9000-piece floor dapple on | 35 ms | not kept | not kept |
+
+Lumen does not run on this Mac (the engine falls back to SM5), so there is no with-Lumen number; the game is lit without it.
+
+### Not verified
+
+- Nothing has been played by hand: mouse feel in camera mode, the wheel, the gamepad buttons, how hard the shots are for a person. The scripted run places the camera with test commands (`near`, `track`), so it proves the systems, not the difficulty.
+- The long lens pickup on the reef: placed and coded, never picked up in a test.
+- "End the shoot" with four or five shots (a film with a `NO TAKE` gap): the code path exists, not run.
+- The film music under the finished film: wired, not listened to (test runs are without sound).
+- The creature models' facing: checked for the turtle only; `-MCFront=` turns all of them.
+- The caustics slowdown was measured in the first run after the material was made, so part of it may have been shader compiling. It was switched off without a second measurement.
+- Whether any scattered piece (a cliff stands near the vents) blocks a route a player would take. The six subjects are reachable in the test.
+- No Windows build.
+
+### Known weak points
+
+- The sea floor is one flat plain colour.
+- The vents have no plume.
+- The jellyfish bells are glossy close up.
+- `m1_swim.txt` still describes the brief 06 ring layout and will not pass.
+- Models still to come (per the coordinator's list) join in on their own once imported: hatchet shoals and the rest are already in the tables.
+
+### What to cut first if time runs short
+
+1. The long lens (it is optional and untested).
+2. The eel and the far whale and oarfish (ambient only).
+3. Film playback as moving takes: fall back to a still frame per take.

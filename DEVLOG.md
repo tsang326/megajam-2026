@@ -154,3 +154,9 @@ All three use rules the game already had (near things come through the cut, a th
 - The clearing's shaft is seven thin additive shells instead of three, so its edge is a gradient. The jellyfish get a stronger soft light of their own and now read pink against the rock.
 - The film music plays under the finished film and the rating card.
 - `d3_film` alone, editor build, background priority: 6 of 6 shots, 18 of 18 stars, median 25 ms, p90 48 ms, average 33.8 ms over 3398 frames.
+
+### 2026-11-14, ~10:50: the packaged build plays the whole documentary (brief 07, checkpoint 3 closed)
+
+- `Tools/package_mac.sh` succeeded after the compile fix. `Tools/run_packaged.sh d3_film Saved/DeepCut/d3_pkg`: 6 of 6 shots, 18 of 18 stars, cutting room, film, rating card, back to the cutting room, back to shooting.
+- Packaged frame time in that run: median 23 ms, p90 47 ms, average 31.6 ms over 3570 frames (background priority, Mac in use).
+- `docs/brief07-report.md` now has the play commands, every new English line, the frame times, what is not verified and what to cut first.
