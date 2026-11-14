@@ -194,3 +194,12 @@ All three use rules the game already had (near things come through the cut, a th
 - Trails of beacons lead out from the first site to each zone; an outer ring of cliffs closes the sea. Small things far from the middle get a cull distance; ambient creatures more than about 110 m away are hidden and not moved.
 - About 40 new ambient creatures per zone, from the batch 3 to 5 models (48 new models this session, logged in `ASSETS.md`). The Abyss is lit only by blue and violet points of life.
 - Tests: `d8_zones.txt` (teleports to each zone, snaps); `d3_film` still 6 of 6, 17 stars; `d6_guide` passes.
+
+### 2026-11-14, ~17:00: easier shoal, sharper picture, Unit 0 kicks (playtest: "blurry, fish flicker and spin when close, the hero is frozen")
+
+- The shoal parts as soon as you are within 10 m, at any speed, and stays open for a few seconds after you leave; the point it parts from follows you softly. Card and tip say so.
+- Fish spun because the flee turn was a straight lerp between unwound angles; it now turns the short way, at most 70 % of the way. The fast 9° yaw wobble is gone (the tail beat is the material's), the tail beats slower (4.5 Hz), rings are wider.
+- The shoal's instances carry last frame's transforms and vertex deformation writes velocity (`r.Velocity.EnableVertexDeformation=1`), so TSR no longer smears or flickers them.
+- Picture: Retina rendering in game (`bAllowHighDPIInGameMode`) at 70 % screen percentage upscaled by TSR, `r.Tonemapper.Sharpen=0.8`, chromatic fringe 0.9 → 0.2, grain 0.18 → 0.06, camera depth of field f/2.2 → f/4.5.
+- Unit 0 uses the swimming material too (kind `hero`: axis head to feet, swing forward and back): a fin kick in the legs and a paddle in the arms, scaled by speed every frame so the beat never jumps. `M_DC_Creature` gained an emissive map so the eyes and lamp still glow.
+- Tests: `d9_look.txt` (hero side views, the shoal close); `d3_film` 6 of 6, 18 of 18 stars, median 25 ms, p90 69 ms.

@@ -52,6 +52,8 @@ struct FDC3D
 	float BumpTime = 0.f;
 	float ThrustTime = 0.f;
 	float IdleTime = 0.f; // seconds without input: the controls line comes back
+	TArray<TWeakObjectPtr<UMaterialInstanceDynamic>> HeroSwim; // Unit 0's swimming materials
+	float KickAmt = 0.25f;
 
 	// ---- camera
 	float Yaw = 0.f;

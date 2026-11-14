@@ -89,7 +89,13 @@ mel.connect_material_property(normal, "", unreal.MaterialProperty.MP_NORMAL)
 glow = node(unreal.MaterialExpressionVectorParameter, -900, 550)
 glow.set_editor_property("parameter_name", "Glow")
 glow.set_editor_property("default_value", unreal.LinearColor(0.0, 0.0, 0.0, 1.0))
-mel.connect_material_property(mul(base, glow, -600, 550), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+# an emissive map as well (Unit 0's eyes and lamp), off unless EmissiveStrength is set
+emap = texture("EmissiveTexture", "texture_diffuse", -900, 750)
+emul = mul(emap, scalar("EmissiveStrength", 0.0, -900, 950), -600, 750)
+eadd = node(unreal.MaterialExpressionAdd, -400, 600)
+mel.connect_material_expressions(mul(base, glow, -600, 550), "", eadd, "A")
+mel.connect_material_expressions(emul, "", eadd, "B")
+mel.connect_material_property(eadd, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
 # ---- the swim
 custom = node(unreal.MaterialExpressionCustom, -300, 1100)

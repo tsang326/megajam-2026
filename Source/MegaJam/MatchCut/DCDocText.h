@@ -19,7 +19,7 @@ namespace DCDocText
 	static const TCHAR* CurrentShot = TEXT("CURRENT SHOT");
 	static const TCHAR* ShotWhere[] = {
 		TEXT("Find the manta. It circles over the wreck."),
-		TEXT("Find the shoal over the reef. Swim into it fast, then film it opening."),
+		TEXT("Find the shoal over the reef. Swim up close: it parts around you. Film it then."),
 		TEXT("Film the anglerfish at the end of the trench, with your lamp on it."),
 		TEXT("Film the jellyfish rising in the shaft of light."),
 		TEXT("The giant crosses high overhead every two minutes. Get under it and film upwards."),
@@ -46,7 +46,7 @@ namespace DCDocText
 	static const TCHAR* TipCutOff = TEXT("TIP: back off or zoom out until all of it fits.");
 	static const TCHAR* TipMoment[] = {
 		TEXT("TIP: wait until the manta is over the wreck."),
-		TEXT("TIP: swim into the shoal fast, then film it opening."),
+		TEXT("TIP: get close to the shoal so it parts, then record."),
 		TEXT("TIP: fetch the headlamp from the wreck, then switch it on with F."),
 		TEXT("TIP: film them while they rise in the light."),
 		TEXT("TIP: get under the giant and tilt the camera up."),

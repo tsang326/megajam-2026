@@ -15,6 +15,9 @@ class USpotLightComponent;
 class UStaticMeshComponent;
 struct FDC3D;
 
+/** Gives a part the swimming material (M_DC_Creature) with the numbers of its kind; Q turns the mesh so its front is along x. */
+void DCApplySwim(UStaticMeshComponent* C, const FString& Id, const FQuat& Q, float Pace, float Phase);
+
 namespace DCSub
 {
 	enum Type { Manta = 0, Shoal, Angler, Jelly, Giant, Crew, Num };
@@ -148,6 +151,7 @@ struct FDCDoc
 	TWeakObjectPtr<UInstancedStaticMeshComponent> Fish;
 	TArray<FVector> FishPos;
 	TArray<FVector4> FishSeed;
+	TArray<FTransform> FishPrevXf; // the fish's places last frame (motion vectors)
 	float FishScale = 1.f;
 	FQuat FishFix = FQuat::Identity;
 	float Split = 0.f, Wave = 0.f;

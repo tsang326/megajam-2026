@@ -1,0 +1,29 @@
+# brief 09: Unit 0 kicks while it swims; the shoal parts when you come close; how sharp the picture is
+wait 1.0
+tp -4600 2250 720 0 -5
+wait 1.5
+snap h0_float
+key3 1 0 0 1.2
+snap h1_swim
+look3 75 -5
+wait 0.1
+snap h2_side_a
+wait 0.12
+snap h3_side_b
+key3 1 0 0 1.0 boost
+look3 -80 -5
+wait 0.1
+snap h4_boost_side
+tp -3700 2250 720 0 -5
+wait 1.0
+key3 1 0 0 1.0
+snap s1_shoal_close
+wait 1.5
+snap s2_shoal_open
+aim 1
+wait 1.2
+snap s3_shoal_aim
+aim 0
+wait 0.5
+stat
+quit

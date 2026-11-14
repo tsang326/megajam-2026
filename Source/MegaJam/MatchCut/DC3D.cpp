@@ -222,6 +222,31 @@ void FDC3D::SpawnHero()
 			}
 		}
 	}
+	// the body moves: a fin kick in the legs and a little paddle in the arms, in the vertex shader (the model has no bones).
+	// The emissive map (eyes, lamp) is carried over; the kick follows the speed (Tick).
+	if (!FParse::Param(FCommandLine::Get(), TEXT("MCNoHeroSwim")))
+	{
+		float Em = 14.f;
+		FParse::Value(FCommandLine::Get(), TEXT("-MCEm="), Em);
+		for (UStaticMeshComponent* Part : Parts)
+		{
+			if (!Part->GetStaticMesh())
+			{
+				continue;
+			}
+			DCApplySwim(Part, TEXT("creature:hero"), Part->GetRelativeRotation().Quaternion(), 1.f, 0.f);
+			for (int32 m = 0; m < Part->GetNumMaterials(); ++m)
+			{
+				UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(Part->GetMaterial(m));
+				if (MID && MID->Parent && MID->Parent->GetName() == TEXT("M_DC_Creature"))
+				{
+					MID->SetScalarParameterValue(TEXT("EmissiveStrength"), Em);
+					HeroSwim.Add(MID);
+				}
+			}
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("3D HERO swim materials: %d"), HeroSwim.Num());
+	}
 	// a light only Unit 0 takes (lighting channel 1), from behind and above where the camera is: its teal reads in green water
 	UPointLightComponent* Rim = NewObject<UPointLightComponent>(A);
 	Rim->SetMobility(EComponentMobility::Movable);
@@ -914,7 +939,7 @@ void FDC3D::Start()
 		// the film look: a lens that fringes a little at the edges and blooms on the lamps
 		FPostProcessSettings& PP = C->GetCameraComponent()->PostProcessSettings;
 		PP.bOverride_SceneFringeIntensity = true;
-		PP.SceneFringeIntensity = 0.9f;
+		PP.SceneFringeIntensity = 0.2f;
 		PP.bOverride_BloomIntensity = true;
 		PP.BloomIntensity = 0.8f;
 		PP.bOverride_FilmToe = PP.bOverride_FilmSlope = true;
@@ -945,7 +970,7 @@ void FDC3D::Start()
 	L.Ambient = 0.2f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCScatter="), L.VolScatter);
 	L.Vignette = 0.5f;
-	L.Grain = 0.18f;
+	L.Grain = 0.06f;
 	L.Saturation = 0.88f;
 	L.Contrast = 1.12f;
 	L.Tint = FLinearColor(0.94f, 1.f, 1.07f);
@@ -1091,7 +1116,7 @@ void FDC3D::TickCamera(float Dt)
 		FPostProcessSettings& PP = C->GetCameraComponent()->PostProcessSettings;
 		PP.bOverride_DepthOfFieldFocalDistance = PP.bOverride_DepthOfFieldFstop = PP.bOverride_DepthOfFieldSensorWidth = true;
 		PP.DepthOfFieldFocalDistance = FocusAt;
-		PP.DepthOfFieldFstop = 2.2f;
+		PP.DepthOfFieldFstop = 4.5f;
 		PP.DepthOfFieldSensorWidth = 30.f;
 	}
 	if (AActor* A = GM->Hero.Actor.Get())
@@ -1295,6 +1320,18 @@ void FDC3D::Tick(float Dt)
 		BodyRoll = FMath::FInterpTo(BodyRoll, WantRoll, Dt, 5.f);
 		const double Bob = 5.0 * FMath::Sin(Time * 1.3) * (1.0 - FMath::Clamp(Vel.Size() / 300.0, 0.0, 1.0));
 		A->SetActorLocationAndRotation(Pos + FVector(0.0, 0.0, Bob), FRotator(BodyPitch, BodyYaw, BodyRoll));
+		// the kick: soft while floating, full while swimming, harder on boost. Only the amounts change, never the beat,
+		// so the legs never jump.
+		const float Speed = FMath::Clamp((float)(Vel.Size() / DC3::Swim), 0.f, 1.6f);
+		KickAmt = FMath::FInterpTo(KickAmt, 0.25f + 0.75f * FMath::Min(Speed, 1.f) + 0.4f * FMath::Max(0.f, Speed - 1.f), Dt, 3.f);
+		for (const TWeakObjectPtr<UMaterialInstanceDynamic>& W : HeroSwim)
+		{
+			if (UMaterialInstanceDynamic* MID = W.Get())
+			{
+				MID->SetVectorParameterValue(TEXT("SwimTail"), FLinearColor(0.16f * KickAmt, 2.4f, 0.55f, 2.0f));
+				MID->SetVectorParameterValue(TEXT("SwimWing"), FLinearColor(0.20f * (0.5f + 0.5f * KickAmt), 0.f, 0.6f, 0.f));
+			}
+		}
 	}
 
 	if (Doc)

@@ -71,8 +71,11 @@ namespace DCSwim
 		{ TEXT(" seapig nudibranch "), 1, 0.025f, 1.0f, 1.5f, 2.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" urchin starfish "), 0, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" angler sunfish seahorse seadragon seatoad "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" turtle turtle2 giant "), 0, 0.f, 1.f, 1.f, 2.6f, 0.28f, 0.15f, 1.f, 0.f, 0.f, 1.f } };
-	static const FKind Fish = { TEXT(""), 0, 0.07f, 1.6f, 0.9f, 7.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
+		{ TEXT(" turtle turtle2 giant "), 0, 0.f, 1.f, 1.f, 2.6f, 0.28f, 0.15f, 1.f, 0.f, 0.f, 1.f },
+		// Unit 0: the axis runs from the head down to the feet, the swing is forward and back: a fin kick in the legs,
+		// the arms paddle a little. The game turns the amounts up and down with the speed (FDC3D::Tick).
+		{ TEXT(" hero "), 2, 0.10f, 2.6f, 0.55f, 2.0f, 0.12f, 0.f, 1.f, 0.f, 0.f, 1.f } };
+	static const FKind Fish = { TEXT(""), 0, 0.06f, 1.6f, 0.9f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 
 	static const FKind& KindOf(const FString& Id)
 	{
@@ -124,7 +127,7 @@ namespace DCSwim
 			{
 				continue;
 			}
-			for (const TCHAR* Tex : { TEXT("BaseColorTexture"), TEXT("MetallicRoughnessTexture"), TEXT("NormalTexture") })
+			for (const TCHAR* Tex : { TEXT("BaseColorTexture"), TEXT("MetallicRoughnessTexture"), TEXT("NormalTexture"), TEXT("EmissiveTexture") })
 			{
 				UTexture* T = nullptr;
 				if (Src && Src->GetTextureParameterValue(FHashedMaterialParameterInfo(FName(Tex)), T) && T)
@@ -143,6 +146,11 @@ namespace DCSwim
 			C->SetMaterial(m, MID);
 		}
 	}
+}
+
+void DCApplySwim(UStaticMeshComponent* C, const FString& Id, const FQuat& Q, float Pace, float Phase)
+{
+	DCSwim::Apply(C, Id, Q, Pace, Phase);
 }
 
 static int32 GFewFrames = 0; // frames of the running take with some of a group in the picture, but too few
@@ -227,7 +235,7 @@ void FDCDoc::SpawnShoal()
 				}
 			}
 		}
-		DCSwim::Apply(C, TEXT("creature:fish"), FishFix, 1.3f, 0.f); // each fish of the shoal beats on its own phase (per-instance random)
+		DCSwim::Apply(C, TEXT("creature:fish"), FishFix, 0.75f, 0.f); // each fish of the shoal beats on its own phase (per-instance random)
 	}
 	else
 	{
@@ -242,10 +250,11 @@ void FDCDoc::SpawnShoal()
 	for (int32 i = 0; i < DCD::NumFish; ++i)
 	{
 		// ring radius, height, where on the ring, how fast round it
-		FishSeed.Add(FVector4(Rand.FRandRange(70.f, 340.f), Rand.FRandRange(-150.f, 150.f), Rand.FRandRange(0.f, 2.f * PI), Rand.FRandRange(0.45f, 0.8f)));
+		FishSeed.Add(FVector4(Rand.FRandRange(150.f, 380.f), Rand.FRandRange(-150.f, 150.f), Rand.FRandRange(0.f, 2.f * PI), Rand.FRandRange(0.45f, 0.8f)));
 		FishPos.Add(DCD::Reef);
 		C->AddInstance(FTransform(DCD::Reef));
 	}
+	C->SetHasPerInstancePrevTransforms(true);
 	Fish = C;
 }
 
@@ -636,10 +645,12 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 		const FVector Centre = DCD::Reef + FVector(200.0 * FMath::Cos(T * 0.10), 200.0 * FMath::Sin(T * 0.13), 60.0 * FMath::Sin(T * 0.2));
 		if (bLive)
 		{
-			const bool bInto = FVector::Dist(HeroPos, Centre) < 700.0 && W->Vel.Size() > 100.0;
-			Split = DCD::Ease(Split, bInto ? 1.f : 0.f, bInto ? 5.f : 0.45f, Dt);
+			// it opens as soon as you are close to it, and stays open a while after you leave
+			const bool bInto = FVector::Dist(HeroPos, Centre) < 1000.0;
+			Split = DCD::Ease(Split, bInto ? 1.f : 0.f, bInto ? 3.f : 0.25f, Dt);
+			// where it opens from follows you softly: a fish never jumps because you turned
+			SplitFrom = FVector::DistSquared(SplitFrom, HeroPos) > 4000.0 * 4000.0 ? HeroPos : FMath::Lerp(SplitFrom, HeroPos, 1.0 - FMath::Exp(-4.0 * Dt));
 		}
-		SplitFrom = HeroPos;
 		SubPos[DCSub::Shoal] = Centre;
 		TArray<FTransform> Xf;
 		Xf.Reserve(FishPos.Num());
@@ -648,21 +659,30 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 			const FVector4& S = FishSeed[i];
 			const double Th = S.Z + T * S.W;
 			FVector P = Centre + FVector(S.X * FMath::Cos(Th), S.X * FMath::Sin(Th), S.Y + 18.0 * FMath::Sin(T * 1.3 + S.Z));
-			float Yaw = FMath::RadiansToDegrees(Th) + 90.f + 9.f * FMath::Sin(T * 9.0 + S.Z * 5.0);
+			// the way round the ring, with a small slow weave (the tail beat is the material's)
+			float Yaw = FMath::UnwindDegrees(FMath::RadiansToDegrees(Th) + 90.f + 3.f * FMath::Sin(T * 1.7 + S.Z * 5.0));
 			if (Split > 0.01f)
 			{
 				const FVector Away = P - SplitFrom;
 				const double D = FMath::Max(1.0, Away.Size());
-				const double Push = Split * FMath::Max(0.0, 560.0 - D) * 0.95;
+				const double Push = Split * FMath::Max(0.0, 600.0 - D) * 0.95;
 				P += Away / D * Push;
-				Yaw = FMath::Lerp(Yaw, (float)Away.Rotation().Yaw, FMath::Clamp((float)Push / 220.f, 0.f, 0.85f));
+				// turn the short way towards fleeing, never more than half a turn
+				const float Flee = FMath::Clamp((float)Push / 260.f, 0.f, 0.7f);
+				Yaw += Flee * FMath::FindDeltaAngleDegrees(Yaw, (float)Away.Rotation().Yaw);
 			}
 			FishPos[i] = P;
 			Xf.Add(FTransform(FQuat(FRotator(0.f, Yaw, 0.f)) * FishFix, P, FVector(FishScale)));
 		}
 		if (UInstancedStaticMeshComponent* C = Fish.Get())
 		{
-			C->BatchUpdateInstancesTransforms(0, Xf, true, true, false);
+			// last frame's places too, so the picture knows how each fish moved (no smear or flicker when it is close)
+			if (FishPrevXf.Num() != Xf.Num())
+			{
+				FishPrevXf = Xf;
+			}
+			C->BatchUpdateInstancesTransforms(0, Xf, FishPrevXf, true, true, false);
+			FishPrevXf = MoveTemp(Xf);
 		}
 	}
 
