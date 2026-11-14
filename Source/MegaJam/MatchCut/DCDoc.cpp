@@ -426,6 +426,10 @@ void FDCDoc::SpawnAmbient()
 				const float Ang = Rand.FRandRange(0.f, 2.f * PI);
 				const float Rad = Row.Spread * FMath::Sqrt(Rand.FRand());
 				One.Centre = Row.Centre + FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), Row.Kind == 1 ? Half : Rand.FRandRange(Row.ZMin, Row.ZMax));
+				if (Row.Kind != 1)
+				{
+					One.Centre.Z += W->Terrain(One.Centre.X, One.Centre.Y); // swimmers live over the floor where they are
+				}
 				if (Row.Kind == 2 || Row.Id == FString(TEXT("creature:lantern")))
 				{
 					if (Row.Kind == 0)
@@ -437,12 +441,13 @@ void FDCDoc::SpawnAmbient()
 					break;
 				}
 				FHitResult Hit;
-				const FVector Top(One.Centre.X, One.Centre.Y, 2500.0);
+				const double Floor = W->Terrain(One.Centre.X, One.Centre.Y);
+				const FVector Top(One.Centre.X, One.Centre.Y, Floor + 2500.0);
 				const float Reach = FMath::Max(One.Ra, One.Rb) + Row.Length;
 				if (Row.Kind == 1)
 				{
 					// a crawler needs bare floor under its whole loop
-					if (!World->SweepSingleByChannel(Hit, Top, FVector(One.Centre.X, One.Centre.Y, Half + Reach + 30.0), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(Reach), Query))
+					if (!World->SweepSingleByChannel(Hit, Top, FVector(One.Centre.X, One.Centre.Y, Floor + Half + Reach + 30.0), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(Reach), Query))
 					{
 						break;
 					}
@@ -462,12 +467,13 @@ void FDCDoc::SpawnAmbient()
 
 void FDCDoc::Start()
 {
+	Seen.SetNum(DCSub::Num);
+	Tally.SetNum(DCSub::Num);
 	for (int32 i = 0; i < DCSub::Num; ++i)
 	{
 		Best[i] = 0;
 		Pick[i] = INDEX_NONE;
 		SubPos[i] = FVector::ZeroVector;
-		Tally[i] = FTally();
 	}
 	SubRadius[DCSub::Manta] = 250.f;
 	SubRadius[DCSub::Shoal] = 300.f;

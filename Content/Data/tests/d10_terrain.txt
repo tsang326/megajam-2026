@@ -1,0 +1,25 @@
+# the sea floor has depth: slopes out of the station, basins, the abyss trench
+wait 1.0
+tp 0 -6500 700 -80 -12
+wait 1.5
+snap t1_rim_south
+tp 0 6500 700 85 -12
+wait 1.0
+snap t2_rim_north
+tp -5500 12000 600 90 -35
+wait 1.5
+snap t3_abyss_edge
+tp -5500 15500 -3000 90 -40
+wait 1.5
+snap t4_abyss_wall
+tp -5500 19500 -8600 90 5
+wait 1.5
+snap t5_abyss_floor
+tp 9000 -9000 0 -60 -15
+wait 1.5
+snap t6_to_smokers
+tp -9000 5000 1400 150 -8
+wait 1.5
+snap t7_to_kelp
+stat
+quit

@@ -5,6 +5,7 @@
 //   collision: engine sweeps against the models themselves (their triangles), sliding along what is hit
 
 #include "DC3D.h"
+#include "ProceduralMeshComponent.h"
 #include "DCDoc.h"
 #include "MatchCutGameMode.h"
 #include "DCAudio.h"
@@ -15,6 +16,7 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/PoseableMeshComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
@@ -121,7 +123,7 @@ UStaticMeshComponent* FDC3D::Bare(UStaticMesh* Mesh, UMaterialInterface* Mat, co
 
 float FDC3D::GroundZ(double X, double Y) const
 {
-	double Z = 0.0;
+	double Z = Terrain(X, Y);
 	for (const FMound& M : Mounds)
 	{
 		const FVector2D D = (FVector2D(X, Y) - M.At).GetRotated(-M.Yaw);
@@ -132,6 +134,127 @@ float FDC3D::GroundZ(double X, double Y) const
 		}
 	}
 	return (float)Z;
+}
+
+// the sea floor: flat round the station (everything there was placed on z = 0), a basin for each zone at its own depth,
+// gentle slopes and ridges between, and the abyss a trench with walls you swim down
+static const float GZoneFloor[] = { 1300.f, -1800.f, -2900.f, -4300.f, -5600.f, -9200.f };
+
+float FDC3D::Terrain(double X, double Y) const
+{
+	const FVector2D P(X, Y);
+	double WSum = 0.0, HSum = 0.0;
+	auto Add = [&](const FVector2D& C, double Core, double H)
+	{
+		const double D = FMath::Max(FVector2D::Distance(P, C) - Core, 1.0);
+		const double Wt = 1.0 / (D * D * D);
+		WSum += Wt;
+		HSum += Wt * H;
+	};
+	Add(FVector2D::ZeroVector, 6800.0, 0.0);
+	const int32 NZ = FMath::Min(Zones.Num(), 5);
+	for (int32 i = 0; i < NZ; ++i)
+	{
+		Add(Zones[i].At, Zones[i].Radius * 0.75, GZoneFloor[i]);
+	}
+	{
+		const double Far = 9000.0; // the open sea between: a plain that leans down
+		const double Wt = 1.0 / (Far * Far * Far);
+		WSum += Wt;
+		HSum += Wt * -1600.0;
+	}
+	double H = HSum / WSum;
+	// ridges and hollows, none on the station's flat, less on a zone's floor
+	const double Keep = FMath::SmoothStep(6600.0, 9500.0, P.Size());
+	double Core = 0.0;
+	for (int32 i = 0; i < Zones.Num(); ++i)
+	{
+		Core = FMath::Max(Core, 1.0 - FMath::SmoothStep(Zones[i].Radius * 0.5, Zones[i].Radius * 0.9, FVector2D::Distance(P, Zones[i].At)));
+	}
+	const double Relief = FMath::PerlinNoise2D(P / 10000.0 + FVector2D(3.7, 1.3)) * 900.0 + FMath::PerlinNoise2D(P / 3100.0 + FVector2D(0.4, 7.1)) * 260.0
+		+ FMath::PerlinNoise2D(P / 950.0) * 45.0;
+	H += Keep * Relief * (1.0 - 0.7 * Core);
+	// the abyss: a trench whose walls drop almost straight down
+	if (Zones.Num() > 5)
+	{
+		const FZone& A = Zones[5];
+		const double D = FVector2D::Distance(P, A.At);
+		const double Wobble = FMath::PerlinNoise1D(FMath::Atan2(P.Y - A.At.Y, P.X - A.At.X) * 2.3) * 900.0;
+		const double S = 1.0 - FMath::SmoothStep(A.Radius * 0.85, A.Radius * 0.85 + 2400.0, D + Wobble);
+		H = FMath::Lerp(H, (double)GZoneFloor[5] + FMath::PerlinNoise2D(P / 1800.0) * 220.0, FMath::Pow(S, 1.4));
+	}
+	return (float)H;
+}
+
+void FDC3D::BuildTerrain(UMaterialInterface* Mat)
+{
+	const double Half = 30000.0, Step = 250.0;
+	const int32 N = FMath::RoundToInt(2.0 * Half / Step) + 1;
+	TArray<FVector> V;
+	TArray<FVector> Nrm;
+	TArray<FVector2D> UV;
+	TArray<int32> Tri;
+	V.Reserve(N * N);
+	Nrm.Reserve(N * N);
+	UV.Reserve(N * N);
+	TArray<float> Hs;
+	Hs.SetNumUninitialized(N * N);
+	for (int32 j = 0; j < N; ++j)
+	{
+		for (int32 i = 0; i < N; ++i)
+		{
+			Hs[j * N + i] = Terrain(-Half + i * Step, -Half + j * Step);
+		}
+	}
+	for (int32 j = 0; j < N; ++j)
+	{
+		for (int32 i = 0; i < N; ++i)
+		{
+			const double X = -Half + i * Step, Y = -Half + j * Step;
+			V.Add(FVector(X, Y, Hs[j * N + i]));
+			const float Hx0 = Hs[j * N + FMath::Max(i - 1, 0)], Hx1 = Hs[j * N + FMath::Min(i + 1, N - 1)];
+			const float Hy0 = Hs[FMath::Max(j - 1, 0) * N + i], Hy1 = Hs[FMath::Min(j + 1, N - 1) * N + i];
+			Nrm.Add(FVector(Hx0 - Hx1, Hy0 - Hy1, 2.0 * Step).GetSafeNormal());
+			UV.Add(FVector2D(X, Y) / 1000.0);
+		}
+	}
+	Tri.Reserve((N - 1) * (N - 1) * 6);
+	for (int32 j = 0; j < N - 1; ++j)
+	{
+		for (int32 i = 0; i < N - 1; ++i)
+		{
+			const int32 A = j * N + i, B = A + 1, C = A + N, D = C + 1;
+			Tri.Append({ A, C, B, B, C, D });
+		}
+	}
+	AActor* Owner = GM->SpawnGroup(FVector::ZeroVector);
+	UProceduralMeshComponent* PM = NewObject<UProceduralMeshComponent>(Owner);
+	PM->SetupAttachment(Owner->GetRootComponent());
+	PM->bUseComplexAsSimpleCollision = true;
+	PM->bUseAsyncCooking = false;
+	PM->RegisterComponent();
+	PM->SetWorldLocation(FVector::ZeroVector);
+	PM->CreateMeshSection_LinearColor(0, V, Tri, Nrm, UV, TArray<FLinearColor>(), TArray<FProcMeshTangent>(), true);
+	PM->SetCollisionObjectType(ECC_WorldStatic);
+	PM->SetCollisionResponseToAllChannels(ECR_Block);
+	PM->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	if (Mat)
+	{
+		PM->SetMaterial(0, Mat);
+	}
+	else
+	{
+		UMaterialInstanceDynamic* M = UMaterialInstanceDynamic::Create(GM->LitMaterial, PM);
+		PM->SetMaterial(0, M);
+	}
+	Ground = PM;
+	float Lo = 1e9f, Hi = -1e9f;
+	for (float H : Hs)
+	{
+		Lo = FMath::Min(Lo, H);
+		Hi = FMath::Max(Hi, H);
+	}
+	UE_LOG(LogMatchCut, Display, TEXT("3D terrain: %d x %d, %d triangles, floor %.0f .. %.0f"), N, N, Tri.Num() / 3, Lo, Hi);
 }
 
 AActor* FDC3D::Block(const FVector& Centre, const FRotator& Rot, const FVector& Size, const FLinearColor& Color)
@@ -321,7 +444,7 @@ void FDC3D::BuildArea()
 	float ShaftPower = 14.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCShaft="), ShaftPower);
 	const FLinearColor Sand(0.20f, 0.19f, 0.16f);
-	AActor* FloorBlock = Block(FVector(0.0, 0.0, -150.0), FRotator::ZeroRotator, FVector(64000.0, 64000.0, 300.0), Sand);
+	AActor* FloorBlock = Block(FVector(0.0, 0.0, -14000.0), FRotator::ZeroRotator, FVector(64000.0, 64000.0, 300.0), Sand); // under everything: a last floor
 	// sand and silt: colour from noise in world space, so it never repeats (Tools/make_sand_material.py)
 	UMaterialInterface* SandMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Sand.M_DC_Sand"));
 	if (FParse::Param(FCommandLine::Get(), TEXT("MCPlainFloor")))
@@ -330,9 +453,9 @@ void FDC3D::BuildArea()
 	}
 	if (SandMat)
 	{
-		Bare(GM->CubeMesh, SandMat, FVector(0.0, 0.0, -50.0), FRotator::ZeroRotator, FVector(640.0, 640.0, 1.0), FLinearColor::White);
-		FloorBlock->SetActorHiddenInGame(true); // still what things collide with
+		FloorBlock->SetActorHiddenInGame(true);
 	}
+	BuildTerrain(SandMat);
 	const TCHAR* Boulder = TEXT("scene:boulder");
 	const TCHAR* Ledge = TEXT("scene:ledge");
 	const TCHAR* Coral = TEXT("scene:coral");
@@ -488,7 +611,7 @@ void FDC3D::BuildArea()
 			M.At = At;
 			M.Yaw = MoundRand.FRandRange(0.f, 180.f);
 			M.Radii = FVector(Wide / Part, Wide * MoundRand.FRandRange(0.5f, 1.f) / Part, Deep);
-			M.CentreZ = High - Deep;
+			M.CentreZ = Terrain(At.X, At.Y) + High - Deep;
 			Mounds.Add(M);
 			Bare(GM->SphereMesh, SandMat, FVector(At.X, At.Y, M.CentreZ), FRotator(0.f, M.Yaw, 0.f), M.Radii / 50.0, FLinearColor::White);
 		}
@@ -529,7 +652,7 @@ void FDC3D::BuildArea()
 		}
 		const float Rad = 7300.f + 350.f * FMath::Sin(i * 1.7f);
 		const float S = 15.f + 4.f * FMath::Sin(i * 3.1f);
-		Place(i % 3 == 2 ? Ledge : Boulder, 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), -260.0), FRotator(0.f, 67.f * i, 0.f), i % 3 == 2 ? S * 1.4f : S);
+		Place(i % 3 == 2 ? Ledge : Boulder, 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), Terrain(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang)) - 260.0), FRotator(0.f, 67.f * i, 0.f), i % 3 == 2 ? S * 1.4f : S);
 	}
 
 	// set dressing from the art drop: each piece joins in when its model is there. It sits on whatever lies under it.
@@ -564,8 +687,9 @@ void FDC3D::BuildArea()
 				continue;
 			}
 			FHitResult Hit;
-			At.Z = FMath::Max(World->LineTraceSingleByChannel(Hit, At + FVector(0.0, 0.0, 2400.0), At, DC3::Channel, DC3::Query()) ? Hit.Location.Z : 0.0, (double)GroundZ(At.X, At.Y)) - 8.0;
-			if (At.Z > 900.0)
+			const double Floor = Terrain(At.X, At.Y);
+			At.Z = FMath::Max(World->LineTraceSingleByChannel(Hit, FVector(At.X, At.Y, Floor + 2400.0), FVector(At.X, At.Y, Floor - 400.0), DC3::Channel, DC3::Query()) ? Hit.Location.Z : Floor, (double)GroundZ(At.X, At.Y)) - 8.0;
+			if (At.Z - Floor > 900.0)
 			{
 				continue; // not on top of the big rock
 			}
@@ -621,7 +745,7 @@ void FDC3D::BuildArea()
 
 	// ---- the wider sea (brief 08): a zone in each direction, each built from its own models, with a trail to it
 	{
-		auto ZoneAt = [this](int32 i) { return FVector(Zones[i].At.X, Zones[i].At.Y, 0.0); };
+		auto ZoneAt = [this](int32 i) { return FVector(Zones[i].At.X, Zones[i].At.Y, Terrain(Zones[i].At.X, Zones[i].At.Y)); };
 		int32 Seed = 500;
 		auto Z = [&](int32 Zi, const TCHAR* Id, int32 Count, float SMin, float SMax, const FVector2D& Off, float Spread, bool bCollide)
 		{
@@ -717,13 +841,16 @@ void FDC3D::BuildArea()
 			const double Len = To.Size2D();
 			for (double D = 8200.0; D < Len - 3500.0; D += 2400.0)
 			{
-				const FVector At = Dir * D + Side * TR.FRandRange(-500.f, 500.f);
+				FVector At = Dir * D + Side * TR.FRandRange(-500.f, 500.f);
+				At.Z = GroundZ(At.X, At.Y);
+				FVector Off = Side * TR.FRandRange(900.f, 1600.f) * (TR.FRand() < 0.5f ? -1.0 : 1.0);
+				Off.Z = GroundZ(At.X + Off.X, At.Y + Off.Y) - At.Z;
 				if (GM->Art.Contains(TEXT("scene:buoy")) && FMath::RoundToInt(D / 2400.0) % 2 == 0)
 				{
 					Place(TEXT("scene:buoy"), 0, At, FRotator(0.f, TR.FRandRange(0.f, 360.f), 0.f), 1.3f, false);
 					Glow(At + FVector(0.0, 0.0, 260.0), FLinearColor(1.f, 0.6f, 0.15f), 3000.f, 900.f);
 				}
-				Place(TEXT("scene:boulder"), 0, At + Side * TR.FRandRange(900.f, 1600.f) * (TR.FRand() < 0.5f ? -1.0 : 1.0), FRotator(0.f, TR.FRandRange(0.f, 360.f), 0.f), TR.FRandRange(1.5f, 4.f));
+				Place(TEXT("scene:boulder"), 0, At + Off, FRotator(0.f, TR.FRandRange(0.f, 360.f), 0.f), TR.FRandRange(1.5f, 4.f));
 			}
 		}
 		// the edge of the wider sea: a ring of cliffs, so the far water ends in rock and not in nothing
@@ -731,7 +858,7 @@ void FDC3D::BuildArea()
 		{
 			const float Ang = 2.f * PI * i / 36.f;
 			const float Rad = 26500.f + 700.f * FMath::Sin(i * 2.9f);
-			Place(i % 2 ? TEXT("scene:cliff") : TEXT("scene:boulder"), 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), -200.0),
+			Place(i % 2 ? TEXT("scene:cliff") : TEXT("scene:boulder"), 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), Terrain(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang)) - 200.0),
 				FRotator(0.f, FMath::RadiansToDegrees(Ang) + 90.f, 0.f), i % 2 ? 22.f : 26.f);
 		}
 		// open sand between the zones is not empty: stones, grass and the odd coral
@@ -824,7 +951,6 @@ void FDC3D::TickZones(float Dt)
 	L.KeyColor = Base->KeyColor * WBase;
 	L.FillIntensity = Base->FillIntensity * WBase;
 	L.SnowColor = Base->SnowColor * WBase;
-	ZoneDepth = 0.f;
 	for (int32 i = 0; i < Zones.Num() && i < 8; ++i)
 	{
 		const float K = W[i] * Norm;
@@ -835,8 +961,8 @@ void FDC3D::TickZones(float Dt)
 		L.KeyColor += Z.KeyColor * K;
 		L.FillIntensity += Z.Fill * K;
 		L.SnowColor += Z.Snow * K;
-		ZoneDepth += Z.Depth * K;
 	}
+	ZoneDepth = DepthAt(Pos.Z);
 	// the light and the water change slowly enough to read as swimming deeper, not as a switch
 	LookTime += Dt;
 	if (GM->Fog && LookTime > 0.1f)
@@ -931,6 +1057,11 @@ void FDC3D::Start()
 		SlatBase.Add(A->GetActorLocation());
 	}
 	SpawnHero();
+	bFirstPerson = !FParse::Param(FCommandLine::Get(), TEXT("MCThirdPerson"));
+	if (bFirstPerson)
+	{
+		SpawnArms();
+	}
 	SpawnFlecks();
 
 	ACameraActor* C = GM->SpawnCamera(Pos - FVector(DC3::BoomLen, 0.0, 0.0), FRotator::ZeroRotator);
@@ -1062,7 +1193,13 @@ void FDC3D::TickCamera(float Dt)
 	const FVector Want = Pos + FVector(0.0, 0.0, 45.0);
 	Pivot = Dt > 0.f ? FMath::Lerp(Pivot, Want, 1.0 - FMath::Exp(-14.0 * Dt)) : Want;
 	const float Fast = FMath::Clamp((Vel.Size() - DC3::Swim) / (DC3::Boost - DC3::Swim), 0.0, 1.0);
-	const FVector Boom = -F * (DC3::BoomLen + 60.f * Fast) + U * DC3::BoomUp;
+	FVector Boom = -F * (DC3::BoomLen + 60.f * Fast) + U * DC3::BoomUp;
+	if (bFirstPerson)
+	{
+		// the diver's eyes: a little up and forward of the body's centre, with the sway of the strokes
+		Pivot = Pos + FVector(0.0, 0.0, 22.0) + U * HeadBob;
+		Boom = F * 4.0;
+	}
 
 	// never inside rock: a ball swept from Unit 0 to where the camera wants to be stops at the first thing in the way.
 	// It comes in at once and goes back out slowly, so the picture does not pump next to a wall.
@@ -1078,8 +1215,13 @@ void FDC3D::TickCamera(float Dt)
 	Fov = FMath::FInterpTo(Fov, 72.f + 9.f * Fast, Dt, 3.f);
 	ViewFov = Fov;
 	FRotator Rot = View;
+	if (bFirstPerson)
+	{
+		Rot.Roll = 1.4f * StrokeAmt * FMath::Sin(StrokePhase * 2.f * PI); // the body rolls a little with each stroke
+		Rot.Pitch += 0.8f * StrokeAmt * FMath::Sin(StrokePhase * 4.f * PI);
+	}
 	float FocusAt = 0.f; // 0: everything sharp
-	bool bHide = FVector::Dist(CamPos, Pos) < 95.0; // too close to see anything but the diver's back
+	bool bHide = bFirstPerson || FVector::Dist(CamPos, Pos) < 95.0; // too close to see anything but the diver's back
 	if (Doc)
 	{
 		FVector P;
@@ -1097,7 +1239,7 @@ void FDC3D::TickCamera(float Dt)
 		else if (Doc->AimBlend > 0.001f)
 		{
 			// the camera is up: the picture is the one the diver's own camera takes, held in front of the chest
-			FVector Chest = Pos + FVector(0.0, 0.0, 32.0) + F * 58.0;
+			FVector Chest = Pos + FVector(0.0, 0.0, 32.0) + F * (bFirstPerson ? 30.0 : 58.0);
 			if (GM->GetWorld()->SweepSingleByChannel(Hit, Pos, Chest, FQuat::Identity, DC3::Channel, FCollisionShape::MakeSphere(12.f), DC3::Query()))
 			{
 				Chest = Pos + (Chest - Pos) * FMath::Max(0.0, Hit.Time - 0.05);
@@ -1122,6 +1264,18 @@ void FDC3D::TickCamera(float Dt)
 	if (AActor* A = GM->Hero.Actor.Get())
 	{
 		A->SetActorHiddenInGame(bHide);
+	}
+	if (bFirstPerson)
+	{
+		FVector PlayP;
+		FRotator PlayR;
+		float PlayFov = 0.f;
+		const bool bPlaying = Doc && Doc->ViewOverride(PlayP, PlayR, PlayFov);
+		TickArms(Dt, CamPos, Rot);
+		if (UPoseableMeshComponent* PM = Arms.Get())
+		{
+			PM->SetVisibility(!bPlaying && (!Doc || Doc->AimBlend < 0.85f), true);
+		}
 	}
 }
 
@@ -1282,7 +1436,7 @@ void FDC3D::Tick(float Dt)
 	MoveHero(Vel * Dt);
 	// the mounds are not solid: the diver is lifted over them here
 	const double SandTop = GroundZ(Pos.X, Pos.Y);
-	if (SandTop > 0.0 && Pos.Z < SandTop + Radius)
+	if (Pos.Z < SandTop + Radius)
 	{
 		Pos.Z = SandTop + Radius;
 		Vel.Z = FMath::Max(Vel.Z, 0.0);

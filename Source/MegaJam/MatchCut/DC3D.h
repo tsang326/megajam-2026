@@ -12,6 +12,9 @@ class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class USpotLightComponent;
 class UStaticMeshComponent;
+class UProceduralMeshComponent;
+class UPoseableMeshComponent;
+class UMaterialInterface;
 struct FDCDoc;
 
 struct FDC3DRing
@@ -55,6 +58,22 @@ struct FDC3D
 	TArray<TWeakObjectPtr<UMaterialInstanceDynamic>> HeroSwim; // Unit 0's swimming materials
 	float KickAmt = 0.25f;
 
+	// ---- first person (DCArms.cpp): the camera is the diver's eyes; two arms swim, hold the camera, reach and shield
+	bool bFirstPerson = true;
+	TWeakObjectPtr<UPoseableMeshComponent> Arms;
+	TWeakObjectPtr<UStaticMeshComponent> HandCam;   // the camera in the right hand
+	TWeakObjectPtr<UStaticMeshComponent> HandCamRec; // its red light
+	struct FArmRef { FName Upper, Lower, Hand; FTransform U, L, H; };
+	FArmRef ArmL, ArmR;
+	float StrokePhase = 0.f;
+	float StrokeAmt = 0.f;   // 0 still .. 1 swimming hard
+	float ReachAmt = 0.f;    // the left hand reaches for what is in front (the base's controls)
+	float ShieldAmt = 0.f;   // both arms up: a bite
+	float HeadBob = 0.f;
+	void SpawnArms();
+	void TickArms(float Dt, const FVector& Eye, const FRotator& View);
+	void SolveArm(const FArmRef& A, const FVector& Target, const FVector& Pole, const FQuat& HandTurn);
+
 	// ---- camera
 	float Yaw = 0.f;
 	float Pitch = -8.f;
@@ -85,7 +104,11 @@ struct FDC3D
 	// ---- the sea floor's low mounds (seen, not solid) and what rises from the vents
 	struct FMound { FVector2D At; float Yaw; FVector Radii; float CentreZ; };
 	TArray<FMound> Mounds;
-	float GroundZ(double X, double Y) const; // height of the sand at a place: 0 on the flat
+	TWeakObjectPtr<UProceduralMeshComponent> Ground;
+	float GroundZ(double X, double Y) const; // height of the sand at a place: the terrain plus the mounds
+	float Terrain(double X, double Y) const; // the sea floor's shape: the station's flat, basins, slopes, the abyss trench
+	float DepthAt(double Z) const { return FMath::Max(0.0, (2950.0 - Z) / 100.0 * 4.0); } // metres the readout shows
+	void BuildTerrain(UMaterialInterface* Mat);
 	struct FPlumeBit { TWeakObjectPtr<UStaticMeshComponent> Part; TWeakObjectPtr<UMaterialInstanceDynamic> MID; FVector Base; float Phase; float Speed; float Size; };
 	TArray<FPlumeBit> PlumeBits;
 	TArray<FVector> PlumeAt; // the mouth of each vent and chimney

@@ -21,7 +21,8 @@ public class MegaJam : ModuleRules
 			"Slate",
 			"SlateCore",
 			"RenderCore",
-			"Json"
+			"Json",
+			"ProceduralMeshComponent"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

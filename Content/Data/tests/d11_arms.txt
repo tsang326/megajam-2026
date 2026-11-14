@@ -1,0 +1,23 @@
+# first person: the arms at rest, swimming, the camera raised
+wait 1.0
+tp -1500 -1500 300 0 -5
+wait 1.0
+snap a1_rest
+key3 1 0 0 0.6
+snap a2_swim_a
+wait 0.35
+snap a3_swim_b
+key3 1 0 0 0.8 boost
+wait 0.3
+snap a4_boost
+wait 1.5
+aim 1
+wait 0.25
+snap a5_raising
+wait 1.0
+snap a6_aim
+aim 0
+look3 0 -50
+wait 0.8
+snap a7_lookdown
+quit

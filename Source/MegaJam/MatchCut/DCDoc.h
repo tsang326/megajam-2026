@@ -26,10 +26,38 @@ namespace DCSub
 enum class EDCDocState : uint8
 {
 	Shooting,
-	Edit,   // the cutting room: one take per shot
-	Film,   // title card, the takes in order, credits
-	Rating  // the last card
+	Edit,   // the cutting room: the dive's clips, each in or out
+	Film,   // title card, the kept clips in order, credits
+	Rating, // the last card: the channel after the last day
+	Upload, // the video goes up: views per clip, comments, money
+	Shop    // between dives: gear for money, then the next dive
 };
+
+/** Something worth filming: one of the six moments, a species of the ambient life, or the legend of the abyss. */
+struct FDCSubject
+{
+	FString Id;      // creature id, or the moment's name
+	FString Name;    // what the upload calls it
+	int32 Value = 0; // views for a three-star clip the first time it is seen
+	float Radius = 50.f;
+	bool bDanger = false; // it bites
+};
+
+/** One clip on the uploaded video. */
+struct FDCUploadLine
+{
+	int32 Subject = 0;
+	int32 Stars = 0;
+	int32 Views = 0;
+	bool bNew = false;   // never uploaded before
+	bool bDup = false;   // already in this video
+};
+
+/** Gear: what the shop sells, by level. */
+namespace DCGear
+{
+	enum Type { Tank = 0, Hull, Lamp, Lens, Scooter, Tape, Num };
+}
 
 struct FDCDocFrame
 {
@@ -41,6 +69,8 @@ struct FDCDocFrame
 	float Split = 0.f;
 	float Wave = 0.f;
 	bool bLamp = false;
+	FVector Hunt = FVector::ZeroVector; // the legend of the abyss: it hunts, so its path is kept
+	float HuntYaw = 0.f;
 };
 
 struct FDCTake
@@ -49,6 +79,7 @@ struct FDCTake
 	int32 Stars = 0;
 	float T0 = 0.f;   // the clock when the take began
 	float Len = 3.f;
+	bool bKeep = true;  // in the cut
 	TArray<FDCDocFrame> Frames; // evenly spread over Len
 };
 
@@ -105,7 +136,7 @@ struct FDCDoc
 	float RecTime = 0.f;
 	FDCTake Rec;
 	struct FTally { int32 In = 0, Whole = 0, Action = 0; float Size = 0.f, Off = 0.f; };
-	FTally Tally[DCSub::Num];
+	TArray<FTally> Tally; // per subject
 	int32 RecFrames = 0;
 	float RecShake = 0.f;
 	FRotator LastRot = FRotator::ZeroRotator;
@@ -139,7 +170,7 @@ struct FDCDoc
 	float PlayT = 0.f;
 
 	// what the lens sees now (for the viewfinder)
-	FDCSeen Seen[DCSub::Num];
+	TArray<FDCSeen> Seen; // per subject
 	int32 Lock = INDEX_NONE;  // the subject nearest the middle of the picture
 
 	// ---- creatures
@@ -167,10 +198,67 @@ struct FDCDoc
 		float Ra = 0.f, Rb = 0.f, Phase = 0.f, Omega = 0.f, Bob = 0.f, Wiggle = 0.f;
 		float Surge = 0.f;
 		bool bAway = false; // far off in another zone: hidden and not moved
+		int32 Subject = INDEX_NONE;
+		float Radius = 50.f;
 	};
 	TArray<FAmbient> Ambient;
 	TWeakObjectPtr<UPointLightComponent> ShoalLight, JellyLight;
 	FVector LampAt = FVector::ZeroVector, LensAt = FVector::ZeroVector;
+
+	// ---- the expedition: days, air, gear, the channel (DCCareer.cpp)
+	TArray<FDCSubject> Subjects; // DCSub first, then the species, then the legend
+	int32 Legend = INDEX_NONE;
+	int32 Day = 1;
+	int32 Days = 6;
+	int32 Money = 0;
+	int64 TotalViews = 0;
+	int32 Subscribers = 0;
+	int32 Gear[DCGear::Num] = { 0, 0, 0, 0, 0, 0 };
+	TMap<int32, int32> TimesUploaded; // subject -> videos it was in
+	float O2 = 180.f, O2Max = 180.f;
+	bool bOverDepth = false;   // deeper than the hull is rated for
+	bool bDocked = false;      // at the station: ENTER surfaces
+	bool bBlackout = false;    // the air ran out: the tape is lost
+	float BlackT = -1.f;       // seconds into the blackout fade; < 0 = none
+	float HurtTime = 0.f;      // the red flash of a bite
+	float HitCooldown = 0.f;
+	FString Alert;             // one warning line (air, depth, tape)
+	float AlertTime = 0.f;
+	bool bLostTape = false;    // this day's upload: nothing came back
+	TArray<FDCUploadLine> UploadLines;
+	int64 VideoViews = 0;
+	int32 Earned = 0;
+	int32 NewSubs = 0;
+	TArray<FString> Comments;
+	FString VideoTitle;
+	int32 ShopSel = 0;
+	FString ShopNote;
+	float ShopNoteTime = 0.f;
+	int32 Trending = INDEX_NONE; // the subject viewers ask for today: double views
+	// the legend of the abyss: it hunts what makes light or noise in its water
+	TWeakObjectPtr<AActor> Hunter;
+	FVector HuntPos = FVector::ZeroVector;
+	FVector HuntVel = FVector::ZeroVector;
+	float HuntYaw = 0.f;
+	float HuntAlert = 0.f;     // 0 calm .. 1 chasing
+	bool bHunting = false;
+
+	void SetupSubjects();
+	void StartDay();
+	void TickDive(float Dt);
+	void Surface(bool bLost);
+	void MakeUpload();
+	void TickHunter(float Dt, bool bLive);
+	int32 TapeCap() const;
+	float HullLimit() const;   // metres below the first site the hull can go
+	int32 GearCost(int32 G) const; // INDEX_NONE when fully upgraded
+	int32 GearLevels(int32 G) const;
+	const TCHAR* GearName(int32 G) const;
+	FString GearLine(int32 G) const;
+	void Buy(int32 G);
+	int32 ClipsKept() const;
+	FString SubjectName(int32 S) const { return Subjects.IsValidIndex(S) ? Subjects[S].Name : FString(TEXT("?")); }
+	float SpeedMul() const;
 
 	// ---- helpers the HUD and the 3D game use
 	int32 ShotsDone() const;
