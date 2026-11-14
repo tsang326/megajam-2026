@@ -1461,7 +1461,7 @@ void FDCDoc::Tick(float Dt)
 	if (USpotLightComponent* L = W->Lamp.Get())
 	{
 		const bool bOn = State == EDCDocState::Shooting ? bLampOn : (bHasPlay && Play.bLamp);
-		L->SetIntensity(bOn ? LampPower : 0.f);
+		L->SetIntensity(bOn ? LampPower * (State == EDCDocState::Shooting ? 1.f - 0.6f * W->DryAmt : 1.f) : 0.f); // the base has its own lights: the headlamp only glares on its pale walls
 		const FRotator R = State == EDCDocState::Shooting ? FRotator(W->Pitch, W->Yaw, 0.f) : Play.Rot;
 		const FVector From = State == EDCDocState::Shooting ? W->Pos + FVector(0.0, 0.0, 40.0) : Play.Cam - FVector(0.0, 0.0, 20.0);
 		L->SetWorldLocationAndRotation(From + R.Vector() * 62.0, R);

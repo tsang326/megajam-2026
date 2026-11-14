@@ -1,0 +1,27 @@
+# the new base: room size, lights, windows, prop scale
+wait 1.5
+look3 0 -5
+wait 0.5
+snap g1_toward_pool
+look3 180 -5
+wait 0.5
+snap g2_toward_desk
+look3 90 -5
+wait 0.5
+snap g3_bunk_side
+look3 -90 -5
+wait 0.5
+snap g4_locker_side
+key3 -1 0 0 1.2
+look3 -150 -10
+wait 0.5
+snap g5_desk_close
+look3 0 -20
+key3 1 0 0 3.0
+wait 0.5
+career
+snap g6_at_pool
+tp 3000 -900 1000 200 5
+wait 0.8
+snap g7_outside
+quit

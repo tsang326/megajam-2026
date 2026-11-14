@@ -12,14 +12,14 @@ snap e3_board
 back
 wait 0.3
 snap e4_board_closed
-tp 1360 -1150 1060 0 -40
+tp 1760 -1150 1105 0 -40
 wait 0.5
 snap e5_hatch_edge
 key3 1 0 0 1.2
 wait 1.0
 career
 snap e6_in_water
-tp 1590 -1150 760 0 30
+tp 2000 -1150 780 0 30
 wait 0.3
 key3 0 0 1 1.5
 wait 0.5

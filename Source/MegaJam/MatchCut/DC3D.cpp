@@ -1126,6 +1126,7 @@ void FDC3D::Start()
 
 	FParse::Value(FCommandLine::Get(), TEXT("-MCSens="), Sens);
 	BuildBase();
+	GM->ApplyLook(TEXT("3D")); // the base's walls and lamps came after the first look: paint them too
 	Doc = new FDCDoc(GM, this);
 	Doc->Start();
 	Pivot = Pos + FVector(0.0, 0.0, 45.0);
@@ -1284,7 +1285,7 @@ void FDC3D::TickCamera(float Dt)
 		const bool bHands = !bPlaying && (!Doc || Doc->AimBlend < 0.85f);
 		if (UStaticMeshComponent* C = HandCam.Get())
 		{
-			C->SetVisibility(bHands, true);
+			C->SetVisibility(bHands && DryAmt < 0.5f, true); // put away in the base
 		}
 	}
 }
@@ -1427,7 +1428,7 @@ void FDC3D::Tick(float Dt)
 	if (!bDry && bInBox && OverHatch(Pos) && Pos.Z > HatchAt.Z - 70.0 && (Vel.Z > 0.0 || In.Z > 0.f))
 	{
 		// up through the surface: the hands on the rim, out onto the deck
-		Pos = FVector(HatchAt.X - HatchHalf - 90.0, HatchAt.Y, Floor + 118.0);
+		Pos = FVector(HatchAt.X - HatchHalf - 90.0, HatchAt.Y, Floor + Stand);
 		Vel = FVector::ZeroVector;
 		Yaw = 180.f;
 		Pitch = -5.f;
@@ -1467,9 +1468,9 @@ void FDC3D::Tick(float Dt)
 		Vel.Z -= 1800.0 * Dt; // air: things fall
 		IdleTime = Walk.SizeSquared() > 0.01 || !Turn.IsNearlyZero() ? 0.f : IdleTime + Dt;
 		MoveHero(Vel * Dt);
-		if (!OverHatch(Pos, 30.0) && Pos.Z < Floor + 118.0)
+		if (!OverHatch(Pos, 30.0) && Pos.Z < Floor + Stand)
 		{
-			Pos.Z = Floor + 118.0;
+			Pos.Z = Floor + Stand;
 			Vel.Z = 0.0;
 		}
 		HeadBob = FMath::Lerp(HeadBob, (float)(2.5 * FMath::Sin(Time * 9.0) * FMath::Min(1.0, FVector2D(Vel.X, Vel.Y).Size() / 280.0)), 0.3f);

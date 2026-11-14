@@ -73,7 +73,8 @@ struct FDC3D
 	void SpawnArms();
 	// the base (DCCareer.cpp): a flooded habitat on legs over the station, its controls, the hatch in its floor
 	FVector BaseC = FVector(1150.0, -1150.0, 1150.0);
-	FVector BaseHalf = FVector(700.0, 450.0, 210.0);
+	FVector BaseHalf = FVector(1150.0, 650.0, 190.0);
+	static constexpr double Stand = 145.0; // body centre over the deck when standing: the eyes at about 1.67 m
 	TArray<FVector> BaseSpots; // desk, locker, bunk, board
 	FVector BaseWake = FVector::ZeroVector;
 	// the base is dry: air held in by its own pressure, the sea a flat surface in the hatch (a moon pool)
