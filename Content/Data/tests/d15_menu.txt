@@ -1,0 +1,45 @@
+# the start menu, settings, how to play, in English and Vietnamese; the tutorial card; the camcorder in the hand
+wait 1.0
+menu title
+wait 1.5
+snap m1_title_en
+menu settings
+menusel 5
+wait 0.4
+snap m2_settings_en
+menu howto
+wait 0.3
+snap m3_howto_en
+lang vi
+menu title
+wait 0.4
+snap m4_title_vi
+menu settings
+wait 0.3
+snap m5_settings_vi
+menu howto
+wait 0.3
+snap m6_howto_vi
+menu pause
+wait 0.3
+snap m7_pause_vi
+menu none
+tut on
+wait 0.6
+snap m8_tutorial_vi
+look3 120 -5
+wait 1.0
+snap m9_tutorial_done_vi
+lang en
+tp 2400 -600 700 0 -5
+wait 1.0
+snap c1_camcorder_water
+key3 1 0 0 2.0
+wait 0.4
+snap c2_camcorder_swim
+tp 600 -1150 1105 0 -5
+wait 0.6
+key3 1 0 0 0.8
+snap w1_walk_mid
+wait 1.0
+quit

@@ -75,6 +75,7 @@ public:
 	bool IsScriptActive() const { return bScriptActive; }
 	/** The 3D game (brief 06), or null when the old side-view game runs (-MC2D). */
 	struct FDC3D* World3D() const { return D3; }
+	class UDCAudio* GetAudio() const { return Audio; }
 
 	/** The cut. Returns true when the take succeeded. */
 	bool TryCut();

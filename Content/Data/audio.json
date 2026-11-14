@@ -1,20 +1,114 @@
 {
-  "_comment": "Mixer for Deep Cut. vol is a linear gain on the file; lufs is the measured integrated loudness of the source file (ffmpeg ebur128), kept here so the gain can be re-derived. Target: ambience bed -28.7 LUFS, SFX about -24 LUFS (never more than 6 dB over the bed), music about -27 LUFS. Buses: music (gameplay music, ducked while a film plays), film (projector and film music), amb, sfx. See docs/stage1-report.md.",
-  "buses": {"music": 1.0, "film": 1.0, "amb": 1.0, "sfx": 1.0},
-  "duck": 0.18,
-  "sounds": {
-    "amb_underwater": {"bus": "amb",   "vol": 2.00, "lufs": -34.7, "loop": true},
-    "projector":      {"bus": "film",  "vol": 0.45, "lufs": -23.1, "loop": true},
-    "mus_opening":    {"bus": "film",  "vol": 0.68, "lufs": -22.7, "loop": true},
-    "mus_explore":    {"bus": "music", "vol": 0.68, "lufs": -23.7, "loop": true},
-    "mus_flashback":  {"bus": "film",  "vol": 0.64, "lufs": -22.1, "loop": true},
-    "cam_rec":        {"bus": "sfx",   "vol": 0.95, "lufs": -23.6},
-    "cut_splice":     {"bus": "sfx",   "vol": 0.38, "lufs": -15.6},
-    "take_clapper":   {"bus": "sfx",   "vol": 0.57, "lufs": -19.1},
-    "lamp_on":        {"bus": "sfx",   "vol": 3.20, "lufs": -38.1},
-    "part_pickup":    {"bus": "sfx",   "vol": 2.75, "lufs": -32.8},
-    "reel_restore":   {"bus": "sfx",   "vol": 1.45, "lufs": -27.2},
-    "thruster":       {"bus": "sfx",   "vol": 0.20, "lufs": -12.8},
-    "plate_lift":     {"bus": "sfx",   "vol": 0.31, "lufs": -13.9}
+ "_comment": "Mixer for Deep Cut. vol is a linear gain on the file; lufs is the measured integrated loudness of the source file (ffmpeg ebur128), kept here so the gain can be re-derived. Target: ambience bed -28.7 LUFS, SFX about -24 LUFS (never more than 6 dB over the bed), music about -27 LUFS. Buses: music (gameplay music, ducked while a film plays), film (projector and film music), amb, sfx. See docs/stage1-report.md.",
+ "buses": {
+  "music": 1.0,
+  "film": 1.0,
+  "amb": 1.0,
+  "sfx": 1.0
+ },
+ "duck": 0.18,
+ "sounds": {
+  "amb_underwater": {
+   "bus": "amb",
+   "vol": 2.0,
+   "lufs": -34.7,
+   "loop": true
+  },
+  "projector": {
+   "bus": "film",
+   "vol": 0.45,
+   "lufs": -23.1,
+   "loop": true
+  },
+  "mus_opening": {
+   "bus": "film",
+   "vol": 0.68,
+   "lufs": -22.7,
+   "loop": true
+  },
+  "mus_explore": {
+   "bus": "music",
+   "vol": 0.68,
+   "lufs": -23.7,
+   "loop": true
+  },
+  "mus_flashback": {
+   "bus": "film",
+   "vol": 0.64,
+   "lufs": -22.1,
+   "loop": true
+  },
+  "cam_rec": {
+   "bus": "sfx",
+   "vol": 0.95,
+   "lufs": -23.6
+  },
+  "cut_splice": {
+   "bus": "sfx",
+   "vol": 0.38,
+   "lufs": -15.6
+  },
+  "take_clapper": {
+   "bus": "sfx",
+   "vol": 0.57,
+   "lufs": -19.1
+  },
+  "lamp_on": {
+   "bus": "sfx",
+   "vol": 3.2,
+   "lufs": -38.1
+  },
+  "part_pickup": {
+   "bus": "sfx",
+   "vol": 2.75,
+   "lufs": -32.8
+  },
+  "reel_restore": {
+   "bus": "sfx",
+   "vol": 1.45,
+   "lufs": -27.2
+  },
+  "thruster": {
+   "bus": "sfx",
+   "vol": 0.2,
+   "lufs": -12.8
+  },
+  "plate_lift": {
+   "bus": "sfx",
+   "vol": 0.31,
+   "lufs": -13.9
+  },
+  "step_deck1": {
+   "bus": "sfx",
+   "vol": 0.35
+  },
+  "step_deck2": {
+   "bus": "sfx",
+   "vol": 0.35
+  },
+  "step_deck3": {
+   "bus": "sfx",
+   "vol": 0.35
+  },
+  "splash_in": {
+   "bus": "sfx",
+   "vol": 0.45
+  },
+  "climb_out": {
+   "bus": "sfx",
+   "vol": 0.45
+  },
+  "ui_move": {
+   "bus": "sfx",
+   "vol": 0.35
+  },
+  "ui_select": {
+   "bus": "sfx",
+   "vol": 0.4
+  },
+  "swim_stroke": {
+   "bus": "sfx",
+   "vol": 0.18
   }
+ }
 }

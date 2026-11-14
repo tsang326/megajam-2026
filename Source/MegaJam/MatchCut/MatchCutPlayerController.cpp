@@ -4,6 +4,9 @@
 #include "MatchCutGameMode.h"
 #include "DC3D.h"
 #include "DCDoc.h"
+#include "DCMenu.h"
+#include "DCAudio.h"
+#include "MatchCutHUD.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "InputCoreTypes.h"
 
@@ -23,29 +26,57 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 		return;
 	}
 
-	if (WasInputKeyJustPressed(EKeys::Escape))
+	FDCMenu& Menu = DCMenu();
+	if (Menu.bQuit)
 	{
-		// in the dive ESC is "back" (menus, the board); only a second ESC, with nothing open, quits
-		FDC3D* W3 = GM->World3D();
-		FDCDoc* D3 = W3 ? W3->Doc : nullptr;
-		static double LastEsc = -10.0;
-		const double NowS = FPlatformTime::Seconds();
-		const bool bFree = !D3 || (D3->State == EDCDocState::Shooting && !D3->bBoardOpen);
-		if (!D3 || (bFree && NowS - LastEsc < 1.5))
-		{
-			UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
-			return;
-		}
-		if (bFree)
-		{
-			LastEsc = NowS;
-			D3->Alert = TEXT("ESC again to quit");
-			D3->AlertTime = 1.5f;
-		}
+		Menu.bQuit = false;
+		UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+		return;
 	}
 	if (GM->IsScriptActive())
 	{
 		return;
+	}
+	if (Menu.IsOpen() && GM->World3D())
+	{
+		TickMenu(GM, DeltaTime);
+		return;
+	}
+	if (bMenuMouse)
+	{
+		// back from a menu: the mouse is the look again, and its first jump is thrown away
+		bMenuMouse = false;
+		bShowMouseCursor = false;
+		SetInputMode(FInputModeGameOnly());
+		float Mx = 0.f, My = 0.f;
+		GetInputMouseDelta(Mx, My);
+		IgnoreMouse = 0.15f;
+	}
+	IgnoreMouse = FMath::Max(0.f, IgnoreMouse - DeltaTime);
+	if (WasInputKeyJustPressed(EKeys::Escape) || WasInputKeyJustPressed(EKeys::Gamepad_Special_Left))
+	{
+		// in the dive ESC is "back" (the board, the base's pages); with nothing open it pauses
+		FDC3D* W3 = GM->World3D();
+		FDCDoc* D3 = W3 ? W3->Doc : nullptr;
+		if (!D3)
+		{
+			UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+			return;
+		}
+		if (D3->State == EDCDocState::Shooting && !D3->bBoardOpen && D3->Spot == INDEX_NONE)
+		{
+			Menu.Open(EDCMenuPage::Pause);
+			if (GM->GetAudio())
+			{
+				GM->GetAudio()->Play(TEXT("ui_select"), 0.8f, 0.9f);
+			}
+			return;
+		}
+	}
+	if (WasInputKeyJustPressed(EKeys::H) && DCTutorial().IsActive())
+	{
+		DCSettings().bTutorial = false; // H hides the tutorial (Settings brings it back)
+		DCSettings().Save();
 	}
 	if (FDC3D* W = GM->World3D())
 	{
@@ -68,12 +99,9 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 		W->bBoost = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift) || IsInputKeyDown(EKeys::Gamepad_LeftThumbstick);
 
 		// look: mouse, arrow keys, right stick
-		if (WasInputKeyJustPressed(EKeys::LeftBracket)) { W->Sens = FMath::Max(0.03f, W->Sens * 0.8f); }
-		if (WasInputKeyJustPressed(EKeys::RightBracket)) { W->Sens = FMath::Min(0.5f, W->Sens * 1.25f); }
-		if (WasInputKeyJustPressed(EKeys::I)) { W->bInvertY = !W->bInvertY; }
 		float MouseX = 0.f, MouseY = 0.f;
 		GetInputMouseDelta(MouseX, MouseY);
-		if (W->Time > 0.5f) // the first counts after the window takes the mouse can be one big jump
+		if (W->Time > 0.5f && IgnoreMouse <= 0.f) // the first counts after the window takes the mouse can be one big jump
 		{
 			W->LookDelta += FVector2D(MouseX, MouseY * (W->bInvertY ? -1.f : 1.f)) * W->Sens;
 		}
@@ -82,7 +110,10 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 		const float LookY = GetInputAnalogKeyState(EKeys::Gamepad_RightY);
 		if (FMath::Abs(LookX) > 0.2f) { Rate.X += LookX; }
 		if (FMath::Abs(LookY) > 0.2f) { Rate.Y += LookY * (W->bInvertY ? -1.f : 1.f); }
-		W->LookRate = FVector2D(Rate.X * 120.0, Rate.Y * 85.0);
+		// keys and sticks: the turn starts gentle (fine aim) and reaches full speed after a moment (a quick look round)
+		LookHold = Rate.IsNearlyZero() ? 0.f : LookHold + DeltaTime;
+		const float Ramp = FMath::Lerp(0.45f, 1.f, FMath::Clamp(LookHold / 0.35f, 0.f, 1.f));
+		W->LookRate = FVector2D(Rate.X * 150.0, Rate.Y * 100.0) * DCSettings().TurnSpeed * Ramp;
 		if (FDCDoc* D = W->Doc)
 		{
 			// brief 07: the hand camera. Mouse first; every action also has a key, for a trackpad.
@@ -140,4 +171,77 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 	if (bLamp) { GM->PressLamp(); }
 	if (bUse) { GM->PressUse(); }
 	if (bRetake) { GM->PressRetake(); }
+}
+
+void AMatchCutPlayerController::TickMenu(AMatchCutGameMode* GM, float DeltaTime)
+{
+	FDCMenu& Menu = DCMenu();
+	if (!bMenuMouse)
+	{
+		bMenuMouse = true;
+		bShowMouseCursor = true;
+		FInputModeGameAndUI Mode;
+		Mode.SetHideCursorDuringCapture(false);
+		SetInputMode(Mode);
+	}
+	if (FDC3D* W = GM->World3D())
+	{
+		W->Move = FVector::ZeroVector;
+		W->LookRate = FVector2D::ZeroVector;
+		W->LookDelta = FVector2D::ZeroVector;
+	}
+	auto Hit = [this](std::initializer_list<FKey> Keys)
+	{
+		for (const FKey& Key : Keys)
+		{
+			if (WasInputKeyJustPressed(Key))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	if (Hit({ EKeys::W, EKeys::Up, EKeys::Gamepad_DPad_Up })) { Menu.Move(-1, GM); }
+	if (Hit({ EKeys::S, EKeys::Down, EKeys::Gamepad_DPad_Down })) { Menu.Move(1, GM); }
+	if (Hit({ EKeys::A, EKeys::Left, EKeys::Gamepad_DPad_Left })) { Menu.Change(-1, GM); }
+	if (Hit({ EKeys::D, EKeys::Right, EKeys::Gamepad_DPad_Right })) { Menu.Change(1, GM); }
+	if (Hit({ EKeys::Enter, EKeys::SpaceBar, EKeys::E, EKeys::Gamepad_FaceButton_Bottom })) { Menu.Activate(GM); }
+	if (Hit({ EKeys::Escape, EKeys::BackSpace, EKeys::Gamepad_FaceButton_Right, EKeys::Gamepad_Special_Left }) && Menu.Page != EDCMenuPage::Title)
+	{
+		Menu.Back(GM);
+	}
+	// the mouse: hover picks a row, a click acts on it (right click turns a setting the other way), the wheel turns it
+	float Mx = 0.f, My = 0.f;
+	if (GetMousePosition(Mx, My))
+	{
+		const FVector2D P(Mx, My); // the HUD stores the rows in viewport pixels
+		int32 Over = INDEX_NONE;
+		for (int32 i = 0; i < Menu.Rows.Num(); ++i)
+		{
+			if (Menu.Rows[i].IsInsideOrOn(P))
+			{
+				Over = i;
+			}
+		}
+		const bool bMoved = !P.Equals(LastMouse, 0.5);
+		LastMouse = P;
+		if (Over != INDEX_NONE && (bMoved || WasInputKeyJustPressed(EKeys::LeftMouseButton)) && Over != Menu.Sel)
+		{
+			Menu.Sel = Over;
+			if (GM->GetAudio())
+			{
+				GM->GetAudio()->Play(TEXT("ui_move"), 0.6f, 1.f, 0.04f);
+			}
+		}
+		if (Over != INDEX_NONE && WasInputKeyJustPressed(EKeys::LeftMouseButton))
+		{
+			Menu.Activate(GM);
+		}
+		if (Over != INDEX_NONE && WasInputKeyJustPressed(EKeys::RightMouseButton))
+		{
+			Menu.Change(-1, GM);
+		}
+	}
+	if (WasInputKeyJustPressed(EKeys::MouseScrollUp)) { Menu.Change(1, GM); }
+	if (WasInputKeyJustPressed(EKeys::MouseScrollDown)) { Menu.Change(-1, GM); }
 }

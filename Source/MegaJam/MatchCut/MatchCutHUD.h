@@ -43,6 +43,13 @@ private:
 	void DrawClapper(AMatchCutGameMode* GM);
 	void DrawHeadCam(float ClipT);
 	void Noise(float T, float Alpha);
+	void DrawMenu(AMatchCutGameMode* GM);
+	void DrawTutorial(AMatchCutGameMode* GM);
+	/** Width of a line in layout pixels (already translated text). */
+	float TextWidth(const FString& Str, float Scale);
+	/** Translates, then breaks the text into lines no wider than MaxW. Returns the height used. */
+	float Wrap(const FString& Str, float X, float Y, float Scale, const FLinearColor& Color, float MaxW, int32 Align = 0);
+	bool bNoTr = false; // the text is already in the player's language
 
 	float K = 1.f;
 	/** Empty runtime-cache font: the canvas needs one to take the Slate text path. */

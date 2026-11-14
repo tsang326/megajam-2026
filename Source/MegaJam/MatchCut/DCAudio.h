@@ -41,6 +41,8 @@ public:
 	void SetLoop(FName Name, float Level, float FadeSeconds = 1.f);
 	/** Ducks the music bus (1 = full, the "duck" value of the JSON = under the film). */
 	void SetDuck(bool bDuck) { bDucked = bDuck; }
+	/** The player's volume settings: everything, and the music on top. */
+	void SetMix(float InMaster, float InMusic) { MasterVol = InMaster; MusicVol = InMusic; }
 	void Tick(float Dt);
 
 private:
@@ -54,4 +56,6 @@ private:
 	float DuckLevel = 0.2f;
 	float DuckNow = 1.f;
 	bool bDucked = false;
+	float MasterVol = 1.f;
+	float MusicVol = 1.f;
 };

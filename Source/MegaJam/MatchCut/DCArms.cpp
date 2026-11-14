@@ -5,6 +5,7 @@
 #include "DC3D.h"
 #include "DCDoc.h"
 #include "MatchCutGameMode.h"
+#include "DCAudio.h"
 
 #include "Components/PoseableMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -44,7 +45,9 @@ void FDC3D::SpawnArms()
 		PM->SetMaterial(i, M);
 	}
 	// nothing of the body but the arms: the head would fill the eyes, the legs trail out of sight anyway
-	for (const TCHAR* Bone : { TEXT("neck_01"), TEXT("thigh_l"), TEXT("thigh_r") })
+	// the right arm too: the right hand is off screen, holding the camera, and only the camera shows (as in most first-person
+	// camera games, the arm that holds the thing is not drawn)
+	for (const TCHAR* Bone : { TEXT("neck_01"), TEXT("thigh_l"), TEXT("thigh_r"), TEXT("upperarm_r") })
 	{
 		PM->HideBoneByName(FName(Bone), PBO_None);
 	}
@@ -61,20 +64,48 @@ void FDC3D::SpawnArms()
 	};
 	ArmL = Ref(TEXT("l"));
 	ArmR = Ref(TEXT("r"));
-	// the camera in the right hand: a box for now, the camcorder model when the art drop has it
+	// the camera in the right hand: the camcorder model (scene:camcorder), on a holder of its own so the model can be
+	// turned and centred inside it; a box when the art is missing
+	USceneComponent* Holder = NewObject<USceneComponent>(Owner);
+	Holder->SetupAttachment(Owner->GetRootComponent());
+	Holder->RegisterComponent();
 	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(Owner);
-	C->SetupAttachment(Owner->GetRootComponent());
+	C->SetupAttachment(Holder);
 	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	C->SetCastShadow(false);
-	C->SetStaticMesh(GM->CubeMesh);
-	UMaterialInstanceDynamic* CM = UMaterialInstanceDynamic::Create(GM->LitMaterial, C);
-	CM->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.55f, 0.32f, 0.05f));
-	C->SetMaterial(0, CM);
+	UStaticMesh* CamMesh = nullptr;
+	float CamYaw = -90.f; // the model's lens looks along its +Y
+	if (const TArray<FDCArtRef>* Set = GM->Art.Find(TEXT("scene:camcorder")))
+	{
+		if (Set->Num() > 0 && GM->ArtMeshes.IsValidIndex((*Set)[0].Mesh))
+		{
+			CamMesh = GM->ArtMeshes[(*Set)[0].Mesh];
+		}
+	}
+	FParse::Value(FCommandLine::Get(), TEXT("-MCCamYaw="), CamYaw);
+	if (CamMesh)
+	{
+		C->SetStaticMesh(CamMesh);
+		const FBox B = CamMesh->GetBoundingBox();
+		const double S = 26.0 / FMath::Max(B.GetSize().GetMax(), 1.0); // about 26 cm long
+		const FQuat Q(FRotator(0.f, CamYaw, 0.f));
+		C->SetRelativeScale3D(FVector(S));
+		C->SetRelativeRotation(Q);
+		C->SetRelativeLocation(-Q.RotateVector(B.GetCenter() * S));
+	}
+	else
+	{
+		C->SetStaticMesh(GM->CubeMesh);
+		UMaterialInstanceDynamic* CM = UMaterialInstanceDynamic::Create(GM->LitMaterial, C);
+		CM->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.55f, 0.32f, 0.05f));
+		C->SetMaterial(0, CM);
+		C->SetRelativeScale3D(FVector(0.17, 0.08, 0.10));
+	}
 	C->RegisterComponent();
-	C->SetRelativeScale3D(FVector(0.17, 0.08, 0.10));
 	HandCam = C;
+	HandCamHolder = Holder;
 	UStaticMeshComponent* L = NewObject<UStaticMeshComponent>(Owner);
-	L->SetupAttachment(C);
+	L->SetupAttachment(Holder);
 	L->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	L->SetCastShadow(false);
 	L->SetStaticMesh(GM->SphereMesh);
@@ -82,8 +113,8 @@ void FDC3D::SpawnArms()
 	LM->SetVectorParameterValue(TEXT("Color"), FLinearColor(6.f, 0.2f, 0.1f));
 	L->SetMaterial(0, LM);
 	L->RegisterComponent();
-	L->SetRelativeLocation(FVector(30.0, 0.0, 55.0));
-	L->SetRelativeScale3D(FVector(0.1, 0.2, 0.15));
+	L->SetRelativeLocation(FVector(4.0, 3.0, 9.0)); // on top, near the front, toward the eye
+	L->SetRelativeScale3D(FVector(0.012));
 	HandCamRec = L;
 	Arms = PM;
 	UE_LOG(LogMatchCut, Display, TEXT("3D arms: shoulder L (%.0f,%.0f,%.0f) R (%.0f,%.0f,%.0f), hand L (%.0f,%.0f,%.0f)"), ArmL.U.GetLocation().X, ArmL.U.GetLocation().Y, ArmL.U.GetLocation().Z,
@@ -137,13 +168,22 @@ void FDC3D::TickArms(float Dt, const FVector& Eye, const FRotator& View)
 	const float WantStroke = FMath::Clamp(Speed / 560.f, 0.f, 1.3f) * (1.f - Aim) * (1.f - DryAmt); // walking in the base: no strokes
 	StrokeAmt = FMath::FInterpTo(StrokeAmt, WantStroke, Dt, 4.f);
 	StrokePhase = FMath::Frac(StrokePhase + Dt * (0.25f + 0.55f * StrokeAmt));
-	HeadBob = 1.6f * StrokeAmt * FMath::Sin(StrokePhase * 4.f * PI);
+	SwimBob = 1.6f * StrokeAmt * FMath::Sin(StrokePhase * 4.f * PI);
+	{
+		// one stroke sound per pull of the arm
+		const float Was = StrokeSoundPhase;
+		StrokeSoundPhase = StrokePhase;
+		if (StrokeAmt > 0.25f && Was < 0.15f && StrokePhase >= 0.15f && GM->Audio)
+		{
+			GM->Audio->Play(TEXT("swim_stroke"), FMath::Lerp(0.6f, 1.f, FMath::Min(StrokeAmt, 1.f)), 1.f, 0.08f);
+		}
+	}
 	ShieldAmt = FMath::Max(0.f, ShieldAmt - Dt * 1.5f);
 	const float Th = StrokePhase * 2.f * PI;
 	const float Idle = 0.6f * FMath::Sin(Time * 1.3f);
 
 	// left hand: a breaststroke sweep (reach forward, sweep out and back, come in under the chest), or resting low
-	const FVector LRest = F * 40.0 + R * -15.0 + U * (-13.0 + Idle);
+	const FVector LRest = F * 42.0 + R * -26.0 + U * (-30.0 + Idle); // below the picture: only a stroke brings it in
 	const FVector LStroke = F * (40.0 + 12.0 * FMath::Cos(Th)) + R * (-10.0 - 18.0 * FMath::Max(0.f, FMath::Sin(Th))) + U * (-12.0 + 6.0 * FMath::Sin(Th));
 	const FVector LReach = F * 54.0 + R * -5.0 + U * -4.0;
 	const FVector LShield = F * 32.0 + R * -8.0 + U * 2.0;
@@ -160,6 +200,7 @@ void FDC3D::TickArms(float Dt, const FVector& Eye, const FRotator& View)
 	const FVector Base = Eye;
 	SolveArm(ArmL, Base + LT, Base + R * -70.0 + U * -45.0 - F * 10.0, FQuat::Identity);
 	SolveArm(ArmR, Base + RT, Base + R * 70.0 + U * -45.0 - F * 10.0, FQuat::Identity);
+	(void)RT;
 
 	static float LogT = 0.f;
 	LogT += Dt;
@@ -174,15 +215,25 @@ void FDC3D::TickArms(float Dt, const FVector& Eye, const FRotator& View)
 		UE_LOG(LogMatchCut, Display, TEXT("3D ARMS (eye frame f,r,u) handL (%.0f,%.0f,%.0f) wantL (%.0f,%.0f,%.0f) handR (%.0f,%.0f,%.0f) shoulderL (%.0f,%.0f,%.0f) head (%.0f,%.0f,%.0f) vis=%d"),
 			a.X, a.Y, a.Z, d.X, d.Y, d.Z, b.X, b.Y, b.Z, c.X, c.Y, c.Z, e.X, e.Y, e.Z, PM->IsVisible() ? 1 : 0);
 	}
-	if (UStaticMeshComponent* C = HandCam.Get())
+	if (USceneComponent* Hold = HandCamHolder.Get())
 	{
-		// the camera sits in the right palm, its lens along the view
-		const FVector HR = PM->GetBoneLocationByName(ArmR.Hand, EBoneSpaces::WorldSpace);
-		C->SetWorldLocationAndRotation(HR + F * 7.0 + U * 3.0 - R * 2.0, FRotator(View.Pitch, View.Yaw, 0.f));
+		// the camera in the right hand, low and to the right of the picture. It lags the turn a little and sways with the
+		// steps and strokes; raising it (aim) brings it up to the eye.
+		const float BobK = bHeadBobOn ? 1.f : 0.3f;
+		const float Sway = FMath::Sin(StepPhase * PI) * StepAmt * 0.9f + FMath::Sin(Th) * StrokeAmt * 1.2f;
+		const float Lift = -FMath::Abs(FMath::Cos(StepPhase * PI)) * StepAmt * 0.7f + FMath::Sin(Th * 2.f) * StrokeAmt * 0.8f;
+		static FRotator Lag = FRotator::ZeroRotator;
+		static FRotator LastView = View;
+		const FRotator DV = (View - LastView).GetNormalized();
+		LastView = View;
+		Lag = FMath::RInterpTo(Lag + FRotator(-DV.Pitch * 0.35f, -DV.Yaw * 0.35f, 0.f), FRotator::ZeroRotator, Dt, 9.f);
+		Lag.Pitch = FMath::Clamp(Lag.Pitch, -6.f, 6.f);
+		Lag.Yaw = FMath::Clamp(Lag.Yaw, -6.f, 6.f);
+		const FVector Low = F * 34.0 + R * (14.5 + Sway * BobK) + U * (-16.5 + Idle * 0.6f + Lift * BobK);
+		const FVector Up = F * 30.0 + R * 6.0 + U * -7.0;
+		const FVector At = Eye + FMath::Lerp(Low, Up, (double)Aim);
+		const FRotator Hold3 = FRotator(View.Pitch + Lag.Pitch - 4.f * (1.f - Aim), View.Yaw + Lag.Yaw - 6.f * (1.f - Aim), View.Roll * 0.5f);
+		Hold->SetWorldLocationAndRotation(At, Hold3);
 	}
-	if (UStaticMeshComponent* L = HandCamRec.Get())
-	{
-		const bool bRec = Doc && Doc->bRecording;
-		L->SetVisibility(bRec && FMath::Frac(Time * 1.2f) < 0.6f);
-	}
+
 }

@@ -1,0 +1,277 @@
+# Deep Cut: the Vietnamese text. English<TAB>Vietnamese, one per line. {} is a value carried over (a number, a name).
+# menus
+Start the dive	Bắt đầu lặn
+Continue	Tiếp tục
+Settings	Cài đặt
+How to play	Cách chơi
+Quit	Thoát
+Resume	Chơi tiếp
+Quit the game	Thoát game
+Back	Quay lại
+Language	Ngôn ngữ
+Mouse sensitivity	Độ nhạy chuột
+Turn speed (keys, pad)	Tốc độ xoay (phím, tay cầm)
+Invert look	Đảo trục nhìn
+Head bob	Rung đầu khi đi
+Field of view	Góc nhìn (FOV)
+Master volume	Âm lượng chung
+Music volume	Âm lượng nhạc
+Display	Hiển thị
+Graphics	Đồ họa
+Tutorial hints	Hướng dẫn chơi
+Low	Thấp
+Medium	Vừa
+High	Cao
+Epic	Rất cao
+On	Bật
+Off	Tắt
+Fullscreen	Toàn màn hình
+Window	Cửa sổ
+SETTINGS	CÀI ĐẶT
+PAUSED	TẠM DỪNG
+HOW TO PLAY	CÁCH CHƠI
+A documentary from the bottom of the sea	Một bộ phim tài liệu từ đáy biển
+ENTER / click: select     W S / mouse: choose	ENTER / nhấp: chọn     W S / chuột: di chuyển
+W S / mouse: choose     A D: change     ENTER / click: select     ESC: back	W S / chuột: di chuyển     A D: đổi     ENTER / nhấp: chọn     ESC: quay lại
+Epic MegaJam 2026  ·  theme: Director's Cut	Epic MegaJam 2026  ·  chủ đề: Director's Cut
+The company's film says the abyss trench is empty. You know it is not. Dive from your base, film what lives down there, and bring the tapes back.	Phim của công ty nói rãnh vực thẳm trống rỗng. Bạn biết là không phải. Lặn từ căn cứ, quay lại những gì sống dưới đó và mang băng về.
+Upload your footage at the edit desk: views pay for gear (lamp, air, lenses). The proofs on the board decide the hearing after the last day.	Đăng video ở bàn dựng phim: lượt xem trả tiền mua đồ (đèn, bình khí, ống kính). Các bằng chứng trên bảng quyết định phiên điều trần sau ngày cuối.
+MOUSE / ARROW KEYS	CHUỘT / PHÍM MŨI TÊN
+look	nhìn
+W A S D	W A S D
+walk, swim	đi, bơi
+SPACE / Q	SPACE / Q
+swim up / down	bơi lên / xuống
+SHIFT	SHIFT
+run, swim fast	chạy, bơi nhanh
+RIGHT MOUSE / C	CHUỘT PHẢI / C
+raise the camera	giơ máy quay
+LEFT MOUSE / E	CHUỘT TRÁI / E
+record	quay
+WHEEL / 1 2	CON LĂN / 1 2
+zoom	phóng to
+headlamp	đèn đội đầu
+use: desk, locker, bunk, board	dùng: bàn, tủ đồ, giường, bảng
+pause, settings	tạm dừng, cài đặt
+# tutorial
+TUTORIAL  {} / {}	HƯỚNG DẪN  {} / {}
+H  hide the tutorial	H  ẩn hướng dẫn
+DONE: {}	XONG: {}
+LOOK AROUND	NHÌN QUANH
+WALK	ĐI LẠI
+THE BOARD	TẤM BẢNG
+DIVE	LẶN XUỐNG
+SWIM	BƠI
+RAISE THE CAMERA	GIƠ MÁY QUAY
+RECORD	QUAY PHIM
+COME BACK	QUAY VỀ
+UPLOAD	ĐĂNG VIDEO
+GEAR AND SLEEP	MUA ĐỒ VÀ NGỦ
+Move the mouse to look. No mouse: the arrow keys.	Di chuột để nhìn. Không có chuột: dùng phím mũi tên.
+W A S D to walk. SHIFT to run.	W A S D để đi. SHIFT để chạy.
+The board by the table lists what to film. Look at it and press E.	Tấm bảng cạnh bàn ghi những thứ cần quay. Nhìn vào nó và bấm E.
+Walk into the moon pool, the yellow ring in the floor, to dive.	Bước vào giếng lặn, vòng vàng dưới sàn, để lặn xuống.
+SPACE up, Q down, SHIFT fast. Watch the AIR bar at the top.	SPACE lên, Q xuống, SHIFT bơi nhanh. Để ý thanh KHÍ ở trên.
+Hold RIGHT MOUSE to raise the camera (or press C).	Giữ CHUỘT PHẢI để giơ máy quay (hoặc bấm C).
+LEFT MOUSE or E to record. Keep the subject in the frame.	CHUỘT TRÁI hoặc E để quay. Giữ đối tượng trong khung hình.
+Follow the BASE marker and swim up into the moon pool before the air runs out.	Theo dấu CĂN CỨ, bơi lên vào giếng lặn trước khi hết khí.
+At the edit desk, press E to upload the tape. Views bring money.	Ở bàn dựng phim, bấm E để đăng băng. Lượt xem ra tiền.
+The locker sells gear. Sleep in the bunk to start the next dive.	Tủ đồ bán dụng cụ. Ngủ ở giường để sang chuyến lặn sau.
+# the dive
+STBY	CHỜ
+DAY {} / {}	NGÀY {} / {}
+TAPE {} / {}	BĂNG {} / {}
+DEPTH {} m / {}   HDG {}	SÂU {} m / {}   HƯỚNG {}
+AIR	KHÍ
+{} s	{} giây
+{}   PROOF	{}   BẰNG CHỨNG
+{}   NEW	{}   MỚI
+{} mm     FOCUS {} m	{} mm     NÉT {} m
+BASE  {} m	CĂN CỨ  {} m
+E   EDIT DESK: cut and upload today's tape	E   BÀN DỰNG: cắt và đăng băng hôm nay
+E   LOCKER: buy gear	E   TỦ ĐỒ: mua dụng cụ
+E   BUNK: sleep to the next day	E   GIƯỜNG: ngủ sang ngày mới
+E   BOARD: the proofs	E   BẢNG: các bằng chứng
+E   BUNK: last night. The Director's Cut goes out.	E   GIƯỜNG: đêm cuối. Bản Director's Cut sẽ được công bố.
+THE PROOFS   {} / {}	BẰNG CHỨNG   {} / {}
+The company's film says the trench is empty. Film what is there, upload it, and it goes in the archive.	Phim của công ty nói rãnh biển trống rỗng. Quay những gì ở đó, đăng lên, và nó vào kho lưu trữ.
+near the station	gần trạm
+{}   (seen only through the camera)	{}   (chỉ thấy qua máy quay)
+Day {} of {}. The hearing is after day {}.	Ngày {} / {}. Phiên điều trần sau ngày {}.
+E / ESC  close	E / ESC  đóng
+The hatch in the floor leads out. Film what you find. Come back before the air runs out.	Cửa sập dưới sàn dẫn ra biển. Quay những gì bạn thấy. Về trước khi hết khí.
+Tape to upload: the edit desk.	Có băng cần đăng: tới bàn dựng phim.
+OUT OF AIR	HẾT KHÍ
+TAPE FULL. Go home and upload.	ĐẦY BĂNG. Về căn cứ và đăng video.
+Every clip is cut. Keep at least one (S).	Đã cắt hết mọi đoạn. Giữ lại ít nhất một đoạn (S).
+MOUSE look     W A S D swim     SPACE up     X down     SHIFT boost	CHUỘT nhìn     W A S D bơi     SPACE lên     X xuống     SHIFT tăng tốc
+Hold RIGHT MOUSE to raise the camera     (or press C)	Giữ CHUỘT PHẢI để giơ máy quay     (hoặc bấm C)
+LEFT MOUSE: record     Hold the frame for three seconds     (or E)	CHUỘT TRÁI: quay     Giữ khung hình ba giây     (hoặc E)
+WHEEL zooms the lens     (or 1 / 2)	CON LĂN để phóng to     (hoặc 1 / 2)
+# the verdict on a clip
+NO GOOD	HỎNG
+Nothing in frame	Không có gì trong khung
+Too few of them in frame	Quá ít trong khung
+Too far	Quá xa
+Subject cut off	Đối tượng bị cắt mất
+Missed the moment	Lỡ mất khoảnh khắc
+Too dark. It needs a lamp.	Quá tối. Cần bật đèn.
+Too shaky	Rung quá
+Off centre	Lệch khung
+Subject lost	Mất đối tượng
+A perfect take	Một cảnh quay hoàn hảo
+TIP: swim closer, or zoom in with the WHEEL.	MẸO: bơi lại gần hơn, hoặc lăn CON LĂN để phóng to.
+TIP: back off or zoom out until all of it fits.	MẸO: lùi ra hoặc thu nhỏ cho tới khi vừa khung.
+TIP: move the camera slowly while it records.	MẸO: di máy quay thật chậm khi đang quay.
+TIP: keep the subject in the middle, or on a third line.	MẸO: giữ đối tượng ở giữa, hoặc trên đường một phần ba.
+TIP: keep it in the frame for the whole three seconds.	MẸO: giữ nó trong khung suốt ba giây.
+TIP: the brackets show what the lens has found.	MẸO: khung ngoặc cho biết ống kính đã bắt được gì.
+TIP: get more of them into the picture.	MẸO: đưa thêm nhiều con vào khung hình.
+TIP: fetch the headlamp from the wreck, then switch it on with F.	MẸO: lấy đèn đội đầu ở xác tàu, rồi bật bằng F.
+# the cutting room and the upload
+CUTTING ROOM   DAY {}	PHÒNG DỰNG   NGÀY {}
+{} CLIPS   {} IN THE VIDEO	{} ĐOẠN   {} TRONG VIDEO
+THUMBNAIL  	ẢNH BÌA  
+PROOF  	BẰNG CHỨNG  
+CLOSE CALL  	SUÝT CHẾT  
+TRENDING	THỊNH HÀNH
+CUT	CẮT
+A / D  clip     W  thumbnail (x2.5 views)     S  keep / cut     ENTER  upload     ESC  back	A / D  đoạn     W  ảnh bìa (x2.5 lượt xem)     S  giữ / cắt     ENTER  đăng     ESC  quay lại
+UPLOADED	ĐÃ ĐĂNG
+again in this video	lặp lại trong video này
+NEW	MỚI
+seen before	đã xem rồi
+{} views	{} lượt xem
+{} views    +{}    +{} subscribers	{} lượt xem    +{}    +{} người đăng ký
+BANK {}	TÀI KHOẢN {}
+COMMENTS	BÌNH LUẬN
+PROOFS IN THE ARCHIVE  {} / {}	BẰNG CHỨNG TRONG KHO  {} / {}
+ENTER  back to the base	ENTER  về căn cứ
+THE LOCKER	TỦ ĐỒ
+BEST	TỐT NHẤT
+W / S  choose     ENTER  buy     ESC  close	W / S  chọn     ENTER  mua     ESC  đóng
+AIR TANK	BÌNH KHÍ
+HULL RATING	ĐỘ BỀN BỘ LẶN
+LONG LENS	ỐNG KÍNH TELE
+THRUSTER	MÁY ĐẨY
+TAPE	BĂNG
+{} s of air	{} giây khí
+safe to {} m	an toàn tới {} m
+strong beam	đèn mạnh
+weak beam	đèn yếu
+zoom to 14 deg	phóng tới 14 độ
+zoom to 30 deg	phóng tới 30 độ
+{}% speed	{}% tốc độ
+{} clips a dive	{} đoạn mỗi lần lặn
+Already the best there is.	Đã là loại tốt nhất rồi.
+Not enough money: ${} more.	Không đủ tiền: thiếu ${}.
+{} upgraded: {}.	Đã nâng cấp {}: {}.
+DAY {} OF {}	NGÀY {} / {}
+Today's footage is not uploaded. It will be lost. Use the bunk again to sleep anyway.	Băng hôm nay chưa đăng, sẽ bị mất. Dùng giường lần nữa nếu vẫn muốn ngủ.
+Today's video is up. Rest at the bunk, or buy gear at the locker.	Video hôm nay đã lên. Nghỉ ở giường, hoặc mua đồ ở tủ.
+No footage on the tape. Go down through the hatch and film something.	Băng trống. Xuống qua cửa sập và quay gì đó đi.
+The crew pulled you in. The tape is lost.	Đồng đội kéo bạn vào. Cuộn băng đã mất.
+HULL OVER RATING ({} m): air going fast. Climb, or buy a better hull.	QUÁ SÂU SO VỚI BỘ LẶN ({} m): khí hao nhanh. Bơi lên, hoặc mua bộ lặn tốt hơn.
+AIR LOW. Head back to the base.	SẮP HẾT KHÍ. Quay về căn cứ.
+{} bit you: -{} s of air.	{} cắn bạn: -{} giây khí.
+Something huge	Thứ gì đó khổng lồ
+DAY {}: {}	NGÀY {}: {}
+ (NOT FAKE)	 (KHÔNG PHẢI ĐỒ GIẢ)
+Something moved in the dark. Lamp off. Keep still.	Có gì đó cử động trong bóng tối. Tắt đèn. Đứng yên.
+Something big is passing overhead. Look up.	Có thứ gì to lớn đang lướt qua trên đầu. Nhìn lên.
+Headlamp fitted.  F switches it.	Đã lắp đèn đội đầu.  F để bật/tắt.
+Long lens fitted.  The zoom goes further.	Đã lắp ống kính tele.  Phóng được xa hơn.
+# comments under the video
+THAT IS NOT A SQUID. THAT IS NOT ANYTHING.	ĐÓ KHÔNG PHẢI CON MỰC. ĐÓ KHÔNG PHẢI THỨ GÌ CẢ.
+The company said that trench was empty. Explain THIS.	Công ty bảo rãnh đó trống rỗng. Giải thích CÁI NÀY đi.
+frame 0:42. zoom in. i'm not sleeping tonight	khung 0:42. phóng to lên. tối nay khỏi ngủ
+how is the camera still rolling when that thing is THAT close	sao máy còn quay được khi thứ đó ở GẦN như vậy
+nice fish i guess	cá đẹp đó chắc vậy
+subscribed. go deeper.	đã đăng ký. lặn sâu hơn nữa đi.
+when are you filming the {}??	bao giờ quay {} vậy??
+upload schedule is insane, respect	lịch đăng video điên thật, nể
+# the ending
+THE TRUTH	SỰ THẬT
+DOUBT	HOÀI NGHI
+THE OFFICIAL STORY	PHIÊN BẢN CHÍNH THỨC
+The hearing watched your film twice. Nobody spoke.	Hội đồng xem phim của bạn hai lần. Không ai nói gì.
+Some of the panel believed it. The company called it a fake.	Một số người trong hội đồng tin. Công ty gọi đó là đồ giả.
+Without proof, the company's film stands as the record.	Không có bằng chứng, phim của công ty thành hồ sơ chính thức.
+The trench is closed to drilling. What lives there is left alone.	Rãnh biển bị cấm khoan. Những gì sống ở đó được để yên.
+The drilling goes on, slower, with cameras watching.	Việc khoan vẫn tiếp tục, chậm hơn, dưới ống kính giám sát.
+The trench opens for drilling next spring. Something down there will notice.	Rãnh biển mở cho khoan vào mùa xuân tới. Thứ gì đó dưới kia sẽ nhận ra.
+PROOFS  {} / {}	BẰNG CHỨNG  {} / {}
+{} views   {} subscribers   {} earned	{} lượt xem   {} người đăng ký   kiếm được {}
+ENTER  watch it again	ENTER  xem lại
+THE DIRECTOR'S CUT	BẢN DIRECTOR'S CUT
+what the official film left out	những gì phim chính thức đã cắt bỏ
+{} of {} proofs on film.	{} / {} bằng chứng đã lên phim.
+The hearing is in the morning.	Phiên điều trần diễn ra sáng mai.
+EXHIBIT {}	TANG VẬT {}
+# places
+THE KELP FOREST	RỪNG TẢO BẸ
+THE WRECK GRAVEYARD	NGHĨA ĐỊA XÁC TÀU
+THE DROWNED CITY	THÀNH PHỐ CHÌM
+THE WHALE FALL	XÁC CÁ VOI
+THE BLACK SMOKERS	MIỆNG PHUN ĐEN
+THE ABYSS	VỰC THẲM
+THE STATION	TRẠM
+# what lives there
+Squid	Mực
+Nautilus	Ốc anh vũ
+Spider crab	Cua nhện
+Giant isopod	Bọ biển khổng lồ
+Lanternfish	Cá đèn lồng
+Whale	Cá voi
+Shark	Cá mập
+Moray	Cá chình moray
+Vampire squid	Mực ma cà rồng
+Hatchetfish	Cá rìu
+Frilled shark	Cá mập mang xếp
+Sea pig	Hải sâm heo
+Barreleye	Cá mắt thùng
+Coelacanth	Cá vây tay
+Oarfish	Cá mái chèo
+Stingray	Cá đuối gai độc
+Cuttlefish	Mực nang
+Brittle star	Sao biển giòn
+Siphonophore	Ống thủy mẫu
+Sea angel	Thiên thần biển
+Octopus	Bạch tuộc
+Goblin shark	Cá mập yêu tinh
+Gulper eel	Cá chình miệng túi
+Sunfish	Cá mặt trăng
+Sea dragon	Rồng biển
+Seahorse	Cá ngựa
+Grouper	Cá mú
+Lobster	Tôm hùm
+Lion's mane	Sứa bờm sư tử
+Nudibranch	Sên biển
+Krill	Nhuyễn thể krill
+Sea turtle	Rùa biển
+Dolphins	Cá heo
+Parrotfish	Cá vẹt
+Barracuda	Cá nhồng
+Hammerhead	Cá mập đầu búa
+Yeti crab	Cua yeti
+Vent shrimp	Tôm miệng phun
+Giant squid	Mực khổng lồ
+Dragonfish	Cá rồng
+Viperfish	Cá răng nanh
+Atolla jelly	Sứa atolla
+Sea toad	Cá cóc biển
+Manta ray	Cá đuối manta
+The shoal	Đàn cá
+Anglerfish	Cá vây chân
+Jellyfish bloom	Đàn sứa
+The giant overhead	Gã khổng lồ trên đầu
+Crewmate	Đồng đội
+The Ribcage Ray	Cá Đuối Xương Sườn
+The Hollow Diver	Thợ Lặn Rỗng
+The Drowner	Kẻ Dìm Người
+The Choir	Dàn Đồng Ca
+Maw Worm	Sâu Miệng Hố
+The Stilt Walker	Kẻ Đi Cà Kheo
+The Lamp Widow	Góa Phụ Đèn
+The Warden	Kẻ Canh Ngục
+THE LEVIATHAN	THỦY QUÁI LEVIATHAN

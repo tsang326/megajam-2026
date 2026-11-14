@@ -9,6 +9,7 @@
 #include "DCDoc.h"
 #include "MatchCutGameMode.h"
 #include "DCAudio.h"
+#include "DCMenu.h"
 
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -1202,7 +1203,9 @@ void FDC3D::TickCamera(float Dt)
 	if (bFirstPerson)
 	{
 		// the diver's eyes: a little up and forward of the body's centre, with the sway of the strokes
-		Pivot = Pos + FVector(0.0, 0.0, 22.0) + U * HeadBob;
+		const FVector RFlat = FRotationMatrix(FRotator(0.f, Yaw, 0.f)).GetUnitAxis(EAxis::Y);
+		const float BobK = bHeadBobOn ? 1.f : 0.f;
+		Pivot = Pos + FVector(0.0, 0.0, 22.0) + U * (SwimBob * BobK) + (RFlat * WalkBob.Y + FVector::UpVector * (WalkBob.Z - 5.0 * LandDip)) * BobK;
 		Boom = F * 4.0;
 	}
 
@@ -1217,13 +1220,15 @@ void FDC3D::TickCamera(float Dt)
 	BoomFrac = Free < BoomFrac ? Free : FMath::Min(Free, BoomFrac + 1.4f * Dt);
 	CamPos = Pivot + Boom * BoomFrac;
 	CamPos.Z = FMath::Max(CamPos.Z, (double)DC3::CamRadius + GroundZ(CamPos.X, CamPos.Y));
-	Fov = FMath::FInterpTo(Fov, 72.f + 9.f * Fast, Dt, 3.f);
+	Fov = Dt > 0.f ? FMath::FInterpTo(Fov, BaseFov + 9.f * Fast, Dt, 3.f) : BaseFov;
 	ViewFov = Fov;
 	FRotator Rot = View;
 	if (bFirstPerson)
 	{
-		Rot.Roll = 1.4f * StrokeAmt * FMath::Sin(StrokePhase * 2.f * PI); // the body rolls a little with each stroke
-		Rot.Pitch += 0.8f * StrokeAmt * FMath::Sin(StrokePhase * 4.f * PI);
+		// the body rolls a little with each stroke; walking, the head sways with the steps and leans into a strafe
+		const float BobK = bHeadBobOn ? 1.f : 0.25f;
+		Rot.Roll = (1.4f * StrokeAmt * FMath::Sin(StrokePhase * 2.f * PI) + WalkRoll) * BobK + StrafeRoll;
+		Rot.Pitch += (0.8f * StrokeAmt * FMath::Sin(StrokePhase * 4.f * PI) - 0.6f * LandDip) * BobK;
 	}
 	float FocusAt = 0.f; // 0: everything sharp
 	bool bHide = bFirstPerson || FVector::Dist(CamPos, Pos) < 95.0; // too close to see anything but the diver's back
@@ -1255,6 +1260,17 @@ void FDC3D::TickCamera(float Dt)
 			FocusAt = Doc->AimBlend > 0.6f ? Doc->Focus : 0.f;
 		}
 	}
+	if (bTitleCam)
+	{
+		// the start menu: a slow circle round the base, from outside, a little below it
+		const float A = Time * 0.045f + 2.2f;
+		CamPos = BaseC + FVector(FMath::Cos(A) * 3000.0, FMath::Sin(A) * 3000.0, -120.0);
+		CamPos.Z = FMath::Max(CamPos.Z, (double)GroundZ(CamPos.X, CamPos.Y) + 220.0);
+		Rot = (BaseC + FVector(0.0, 0.0, -150.0) - CamPos).Rotation();
+		ViewFov = 58.f;
+		FocusAt = 0.f;
+		bHide = true;
+	}
 	if (ACameraActor* C = Cam.Get())
 	{
 		C->SetActorLocationAndRotation(CamPos, Rot);
@@ -1275,7 +1291,7 @@ void FDC3D::TickCamera(float Dt)
 		FVector PlayP;
 		FRotator PlayR;
 		float PlayFov = 0.f;
-		const bool bPlaying = Doc && Doc->ViewOverride(PlayP, PlayR, PlayFov);
+		const bool bPlaying = bTitleCam || (Doc && Doc->ViewOverride(PlayP, PlayR, PlayFov));
 		TickArms(Dt, CamPos, Rot);
 		if (UPoseableMeshComponent* PM = Arms.Get())
 		{
@@ -1283,9 +1299,13 @@ void FDC3D::TickCamera(float Dt)
 		}
 		// the camera in the hand goes with the arms: up at the eye it would fill the picture
 		const bool bHands = !bPlaying && (!Doc || Doc->AimBlend < 0.85f);
-		if (UStaticMeshComponent* C = HandCam.Get())
+		if (USceneComponent* Hold = HandCamHolder.Get())
 		{
-			C->SetVisibility(bHands && DryAmt < 0.5f, true); // put away in the base
+			Hold->SetVisibility(bHands && DryAmt < 0.5f, true); // put away in the base
+			if (UStaticMeshComponent* L = HandCamRec.Get())
+			{
+				L->SetVisibility(bHands && DryAmt < 0.5f && Doc && Doc->bRecording && FMath::Frac(Time * 1.2f) < 0.6f);
+			}
 		}
 	}
 }
@@ -1390,6 +1410,12 @@ void FDC3D::Tick(float Dt)
 			}
 		}
 	}
+	if (bFrozen)
+	{
+		In = FVector::ZeroVector;
+		bFast = false;
+		Turn = FVector2D::ZeroVector;
+	}
 	const bool bShoot = !Doc || Doc->State == EDCDocState::Shooting;
 	if (!bShoot)
 	{
@@ -1407,7 +1433,7 @@ void FDC3D::Tick(float Dt)
 		Yaw = DC3::TurnTo(Yaw, To.Yaw, 9.f, Dt);
 		Pitch = DC3::TurnTo(Pitch, FMath::Clamp(To.Pitch, -80.f, 80.f), 9.f, Dt);
 	}
-	Turn *= FMath::Lerp(1.f, ViewFov / 72.f, Aim); // a long lens turns slowly
+	Turn *= FMath::Lerp(1.f, ViewFov / BaseFov, Aim); // a long lens turns slowly
 	Yaw = FRotator::NormalizeAxis(Yaw + Turn.X);
 	Pitch = FMath::Clamp(Pitch + Turn.Y, -82.f, 82.f);
 
@@ -1435,8 +1461,9 @@ void FDC3D::Tick(float Dt)
 		bDry = true;
 		if (GM->Audio)
 		{
-			GM->Audio->Play(TEXT("plate_lift"), 0.6f, 1.3f);
+			GM->Audio->Play(TEXT("climb_out"), 1.f, 1.f, 0.04f);
 		}
+		LandDip = 1.f;
 		UE_LOG(LogMatchCut, Display, TEXT("3D BASE climbed out onto the deck"));
 	}
 	else if (bDry && (!bInBox || Pos.Z < HatchAt.Z))
@@ -1446,7 +1473,7 @@ void FDC3D::Tick(float Dt)
 		Vel *= 0.35;
 		if (GM->Audio)
 		{
-			GM->Audio->Play(TEXT("plate_lift"), 0.7f, 0.6f);
+			GM->Audio->Play(TEXT("splash_in"), 1.f, 1.f, 0.05f);
 		}
 		UE_LOG(LogMatchCut, Display, TEXT("3D BASE dropped into the hatch"));
 	}
@@ -1473,8 +1500,35 @@ void FDC3D::Tick(float Dt)
 			Pos.Z = Floor + Stand;
 			Vel.Z = 0.0;
 		}
-		HeadBob = FMath::Lerp(HeadBob, (float)(2.5 * FMath::Sin(Time * 9.0) * FMath::Min(1.0, FVector2D(Vel.X, Vel.Y).Size() / 280.0)), 0.3f);
+		// steps: the phase moves with the distance walked, so the bob and the footfalls always match the speed
+		const float HSpeed = (float)FVector2D(Vel.X, Vel.Y).Size();
+		const float StepLen = bFast ? 92.f : 72.f;
+		const float Was = StepPhase;
+		StepAmt = FMath::FInterpTo(StepAmt, FMath::Clamp(HSpeed / 280.f, 0.f, 1.5f), Dt, 8.f);
+		StepPhase += HSpeed * Dt / StepLen;
+		if (HSpeed > 60.f && FMath::FloorToInt(StepPhase) != FMath::FloorToInt(Was) && GM->Audio)
+		{
+			static int32 Foot = 0;
+			static const TCHAR* Steps[3] = { TEXT("step_deck1"), TEXT("step_deck2"), TEXT("step_deck3") };
+			Foot = (Foot + 1 + FMath::RandRange(0, 1)) % 3;
+			GM->Audio->Play(Steps[Foot], FMath::Lerp(0.7f, 1.f, FMath::Min(StepAmt, 1.f)), bFast ? 1.05f : 1.f, 0.06f);
+		}
+		if (HSpeed < 20.f)
+		{
+			StepPhase = FMath::FInterpTo(StepPhase, FMath::RoundToFloat(StepPhase), Dt, 4.f); // settle on both feet
+		}
+		const float Amp = StepAmt > 1.f ? FMath::Lerp(1.6f, 2.4f, StepAmt - 1.f) : 1.6f * StepAmt;
+		WalkBob = FVector(0.0, 0.8f * StepAmt * FMath::Sin(StepPhase * PI), -Amp * FMath::Cos(StepPhase * 2.f * PI) * 0.5f - Amp * 0.5f);
+		WalkRoll = 0.35f * StepAmt * FMath::Sin(StepPhase * PI);
 	}
+	else
+	{
+		StepAmt = FMath::FInterpTo(StepAmt, 0.f, Dt, 6.f);
+		WalkBob = FMath::Lerp(WalkBob, FVector::ZeroVector, (double)FMath::Min(1.f, Dt * 6.f));
+		WalkRoll = FMath::FInterpTo(WalkRoll, 0.f, Dt, 6.f);
+	}
+	StrafeRoll = FMath::FInterpTo(StrafeRoll, (bHeadBobOn ? 1.2f : 0.4f) * (float)In.Y * (bDry ? 1.f : 0.6f), Dt, 6.f);
+	LandDip = FMath::FInterpTo(LandDip, 0.f, Dt, 5.f);
 	const bool bThrust = !bDry && Wish.SizeSquared() > 0.01;
 	if (!bDry)
 	{
@@ -1515,7 +1569,7 @@ void FDC3D::Tick(float Dt)
 	(void)bWasDry;
 
 	ThrustTime -= Dt;
-	if (bThrust && ThrustTime <= 0.f && GM->Audio)
+	if (bThrust && ThrustTime <= 0.f && GM->Audio && !bFirstPerson)
 	{
 		GM->Audio->Play(TEXT("thruster"), bFast ? 0.9f : 0.6f, bFast ? 1.15f : 1.f, 0.05f);
 		ThrustTime = bFast ? 0.7f : 1.1f;
@@ -1559,7 +1613,7 @@ void FDC3D::Tick(float Dt)
 		}
 	}
 
-	if (Doc)
+	if (Doc && !bFrozen)
 	{
 		Doc->Tick(Dt);
 	}
@@ -1654,6 +1708,10 @@ int32 FDC3D::RunLine(const TArray<FString>& T)
 	const FString& Cmd = T[0];
 	auto Num = [&T](int32 i) { return T.IsValidIndex(i) ? FCString::Atof(*T[i]) : 0.f; };
 	if (const int32 Done = Doc ? Doc->RunLine(T) : 0)
+	{
+		return Done;
+	}
+	if (const int32 Done = DCMenuRunLine(GM, T))
 	{
 		return Done;
 	}

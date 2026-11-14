@@ -5,6 +5,7 @@
 #include "DC3D.h"
 #include "DCDoc.h"
 #include "DCDocText.h"
+#include "DCMenu.h"
 #include "DeepCutText.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -68,12 +69,13 @@ void AMatchCutHUD::LoadFonts()
 	UE_LOG(LogMatchCut, Display, TEXT("HUD fonts: mono=%d title=%d (%s)"), MonoFont.IsValid() ? 1 : 0, TitleFont.IsValid() ? 1 : 0, *Dir);
 }
 
-void AMatchCutHUD::Text(const FString& Str, float X, float Y, float Scale, const FLinearColor& Color, int32 Align)
+void AMatchCutHUD::Text(const FString& InStr, float X, float Y, float Scale, const FLinearColor& Color, int32 Align)
 {
-	if (!Canvas || Str.IsEmpty())
+	if (!Canvas || InStr.IsEmpty())
 	{
 		return;
 	}
+	const FString Str = bNoTr ? InStr : DCLoc::Tr(InStr);
 	if (!bFontsTried)
 	{
 		LoadFonts();
@@ -1041,7 +1043,19 @@ void AMatchCutHUD::DrawHUD()
 	K = Canvas->ClipY / 1080.f; // the Canvas is the 16:9 view rect, whatever the window is
 	if (GM->World3D())
 	{
-		Draw3D(GM);
+		const FDCMenu& Menu = DCMenu();
+		if (!(Menu.IsOpen() && !Menu.bStarted))
+		{
+			Draw3D(GM);
+		}
+		if (DCTutorial().IsActive())
+		{
+			DrawTutorial(GM);
+		}
+		if (Menu.IsOpen())
+		{
+			DrawMenu(GM);
+		}
 		return;
 	}
 
@@ -1600,7 +1614,7 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		Line = DCText::Controls3D;
 		LineColor.A = FMath::Clamp((W.IdleTime - 12.f) * 0.8f, 0.f, 0.85f);
 	}
-	if (!Line.IsEmpty())
+	if (!Line.IsEmpty() && !DCTutorial().IsActive())
 	{
 		Text(Line, 960.f, Aim > 0.5f ? 920.f : 962.f, 1.4f, LineColor, 1);
 	}
@@ -1612,4 +1626,222 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.f, 0.f, 0.f, A));
 		Text(TEXT("OUT OF AIR"), 960.f, 480.f, 3.f, Fade(Red, A), 1);
 	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// the menus (DCMenu.h) and the tutorial card
+// ---------------------------------------------------------------------------------------------
+
+float AMatchCutHUD::TextWidth(const FString& Str, float Scale)
+{
+	if (!bFontsTried)
+	{
+		LoadFonts();
+	}
+	const bool bTitle = Scale >= 2.5f && TitleFont.IsValid();
+	const TSharedPtr<const FCompositeFont>& Face = bTitle ? TitleFont : MonoFont;
+	if (Face.IsValid() && FSlateApplication::IsInitialized())
+	{
+		const float Size = FMath::Max(6.f, Scale * K * (bTitle ? 12.5f : 10.0f));
+		return FSlateApplication::Get().GetRenderer()->GetFontMeasureService()->Measure(Str, FSlateFontInfo(Face, Size)).X / FMath::Max(K, 0.01f);
+	}
+	return Str.Len() * 9.f * Scale;
+}
+
+float AMatchCutHUD::Wrap(const FString& InStr, float X, float Y, float Scale, const FLinearColor& Color, float MaxW, int32 Align)
+{
+	const FString Str = DCLoc::Tr(InStr);
+	TArray<FString> Words;
+	Str.ParseIntoArray(Words, TEXT(" "), true);
+	const float LineH = 15.f * Scale + 6.f;
+	FString Cur;
+	float Yy = Y;
+	bNoTr = true;
+	for (const FString& Word : Words)
+	{
+		const FString Try = Cur.IsEmpty() ? Word : Cur + TEXT(" ") + Word;
+		if (!Cur.IsEmpty() && TextWidth(Try, Scale) > MaxW)
+		{
+			Text(Cur, X, Yy, Scale, Color, Align);
+			Yy += LineH;
+			Cur = Word;
+		}
+		else
+		{
+			Cur = Try;
+		}
+	}
+	if (!Cur.IsEmpty())
+	{
+		Text(Cur, X, Yy, Scale, Color, Align);
+		Yy += LineH;
+	}
+	bNoTr = false;
+	return Yy - Y;
+}
+
+void AMatchCutHUD::DrawTutorial(AMatchCutGameMode* GM)
+{
+	const FDC3D* W = GM->World3D();
+	if (!W || !W->Doc || W->Doc->State != EDCDocState::Shooting || W->Doc->bBoardOpen || W->Doc->bBlackout)
+	{
+		return;
+	}
+	const FDCTutorial& T = DCTutorial();
+	const float Aim = W->Doc->AimBlend;
+	const float A = FMath::Clamp(T.Shown * 3.f, 0.f, 1.f) * (1.f - 0.45f * Aim);
+	auto Fade = [A](const FLinearColor& C) { return FLinearColor(C.R, C.G, C.B, C.A * A); };
+	const float X = 56.f, Y = 250.f, Wd = 560.f;
+	FString Head, Body;
+	FDCTutorial::Card(T.Step, Head, Body);
+	// measure the body to size the panel
+	const FString BodyTr = DCLoc::Tr(Body);
+	const float Lines = FMath::Max(1.f, FMath::CeilToFloat(TextWidth(BodyTr, 1.3f) / (Wd - 48.f)));
+	const float H = 118.f + Lines * 25.5f;
+	Rect(X, Y, Wd, H, FLinearColor(0.f, 0.02f, 0.03f, 0.62f * A));
+	Rect(X, Y, 5.f, H, Fade(Amber));
+	Text(FString::Printf(TEXT("TUTORIAL  %d / %d"), T.Step + 1, FDCTutorial::NumSteps), X + 24.f, Y + 16.f, 1.0f, Fade(Dim));
+	Text(Head, X + 24.f, Y + 42.f, 1.75f, Fade(Amber));
+	Wrap(Body, X + 24.f, Y + 82.f, 1.3f, Fade(White), Wd - 48.f);
+	Text(TEXT("H  hide the tutorial"), X + Wd - 20.f, Y + 16.f, 0.95f, Fade(FLinearColor(1.f, 1.f, 1.f, 0.4f)), 2);
+	if (T.Flash > 0.f && T.FlashStep >= 0)
+	{
+		FString PrevHead, PrevBody;
+		FDCTutorial::Card(T.FlashStep, PrevHead, PrevBody);
+		const float F = FMath::Clamp(T.Flash * 2.f, 0.f, 1.f);
+		Rect(X, Y - 52.f, Wd, 42.f, FLinearColor(0.f, 0.08f, 0.03f, 0.6f * F));
+		Text(FString::Printf(TEXT("DONE: %s"), *PrevHead), X + 24.f, Y - 44.f, 1.3f, FLinearColor(Green.R, Green.G, Green.B, F));
+	}
+}
+
+void AMatchCutHUD::DrawMenu(AMatchCutGameMode* GM)
+{
+	FDCMenu& Menu = DCMenu();
+	const float T = Menu.Time;
+	Menu.Rows.Reset();
+	// the canvas is the 16:9 view, centred in the window: the mouse is in window pixels
+	FVector2D Off(0.0, 0.0);
+	if (const APlayerController* PC = GetOwningPlayerController())
+	{
+		int32 Vx = 0, Vy = 0;
+		PC->GetViewportSize(Vx, Vy);
+		Off = FVector2D(FMath::Max(0.0, (Vx - Canvas->ClipX) * 0.5), FMath::Max(0.0, (Vy - Canvas->ClipY) * 0.5));
+	}
+	auto AddRow = [this, &Menu, Off](float X0, float Y0, float X1, float Y1)
+	{
+		Menu.Rows.Add(FBox2D(FVector2D(X0 * K, Y0 * K) + Off, FVector2D(X1 * K, Y1 * K) + Off));
+	};
+	const FLinearColor Sel(1.f, 0.78f, 0.25f, 1.f);
+	const FLinearColor Panel(0.f, 0.015f, 0.025f, 0.78f);
+	const FString Keys = TEXT("W S / mouse: choose     A D: change     ENTER / click: select     ESC: back");
+
+	if (Menu.Page == EDCMenuPage::Title || Menu.Page == EDCMenuPage::Pause)
+	{
+		const bool bTitle = Menu.Page == EDCMenuPage::Title;
+		if (bTitle)
+		{
+			// the left third darkened, the base turning slowly behind
+			for (int32 i = 0; i < 24; ++i)
+			{
+				const float X0 = i * 40.f;
+				Rect(X0, 0.f, 40.f, 1080.f, FLinearColor(0.f, 0.01f, 0.02f, 0.86f * (1.f - i / 24.f)));
+			}
+			Text(TEXT("DEEP CUT"), 130.f, 210.f, 7.f, White);
+			Text(TEXT("A documentary from the bottom of the sea"), 136.f, 352.f, 1.45f, Dim);
+			Rect(136.f, 394.f, 120.f, 3.f, Amber);
+		}
+		else
+		{
+			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.f, 0.f, 0.f, 0.62f));
+			Text(TEXT("PAUSED"), 130.f, 230.f, 4.5f, White);
+		}
+		for (int32 i = 0; i < Menu.NumRows(); ++i)
+		{
+			FString Label, Value;
+			Menu.Row(i, Label, Value);
+			const float Y = 450.f + i * 74.f;
+			const bool bOn = Menu.Sel == i;
+			if (bOn)
+			{
+				Rect(120.f, Y - 10.f, 560.f, 60.f, FLinearColor(1.f, 0.78f, 0.25f, 0.13f));
+				Rect(120.f, Y - 10.f, 5.f, 60.f, Sel);
+			}
+			Text(Label, 150.f + (bOn ? 10.f : 0.f), Y, 2.1f, bOn ? Sel : FLinearColor(1.f, 1.f, 1.f, 0.82f));
+			AddRow(120.f, Y - 10.f, 680.f, Y + 50.f);
+		}
+		Text(TEXT("ENTER / click: select     W S / mouse: choose"), 136.f, 1000.f, 1.1f, Dim);
+		if (bTitle)
+		{
+			bNoTr = true; // both languages, so either reader finds it
+			Text(TEXT("English / Tiếng Việt:  Settings > Language"), 1880.f, 1030.f, 1.05f, FLinearColor(1.f, 1.f, 1.f, 0.5f), 2);
+			bNoTr = false;
+			Text(TEXT("Epic MegaJam 2026  ·  theme: Director's Cut"), 1880.f, 1000.f, 1.0f, FLinearColor(1.f, 1.f, 1.f, 0.35f), 2);
+		}
+		return;
+	}
+
+	// Settings and How to play: a centred panel over the dimmed game
+	Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.f, 0.f, 0.f, Menu.bStarted ? 0.55f : 0.35f));
+	Rect(400.f, 110.f, 1120.f, 860.f, Panel);
+	Rect(400.f, 110.f, 1120.f, 4.f, Amber);
+	if (Menu.Page == EDCMenuPage::Settings)
+	{
+		Text(TEXT("SETTINGS"), 460.f, 140.f, 3.2f, White);
+		for (int32 i = 0; i < Menu.NumRows(); ++i)
+		{
+			FString Label, Value;
+			Menu.Row(i, Label, Value);
+			const float Y = 250.f + i * 54.f + (i == Menu.NumRows() - 1 ? 14.f : 0.f);
+			const bool bOn = Menu.Sel == i;
+			if (bOn)
+			{
+				Rect(440.f, Y - 9.f, 1040.f, 46.f, FLinearColor(1.f, 0.78f, 0.25f, 0.12f));
+				Rect(440.f, Y - 9.f, 4.f, 46.f, Sel);
+			}
+			Text(Label, 470.f, Y, 1.55f, bOn ? Sel : FLinearColor(1.f, 1.f, 1.f, 0.85f));
+			if (!Value.IsEmpty())
+			{
+				Text(Value, 1300.f, Y, 1.55f, bOn ? White : Dim, 1);
+				if (bOn)
+				{
+					const float Nudge = 3.f * FMath::Sin(T * 6.f);
+					Text(TEXT("<"), 1150.f - Nudge, Y, 1.55f, Sel, 1);
+					Text(TEXT(">"), 1450.f + Nudge, Y, 1.55f, Sel, 1);
+				}
+			}
+			AddRow(440.f, Y - 9.f, 1480.f, Y + 37.f);
+		}
+		Text(Keys, 960.f, 920.f, 1.05f, Dim, 1);
+		return;
+	}
+
+	// How to play
+	Text(TEXT("HOW TO PLAY"), 460.f, 140.f, 3.2f, White);
+	float Y = 240.f;
+	Y += Wrap(TEXT("The company's film says the abyss trench is empty. You know it is not. Dive from your base, film what lives down there, and bring the tapes back."), 460.f, Y, 1.3f, White, 1000.f) + 8.f;
+	Y += Wrap(TEXT("Upload your footage at the edit desk: views pay for gear (lamp, air, lenses). The proofs on the board decide the hearing after the last day."), 460.f, Y, 1.3f, White, 1000.f) + 22.f;
+	static const TCHAR* Ctl[][2] = {
+		{ TEXT("MOUSE / ARROW KEYS"), TEXT("look") },
+		{ TEXT("W A S D"), TEXT("walk, swim") },
+		{ TEXT("SPACE / Q"), TEXT("swim up / down") },
+		{ TEXT("SHIFT"), TEXT("run, swim fast") },
+		{ TEXT("RIGHT MOUSE / C"), TEXT("raise the camera") },
+		{ TEXT("LEFT MOUSE / E"), TEXT("record") },
+		{ TEXT("WHEEL / 1 2"), TEXT("zoom") },
+		{ TEXT("F"), TEXT("headlamp") },
+		{ TEXT("E"), TEXT("use: desk, locker, bunk, board") },
+		{ TEXT("ESC"), TEXT("pause, settings") } };
+	for (int32 i = 0; i < (int32)UE_ARRAY_COUNT(Ctl); ++i)
+	{
+		const float Yy = Y + (i % 5) * 40.f;
+		const float X = i < 5 ? 460.f : 990.f;
+		Text(Ctl[i][0], X, Yy, 1.2f, Amber);
+		Text(Ctl[i][1], X + 250.f, Yy, 1.2f, White);
+	}
+	const float By = Y + 5 * 40.f + 50.f;
+	Rect(440.f, By - 9.f, 300.f, 46.f, FLinearColor(1.f, 0.78f, 0.25f, 0.12f));
+	Rect(440.f, By - 9.f, 4.f, 46.f, Sel);
+	Text(TEXT("Back"), 470.f, By, 1.55f, Sel);
+	AddRow(440.f, By - 9.f, 740.f, By + 37.f);
+	(void)GM;
 }

@@ -12,6 +12,7 @@ class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class USpotLightComponent;
 class UStaticMeshComponent;
+class USceneComponent;
 class UProceduralMeshComponent;
 class UPoseableMeshComponent;
 class UMaterialInterface;
@@ -44,6 +45,20 @@ struct FDC3D
 	bool bBoost = false;
 	float Sens = 0.11f; // degrees per mouse count
 	bool bInvertY = false;
+	// ---- the menus and the settings (DCMenu.cpp)
+	float BaseFov = 72.f;   // the field of view the player chose
+	bool bHeadBobOn = true; // the walking and swimming sway of the eyes
+	bool bFrozen = false;   // a menu is open: nothing moves, the air does not run down
+	bool bTitleCam = false; // the start menu: the camera circles the base outside
+	// ---- walking (first person): one step every StepLen cm, the eyes dip at each footfall
+	float StepPhase = 0.f;
+	float StepAmt = 0.f;
+	float StrafeRoll = 0.f;
+	float LandDip = 0.f;
+	FVector WalkBob = FVector::ZeroVector; // x forward, y right, z up (cm); roll in WalkRoll
+	float WalkRoll = 0.f;
+	float SwimBob = 0.f;
+	float StrokeSoundPhase = 0.f;
 
 	// ---- Unit 0
 	FVector Pos = FVector(0.0, 0.0, 260.0);
@@ -63,6 +78,7 @@ struct FDC3D
 	TWeakObjectPtr<UPoseableMeshComponent> Arms;
 	TWeakObjectPtr<UStaticMeshComponent> HandCam;   // the camera in the right hand
 	TWeakObjectPtr<UStaticMeshComponent> HandCamRec; // its red light
+	TWeakObjectPtr<USceneComponent> HandCamHolder;   // places the camera; the model sits turned inside it
 	struct FArmRef { FName Upper, Lower, Hand; FTransform U, L, H; };
 	FArmRef ArmL, ArmR;
 	float StrokePhase = 0.f;

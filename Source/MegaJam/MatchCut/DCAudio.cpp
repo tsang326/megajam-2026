@@ -78,10 +78,10 @@ void UDCAudio::Init(UWorld* InWorld)
 float UDCAudio::BusGain(FName Bus) const
 {
 	const float* G = Buses.Find(Bus);
-	float Out = G ? *G : 1.f;
+	float Out = (G ? *G : 1.f) * MasterVol;
 	if (Bus == FName(TEXT("music")))
 	{
-		Out *= DuckNow;
+		Out *= DuckNow * MusicVol;
 	}
 	return Out;
 }

@@ -5,6 +5,7 @@
 #include "MatchCutHUD.h"
 #include "DCAudio.h"
 #include "DC3D.h"
+#include "DCMenu.h"
 #include "DCDoc.h"
 #include "DeepCutText.h"
 
@@ -88,6 +89,17 @@ void AMatchCutGameMode::StartPlay()
 		Audio = NewObject<UDCAudio>(this);
 		Audio->Init(GetWorld());
 		LoadScript();
+		{
+			// the start menu, unless a test script drives the game (or -MCNoMenu)
+			DCSettings().Load();
+			const bool bTest = bScriptActive || FParse::Param(FCommandLine::Get(), TEXT("MCNoMenu"));
+			if (bTest)
+			{
+				DCMenu().Page = EDCMenuPage::None;
+				DCMenu().bStarted = true;
+			}
+			DCSettings().Apply(this, !bTest && !GIsEditor);
+		}
 		return;
 	}
 
@@ -568,7 +580,17 @@ void AMatchCutGameMode::Tick(float DeltaSeconds)
 			FrameMax = FMath::Max(FrameMax, (double)DeltaSeconds);
 			++FrameCount;
 		}
+		{
+			FDCMenu& Menu = DCMenu();
+			Menu.Time += DeltaSeconds;
+			D3->bFrozen = Menu.IsOpen();
+			D3->bTitleCam = Menu.IsOpen() && !Menu.bStarted;
+		}
 		D3->Tick(FMath::Min(DeltaSeconds, 0.05f));
+		if (!bScriptActive || DCTutorial().bForced)
+		{
+			DCTutorial().Tick(*D3, FMath::Min(DeltaSeconds, 0.05f));
+		}
 		if (Audio)
 		{
 			Audio->SetLoop(TEXT("amb_underwater"), 1.f, 2.0f);
