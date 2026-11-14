@@ -178,3 +178,11 @@ All three use rules the game already had (near things come through the cut, a th
 - The first shot is taught one prompt at a time: swim up, raise the camera, frame, record.
 - The director types one line between shots, and a take of one star or none comes with a tip for its reason.
 - Test: `Content/Data/tests/d6_guide.txt`.
+
+### 2026-11-14, ~11:50: every creature swims (first playtest: "no creature has any swimming motion")
+
+- The models have no bones. One material, `M_DC_Creature` (`Tools/make_creature_material.py`), moves the body in the vertex shader from the vertex's place in the mesh: a wave along the body that is zero at the head and largest at the tail, a wave that grows away from the middle line (wings, flippers, legs), and a pulse round the axis (bells, mantles). The model's own textures are copied into it by name.
+- Thirteen kinds with their own numbers (`DCSwim::Kinds` in `DCDoc.cpp`): fish, sharks, eels, whale (fluke beats up and down), rays, cuttlefish, sea angel, jellyfish (the wave runs down the tentacles), squid and octopus, crabs and their like (legs), sea pig and nudibranch, turtle (flippers). Every animal has its own phase; the fish of the shoal use the per-instance random number; the beat follows the animal's speed for its length.
+- Ambient swimmers bank into their turn; jet swimmers (squid, octopus, nautilus, jellyfish) move in surges.
+- Facing: `d5_facing.txt` lines every creature model up in side view. Octopus, squid, vampire squid, nautilus and stingray came with the nose at the other end and are turned round (`DCSwim::FrontFix`).
+- `d3_film`, editor, alone: 6 of 6, 18 of 18 stars, median 29 ms, p90 54 ms (25 and 48 before the swim).

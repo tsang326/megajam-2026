@@ -161,6 +161,7 @@ struct FDCDoc
 		TWeakObjectPtr<AActor> Actor;
 		FVector Centre = FVector::ZeroVector;
 		float Ra = 0.f, Rb = 0.f, Phase = 0.f, Omega = 0.f, Bob = 0.f, Wiggle = 0.f;
+		float Surge = 0.f;
 	};
 	TArray<FAmbient> Ambient;
 	TWeakObjectPtr<UPointLightComponent> ShoalLight, JellyLight;
@@ -183,7 +184,7 @@ private:
 	FRotator CamR = FRotator::ZeroRotator;
 	float CamFov = 72.f;
 
-	AActor* SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, bool bLampOnly = false, float* OutHalfHeight = nullptr);
+	AActor* SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, bool bLampOnly = false, float* OutHalfHeight = nullptr, float Pace = 1.f);
 	void SpawnAmbient();
 	UPointLightComponent* SoftLight(const FLinearColor& Color, float Power, float Reach);
 	void SpawnShoal();

@@ -1,0 +1,31 @@
+# every creature model in rows, seen from the side: every nose must point to the right, and every body must be in its swimming motion (two pictures a moment apart)
+wait 1.0
+parade
+aim 1
+zoom 60
+tp -6000 1800 2940 -90 0
+wait 0.8
+snap p0_side
+wait 0.35
+snap p0_side_b
+tp -3000 1800 2940 -90 0
+wait 0.8
+snap p1_side
+wait 0.35
+snap p1_side_b
+tp 0 1800 2940 -90 0
+wait 0.8
+snap p2_side
+wait 0.35
+snap p2_side_b
+tp 3000 1800 2940 -90 0
+wait 0.8
+snap p3_side
+wait 0.35
+snap p3_side_b
+tp 6000 1800 2940 -90 0
+wait 0.8
+snap p4_side
+wait 0.35
+snap p4_side_b
+quit

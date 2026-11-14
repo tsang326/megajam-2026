@@ -46,10 +46,110 @@ namespace DCD
 // spawning
 // ---------------------------------------------------------------------------------------------
 
+// ---- the swim: the models have no bones, so the body is moved in the material (M_DC_Creature, see
+// Tools/make_creature_material.py). Each kind of animal gets its own numbers; each animal its own phase.
+namespace DCSwim
+{
+	struct FKind
+	{
+		const TCHAR* Ids;   // ids of this kind, each between spaces
+		int32 Mode;         // 0 tail beats sideways, 1 tail beats up and down, 2 hangs: the wave runs downwards
+		float TailAmp, TailPow, TailWaves, Beats;
+		float WingAmp, WingWaves, WingRate;
+		float PulseAmp, PulseWaves, PulseRate;
+	};
+	static const FKind Kinds[] = {
+		{ TEXT(" shark goblin "), 0, 0.055f, 1.8f, 0.7f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" eel oarfish frilled gulper "), 0, 0.065f, 1.1f, 1.6f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" whale "), 1, 0.035f, 1.8f, 0.6f, 1.5f, 0.10f, 0.2f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" manta stingray "), 1, 0.02f, 2.0f, 0.5f, 2.4f, 0.30f, 0.30f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" cuttle "), 0, 0.01f, 2.0f, 0.5f, 6.0f, 0.10f, 1.4f, 1.f, 0.02f, 0.6f, 0.5f },
+		{ TEXT(" seaangel "), 0, 0.02f, 1.5f, 0.6f, 5.0f, 0.30f, 0.2f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" jelly lionsmane siphon "), 2, 0.06f, 2.0f, 1.2f, 2.2f, 0.f, 0.f, 1.f, 0.07f, 0.5f, 1.f },
+		{ TEXT(" squid vampsquid octopus nautilus "), 0, 0.03f, 2.0f, 1.0f, 3.0f, 0.f, 0.f, 1.f, 0.05f, 0.7f, 1.f },
+		{ TEXT(" crab isopod lobster brittlestar "), 0, 0.f, 1.f, 1.f, 11.f, 0.10f, 0.5f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" seapig nudibranch "), 1, 0.025f, 1.0f, 1.5f, 2.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" urchin "), 0, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" angler sunfish seahorse seadragon "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" turtle turtle2 giant "), 0, 0.f, 1.f, 1.f, 2.6f, 0.28f, 0.15f, 1.f, 0.f, 0.f, 1.f } };
+	static const FKind Fish = { TEXT(""), 0, 0.07f, 1.6f, 0.9f, 7.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
+
+	static const FKind& KindOf(const FString& Id)
+	{
+		FString Name = Id;
+		Name.RemoveFromStart(TEXT("creature:"));
+		const FString Key = FString::Printf(TEXT(" %s "), *Name);
+		for (const FKind& K : Kinds)
+		{
+			if (FString(K.Ids).Contains(Key))
+			{
+				return K;
+			}
+		}
+		return Fish;
+	}
+
+	// models that came with the nose at the other end (seen in the parade, Content/Data/tests/d5_facing.txt)
+	static float FrontFix(const FString& Id)
+	{
+		return FString(TEXT(" creature:octopus creature:squid creature:vampsquid creature:stingray creature:nautilus ")).Contains(FString::Printf(TEXT(" %s "), *Id)) ? 180.f : 0.f;
+	}
+
+	static float Ext(const FVector& V, const FVector& E)
+	{
+		return FMath::Abs(V.X) * E.X + FMath::Abs(V.Y) * E.Y + FMath::Abs(V.Z) * E.Z;
+	}
+
+	/** Gives the part the swimming material, with the model's own textures. Q turns the mesh so its nose is along x. */
+	static void Apply(UStaticMeshComponent* C, const FString& Id, const FQuat& Q, float Pace, float Phase)
+	{
+		static bool bOff = FParse::Param(FCommandLine::Get(), TEXT("MCNoSwim"));
+		UMaterialInterface* Base = bOff ? nullptr : LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Creature.M_DC_Creature"));
+		if (!Base || !C || !C->GetStaticMesh())
+		{
+			return;
+		}
+		const FKind& K = KindOf(Id);
+		const FBox B = C->GetStaticMesh()->GetBoundingBox();
+		const FVector Cn = B.GetCenter(), E = B.GetExtent();
+		const FVector Nose = Q.UnrotateVector(FVector::XAxisVector), Across = Q.UnrotateVector(FVector::YAxisVector), Up = FVector::ZAxisVector;
+		const FVector Axis = K.Mode == 2 ? -Up : -Nose;
+		const FVector Side = K.Mode == 0 ? Across : K.Mode == 1 ? Up : Nose;
+		const float Len = 2.f * Ext(Axis, E), Head = FVector::DotProduct(Cn, Axis) - Ext(Axis, E);
+		for (int32 m = 0; m < C->GetNumMaterials(); ++m)
+		{
+			UMaterialInterface* Src = C->GetMaterial(m);
+			UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(Base, C);
+			if (!MID)
+			{
+				continue;
+			}
+			for (const TCHAR* Tex : { TEXT("BaseColorTexture"), TEXT("MetallicRoughnessTexture"), TEXT("NormalTexture") })
+			{
+				UTexture* T = nullptr;
+				if (Src && Src->GetTextureParameterValue(FHashedMaterialParameterInfo(FName(Tex)), T) && T)
+				{
+					MID->SetTextureParameterValue(Tex, T);
+				}
+			}
+			MID->SetVectorParameterValue(TEXT("SwimAxis"), FLinearColor(Axis.X, Axis.Y, Axis.Z, Head));
+			MID->SetVectorParameterValue(TEXT("SwimSide"), FLinearColor(Side.X, Side.Y, Side.Z, Len));
+			MID->SetVectorParameterValue(TEXT("SwimLat"), FLinearColor(Across.X, Across.Y, Across.Z, FVector::DotProduct(Cn, Across)));
+			MID->SetVectorParameterValue(TEXT("SwimUp"), FLinearColor(Up.X, Up.Y, Up.Z, Ext(Across, E)));
+			MID->SetVectorParameterValue(TEXT("SwimCentre"), FLinearColor(Cn.X, Cn.Y, Cn.Z, Phase));
+			MID->SetVectorParameterValue(TEXT("SwimTail"), FLinearColor(K.TailAmp, K.TailPow, K.TailWaves, K.Beats * Pace));
+			MID->SetVectorParameterValue(TEXT("SwimWing"), FLinearColor(K.WingAmp, K.WingWaves, K.WingRate, 0.f));
+			MID->SetVectorParameterValue(TEXT("SwimPulse"), FLinearColor(K.PulseAmp, K.PulseWaves, K.PulseRate, 0.f));
+			C->SetMaterial(m, MID);
+		}
+	}
+}
+
 static int32 GFewFrames = 0; // frames of the running take with some of a group in the picture, but too few
 
-AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, bool bLampOnly, float* OutHalfHeight)
+AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, bool bLampOnly, float* OutHalfHeight, float Pace)
 {
+	static FRandomStream SwimRand(4177);
 	AActor* A = GM->SpawnGroup(FVector::ZeroVector);
 	const TArray<FDCArtRef>* Set = GM->Art.Find(Id);
 	UStaticMeshComponent* C = Set && Set->Num() > 0 ? GM->AddArt(A, Id, FVector::ZeroVector, FVector(Length), 0, false) : nullptr;
@@ -61,7 +161,11 @@ AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, boo
 	}
 	const FBox B = C->GetStaticMesh()->GetBoundingBox();
 	const double S = C->GetRelativeScale3D().X;
-	const FQuat Q(FRotator(0.f, FrontYaw > 500.f ? (*Set)[0].Yaw : FrontYaw, 0.f));
+	const FQuat Q(FRotator(0.f, FrontYaw > 500.f ? (*Set)[0].Yaw : FrontYaw + DCSwim::FrontFix(Id), 0.f));
+	if (FrontYaw < 500.f)
+	{
+		DCSwim::Apply(C, Id, Q, Pace, SwimRand.FRandRange(0.f, 2.f * PI)); // not the crewmate: a diver does not ripple
+	}
 	// its middle on the actor's middle, its nose along the actor's x
 	C->SetRelativeLocationAndRotation(-Q.RotateVector(B.GetCenter() * S), Q);
 	if (OutHalfHeight)
@@ -123,6 +227,7 @@ void FDCDoc::SpawnShoal()
 				}
 			}
 		}
+		DCSwim::Apply(C, TEXT("creature:fish"), FishFix, 1.3f, 0.f); // each fish of the shoal beats on its own phase (per-instance random)
 	}
 	else
 	{
@@ -241,7 +346,8 @@ void FDCDoc::SpawnAmbient()
 		{
 			FAmbient One;
 			float Half = 0.f;
-			One.Actor = SpawnCreature(Row.Id, Row.Length * Rand.FRandRange(0.85f, 1.15f), Front, false, &Half);
+			One.Actor = SpawnCreature(Row.Id, Row.Length * Rand.FRandRange(0.85f, 1.15f), Front, false, &Half, FMath::Clamp(Row.Speed / Row.Length * 4.f, 0.6f, 1.6f));
+			One.Surge = DCSwim::KindOf(Row.Id).PulseAmp > 0.f ? 0.5f : 0.f; // what swims by a jet goes in surges
 			// ambient life casts no shadow: 20k triangles each, and every caster is drawn again for each shadow cascade
 			TInlineComponentArray<UStaticMeshComponent*> Parts; One.Actor->GetComponents(Parts);
 			for (UStaticMeshComponent* Part : Parts)
@@ -539,14 +645,15 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 	{
 		if (AActor* A = One.Actor.Get())
 		{
-			const double Th = One.Phase + One.Omega * T;
+			// a jet swimmer's speed swells and dies with its pulse (never backwards: the surge is less than the pace)
+			const double Th = One.Phase + One.Omega * (T + One.Surge * 0.9 * FMath::Sin(T * 1.1 + One.Phase * 5.0));
 			FVector P = One.Centre + FVector(One.Ra * FMath::Cos(Th), One.Rb * FMath::Sin(Th), One.Bob * FMath::Sin(T * 0.6 + One.Phase * 3.0));
 			if (One.Bob <= 0.f)
 			{
 				P.Z += W->GroundZ(P.X, P.Y); // a crawler walks over the mounds
 			}
 			const FVector Dir = FVector(-One.Ra * FMath::Sin(Th), One.Rb * FMath::Cos(Th), 0.0) * (One.Omega < 0.f ? -1.0 : 1.0);
-			A->SetActorLocationAndRotation(P, FRotator(0.f, Dir.Rotation().Yaw + One.Wiggle * FMath::Sin(T * 4.0 + One.Phase * 7.0), One.Bob > 0.f ? 4.f * FMath::Sin(T * 0.9 + One.Phase) : 0.f));
+			A->SetActorLocationAndRotation(P, FRotator(0.f, Dir.Rotation().Yaw + One.Wiggle * FMath::Sin(T * 4.0 + One.Phase * 7.0), One.Bob > 0.f ? 4.f * FMath::Sin(T * 0.9 + One.Phase) + FMath::Clamp(One.Omega * 70.f, -14.f, 14.f) : 0.f)); // it banks into its turn
 		}
 	}
 	if (UPointLightComponent* L = ShoalLight.Get())
