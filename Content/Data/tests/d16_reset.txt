@@ -1,0 +1,8 @@
+# settings: the restore-defaults row
+wait 1.0
+lang vi
+menu settings
+menusel 11
+wait 0.4
+snap r1_settings_vi
+quit

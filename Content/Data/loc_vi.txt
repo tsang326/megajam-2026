@@ -275,3 +275,4 @@ The Stilt Walker	Kẻ Đi Cà Kheo
 The Lamp Widow	Góa Phụ Đèn
 The Warden	Kẻ Canh Ngục
 THE LEVIATHAN	THỦY QUÁI LEVIATHAN
+Restore defaults	Khôi phục mặc định

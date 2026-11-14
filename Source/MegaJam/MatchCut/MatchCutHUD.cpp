@@ -1791,7 +1791,7 @@ void AMatchCutHUD::DrawMenu(AMatchCutGameMode* GM)
 		{
 			FString Label, Value;
 			Menu.Row(i, Label, Value);
-			const float Y = 250.f + i * 54.f + (i == Menu.NumRows() - 1 ? 14.f : 0.f);
+			const float Y = 240.f + i * 50.f + (i >= Menu.NumRows() - 2 ? 14.f : 0.f);
 			const bool bOn = Menu.Sel == i;
 			if (bOn)
 			{

@@ -217,7 +217,7 @@ int32 FDCMenu::NumRows() const
 	{
 	case EDCMenuPage::Title: return 4;
 	case EDCMenuPage::Pause: return 4;
-	case EDCMenuPage::Settings: return 12;
+	case EDCMenuPage::Settings: return 13;
 	case EDCMenuPage::HowTo: return 1;
 	default: return 0;
 	}
@@ -302,6 +302,16 @@ void FDCMenu::Activate(AMatchCutGameMode* GM)
 		{
 			Back(GM);
 		}
+		else if (Sel == NumRows() - 2)
+		{
+			// back to the defaults, keeping the language
+			FDCSettings& S = DCSettings();
+			const int32 Lang = S.Lang;
+			S = FDCSettings();
+			S.Lang = Lang;
+			S.Apply(GM, true);
+			S.Save();
+		}
 		else
 		{
 			Change(1, GM);
@@ -350,9 +360,9 @@ void FDCMenu::Row(int32 i, FString& Label, FString& Value) const
 		return;
 	}
 	static const TCHAR* Names[] = { TEXT("Language"), TEXT("Mouse sensitivity"), TEXT("Turn speed (keys, pad)"), TEXT("Invert look"), TEXT("Head bob"),
-		TEXT("Field of view"), TEXT("Master volume"), TEXT("Music volume"), TEXT("Display"), TEXT("Graphics"), TEXT("Tutorial hints"), TEXT("Back") };
+		TEXT("Field of view"), TEXT("Master volume"), TEXT("Music volume"), TEXT("Display"), TEXT("Graphics"), TEXT("Tutorial hints"), TEXT("Restore defaults"), TEXT("Back") };
 	static const TCHAR* Quality[] = { TEXT("Low"), TEXT("Medium"), TEXT("High"), TEXT("Epic") };
-	Label = Names[FMath::Clamp(i, 0, 11)];
+	Label = Names[FMath::Clamp(i, 0, 12)];
 	switch (i)
 	{
 	case 0: Value = S.Lang ? TEXT("Tiếng Việt") : TEXT("English"); break;
