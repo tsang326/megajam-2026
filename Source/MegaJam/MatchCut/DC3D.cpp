@@ -95,6 +95,22 @@ AActor* FDC3D::Place(const TCHAR* Id, int32 Variant, const FVector& Base, const 
 			C->SetCollisionResponseToAllChannels(ECR_Block);
 			C->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		}
+		else if (Size.GetMax() >= 140.0)
+		{
+			// loose set dressing was all swum through. What is big and hard (a rock, a buoy, a light pole, a bone pile, a big
+			// sponge or coral) is in the way like everything else; what is soft and sways (weed, fans, worms, jelly) is not.
+			// It turns solid only after the whole sea is laid out, so nothing that was placed by a sweep moves.
+			static const TCHAR* Soft[] = { TEXT("creature:"), TEXT("scene:kelp"), TEXT("scene:seagrass"), TEXT("scene:seafan"), TEXT("scene:seapen"), TEXT("scene:crinoid"), TEXT("scene:anemone"), TEXT("scene:tubeworms") };
+			bool bSoft = false;
+			for (const TCHAR* S : Soft)
+			{
+				bSoft |= FString(Id).StartsWith(S);
+			}
+			if (!bSoft)
+			{
+				LateSolid.Add(C);
+			}
+		}
 	}
 	return A;
 }
@@ -1132,6 +1148,17 @@ void FDC3D::Start()
 	Doc->Start();
 	Pivot = Pos + FVector(0.0, 0.0, 45.0);
 	TickCamera(0.f);
+	for (const TWeakObjectPtr<UStaticMeshComponent>& Late : LateSolid)
+	{
+		if (UStaticMeshComponent* Part = Late.Get())
+		{
+			Part->SetCollisionObjectType(ECC_WorldStatic);
+			Part->SetCollisionResponseToAllChannels(ECR_Block);
+			Part->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		}
+	}
+	UE_LOG(LogMatchCut, Display, TEXT("3D big loose set dressing made solid: %d"), LateSolid.Num());
+	LateSolid.Reset();
 
 	// do the sweeps see the models, and are the places the game needs free? The log says so.
 	auto Free = [World](const TCHAR* Name, const FVector& A, const FVector& B, float R)
@@ -1154,10 +1181,12 @@ void FDC3D::Start()
 // every frame
 // ---------------------------------------------------------------------------------------------
 
-void FDC3D::MoveHero(const FVector& Delta)
+void FDC3D::MoveHero(const FVector& Delta, bool bStanding)
 {
 	UWorld* World = GM->GetWorld();
-	const FCollisionShape Ball = FCollisionShape::MakeSphere(Radius);
+	// swimming, the diver is a ball; standing in the base, a body from the shins to over the head, so a table or a case
+	// that is lower than the chest is in the way too (the feet are 145 cm under the middle: the lowest 40 cm step over)
+	const FCollisionShape Ball = bStanding ? FCollisionShape::MakeCapsule(Radius, 105.f) : FCollisionShape::MakeSphere(Radius);
 	FVector Left = Delta;
 	for (int32 Step = 0; Step < 4 && Left.SizeSquared() > 0.0001; ++Step)
 	{
@@ -1202,10 +1231,9 @@ void FDC3D::TickCamera(float Dt)
 	FVector Boom = -F * (DC3::BoomLen + 60.f * Fast) + U * DC3::BoomUp;
 	if (bFirstPerson)
 	{
-		// the diver's eyes: a little up and forward of the body's centre, with the sway of the strokes
-		const FVector RFlat = FRotationMatrix(FRotator(0.f, Yaw, 0.f)).GetUnitAxis(EAxis::Y);
-		const float BobK = bHeadBobOn ? 1.f : 0.f;
-		Pivot = Pos + FVector(0.0, 0.0, 22.0) + U * (SwimBob * BobK) + (RFlat * WalkBob.Y + FVector::UpVector * (WalkBob.Z - 5.0 * LandDip)) * BobK;
+		// the diver's eyes: a little up and forward of the body's centre. They ride level: swimming, nothing moves them
+		// but the diver; walking, a dip of a few millimetres at each footfall (the "Head bob" setting turns it off)
+		Pivot = Pos + FVector(0.0, 0.0, 22.0 + (bHeadBobOn ? WalkDip - 2.0 * LandDip : 0.0));
 		Boom = F * 4.0;
 	}
 
@@ -1223,12 +1251,16 @@ void FDC3D::TickCamera(float Dt)
 	Fov = Dt > 0.f ? FMath::FInterpTo(Fov, BaseFov + 9.f * Fast, Dt, 3.f) : BaseFov;
 	ViewFov = Fov;
 	FRotator Rot = View;
+	// first person: the horizon stays level and the view points where the player aims, always (no roll, no nodding)
 	if (bFirstPerson)
 	{
-		// the body rolls a little with each stroke; walking, the head sways with the steps and leans into a strafe
-		const float BobK = bHeadBobOn ? 1.f : 0.25f;
-		Rot.Roll = (1.4f * StrokeAmt * FMath::Sin(StrokePhase * 2.f * PI) + WalkRoll) * BobK + StrafeRoll;
-		Rot.Pitch += (0.8f * StrokeAmt * FMath::Sin(StrokePhase * 4.f * PI) - 0.6f * LandDip) * BobK;
+		const FVector Off = Pivot - (Pos + FVector(0.0, 0.0, 22.0));
+		const FVector4 Now4(FVector::DotProduct(Off, FRotationMatrix(FRotator(0.f, Yaw, 0.f)).GetUnitAxis(EAxis::Y)), Off.Z, Rot.Roll, Rot.Pitch - Pitch);
+		for (int32 i = 0; i < 4; ++i)
+		{
+			FeelMin[i] = FMath::Min(FeelMin[i], Now4[i]);
+			FeelMax[i] = FMath::Max(FeelMax[i], Now4[i]);
+		}
 	}
 	float FocusAt = 0.f; // 0: everything sharp
 	bool bHide = bFirstPerson || FVector::Dist(CamPos, Pos) < 95.0; // too close to see anything but the diver's back
@@ -1494,7 +1526,7 @@ void FDC3D::Tick(float Dt)
 		Vel.Y += (WantV.Y - Vel.Y) * (1.0 - FMath::Exp(-10.0 * Dt));
 		Vel.Z -= 1800.0 * Dt; // air: things fall
 		IdleTime = Walk.SizeSquared() > 0.01 || !Turn.IsNearlyZero() ? 0.f : IdleTime + Dt;
-		MoveHero(Vel * Dt);
+		MoveHero(Vel * Dt, true);
 		if (!OverHatch(Pos, 30.0) && Pos.Z < Floor + Stand)
 		{
 			Pos.Z = Floor + Stand;
@@ -1517,17 +1549,15 @@ void FDC3D::Tick(float Dt)
 		{
 			StepPhase = FMath::FInterpTo(StepPhase, FMath::RoundToFloat(StepPhase), Dt, 4.f); // settle on both feet
 		}
-		const float Amp = StepAmt > 1.f ? FMath::Lerp(1.6f, 2.4f, StepAmt - 1.f) : 1.6f * StepAmt;
-		WalkBob = FVector(0.0, 0.8f * StepAmt * FMath::Sin(StepPhase * PI), -Amp * FMath::Cos(StepPhase * 2.f * PI) * 0.5f - Amp * 0.5f);
-		WalkRoll = 0.35f * StepAmt * FMath::Sin(StepPhase * PI);
+		// straight down and back, 5 mm walking and 8 mm running, smooth at both ends
+		const float Amp = StepAmt > 1.f ? FMath::Lerp(0.5f, 0.8f, (StepAmt - 1.f) * 2.f) : 0.5f * StepAmt;
+		WalkDip = -Amp * (0.5f + 0.5f * FMath::Cos(StepPhase * 2.f * PI));
 	}
 	else
 	{
 		StepAmt = FMath::FInterpTo(StepAmt, 0.f, Dt, 6.f);
-		WalkBob = FMath::Lerp(WalkBob, FVector::ZeroVector, (double)FMath::Min(1.f, Dt * 6.f));
-		WalkRoll = FMath::FInterpTo(WalkRoll, 0.f, Dt, 6.f);
+		WalkDip = FMath::FInterpTo(WalkDip, 0.f, Dt, 6.f);
 	}
-	StrafeRoll = FMath::FInterpTo(StrafeRoll, (bHeadBobOn ? 1.2f : 0.4f) * (float)In.Y * (bDry ? 1.f : 0.6f), Dt, 6.f);
 	LandDip = FMath::FInterpTo(LandDip, 0.f, Dt, 5.f);
 	const bool bThrust = !bDry && Wish.SizeSquared() > 0.01;
 	if (!bDry)
@@ -1616,6 +1646,14 @@ void FDC3D::Tick(float Dt)
 	if (Doc && !bFrozen)
 	{
 		Doc->Tick(Dt);
+		// a big animal is in the way: the diver is moved out to its skin and slides along it (through the world's own
+		// sweep, so never into rock). Only in the live sea: while a take plays the animals are where they were then.
+		FVector Push, PushN;
+		if (bShoot && Doc->State == EDCDocState::Shooting && Doc->Blocked(Pos, Radius, Push, PushN) && !bDry)
+		{
+			MoveHero(Push);
+			Vel -= PushN * FMath::Min(0.0, FVector::DotProduct(Vel, PushN));
+		}
 	}
 	TickCamera(Dt);
 	TickZones(Dt);
@@ -1754,6 +1792,27 @@ int32 FDC3D::RunLine(const TArray<FString>& T)
 		GM->ScriptWait = Num(4);
 		return 1;
 	}
+	if (Cmd == TEXT("hold3"))
+	{
+		// hold3 FORWARD RIGHT UP SECONDS [boost]: as key3, but the script goes on at once (snapshots while moving)
+		ScriptMove = FVector(Num(1), Num(2), Num(3));
+		ScriptMoveLeft = Num(4);
+		bScriptBoost = T.IsValidIndex(5) && T[5] == TEXT("boost");
+		return 1;
+	}
+	if (Cmd == TEXT("bob3"))
+	{
+		bHeadBobOn = Num(1) > 0.5f; // the "Head bob" setting, for a test
+		return 1;
+	}
+	if (Cmd == TEXT("feel3"))
+	{
+		// feel3 [LABEL]: how far the eyes swayed since the last feel3, then start again
+		UE_LOG(LogMatchCut, Display, TEXT("3D FEEL %s right [%.2f, %.2f] cm  up [%.2f, %.2f] cm  roll [%.2f, %.2f] deg  pitch [%.2f, %.2f] deg  speed %.0f dry %d bob %d"), T.IsValidIndex(1) ? *T[1] : TEXT(""),
+			FeelMin.X, FeelMax.X, FeelMin.Y, FeelMax.Y, FeelMin.Z, FeelMax.Z, FeelMin.W, FeelMax.W, Vel.Size(), bDry ? 1 : 0, bHeadBobOn ? 1 : 0);
+		FeelMin = FeelMax = FVector4(0.0, 0.0, 0.0, 0.0);
+		return 1;
+	}
 	if (Cmd == TEXT("swim3"))
 	{
 		// swim3 X Y Z: look at the point and swim there; the script waits
@@ -1774,8 +1833,13 @@ int32 FDC3D::RunLine(const TArray<FString>& T)
 	}
 	if (Cmd == TEXT("stat3"))
 	{
-		UE_LOG(LogMatchCut, Display, TEXT("3D STAT pos=(%.0f,%.0f,%.0f) speed=%.0f yaw=%.0f pitch=%.0f boom=%.2f cam=(%.0f,%.0f,%.0f) rings=%d/%d"), Pos.X, Pos.Y, Pos.Z, Vel.Size(), Yaw, Pitch,
-			BoomFrac, CamPos.X, CamPos.Y, CamPos.Z, RingsDone, Rings.Num());
+		FVector StatPush, StatN;
+		if (Doc)
+		{
+			Doc->Blocked(Pos, Radius, StatPush, StatN); // for "animal": how near the nearest big animal is now
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("3D STAT pos=(%.0f,%.0f,%.0f) speed=%.0f yaw=%.0f pitch=%.0f boom=%.2f cam=(%.0f,%.0f,%.0f) rings=%d/%d dry=%d animal=%.2f"), Pos.X, Pos.Y, Pos.Z, Vel.Size(), Yaw, Pitch,
+			BoomFrac, CamPos.X, CamPos.Y, CamPos.Z, RingsDone, Rings.Num(), bDry ? 1 : 0, Doc ? Doc->SolidNear : 99.f);
 		return 1;
 	}
 	return 0;

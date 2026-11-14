@@ -50,15 +50,15 @@ struct FDC3D
 	bool bHeadBobOn = true; // the walking and swimming sway of the eyes
 	bool bFrozen = false;   // a menu is open: nothing moves, the air does not run down
 	bool bTitleCam = false; // the start menu: the camera circles the base outside
-	// ---- walking (first person): one step every StepLen cm, the eyes dip at each footfall
+	// ---- walking (first person): one step every StepLen cm (the footfalls). The eyes stay level: no sway to the side,
+	// no roll, no lean into a strafe; with "Head bob" on they dip a few millimetres at each footfall, and that is all.
 	float StepPhase = 0.f;
 	float StepAmt = 0.f;
-	float StrafeRoll = 0.f;
 	float LandDip = 0.f;
-	FVector WalkBob = FVector::ZeroVector; // x forward, y right, z up (cm); roll in WalkRoll
-	float WalkRoll = 0.f;
-	float SwimBob = 0.f;
+	float WalkDip = 0.f; // cm, down is negative
 	float StrokeSoundPhase = 0.f;
+	// test scripts (feel3): how far the eyes left their steady place since the last reading (cm right, cm up, degrees roll, degrees pitch)
+	FVector4 FeelMin = FVector4(0.0, 0.0, 0.0, 0.0), FeelMax = FVector4(0.0, 0.0, 0.0, 0.0);
 
 	// ---- Unit 0
 	FVector Pos = FVector(0.0, 0.0, 260.0);
@@ -81,6 +81,8 @@ struct FDC3D
 	TWeakObjectPtr<USceneComponent> HandCamHolder;   // places the camera; the model sits turned inside it
 	struct FArmRef { FName Upper, Lower, Hand; FTransform U, L, H; };
 	FArmRef ArmL, ArmR;
+	FQuat HandFrameL = FQuat::Identity, HandFrameR = FQuat::Identity; // each hand's own frame in the reference pose (DCArms.cpp)
+	FVector CamHalf = FVector(13.0, 5.0, 6.0); // half the hand camera's size in its holder (x along the lens)
 	float StrokePhase = 0.f;
 	float StrokeAmt = 0.f;   // 0 still .. 1 swimming hard
 	float ReachAmt = 0.f;    // the left hand reaches for what is in front (the base's controls)
@@ -103,7 +105,7 @@ struct FDC3D
 	void BuildBase();
 	bool InBase(const FVector& P) const;
 	void TickArms(float Dt, const FVector& Eye, const FRotator& View);
-	void SolveArm(const FArmRef& A, const FVector& Target, const FVector& Pole, const FQuat& HandTurn);
+	FVector SolveArm(const FArmRef& A, const FVector& Target, const FVector& Pole, const FQuat& HandTurn); // gives the way the forearm points
 
 	// ---- camera
 	float Yaw = 0.f;
@@ -182,11 +184,12 @@ private:
 	void SpawnHero();
 	void SpawnFlecks();
 	AActor* Place(const TCHAR* Id, int32 Variant, const FVector& Base, const FRotator& Rot, float Scale, bool bCollide = true);
+	TArray<TWeakObjectPtr<UStaticMeshComponent>> LateSolid; // big hard set dressing: made solid once everything has found its place
 	UStaticMeshComponent* Bare(UStaticMesh* Mesh, UMaterialInterface* Mat, const FVector& At, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, UMaterialInstanceDynamic** OutMID = nullptr);
 	AActor* Block(const FVector& Centre, const FRotator& Rot, const FVector& Size, const FLinearColor& Color);
 	void AddRing(const FVector& At, float YawDeg, float PitchDeg);
 	UPointLightComponent* Glow(const FVector& At, const FLinearColor& Color, float Power, float Reach);
-	void MoveHero(const FVector& Delta);
+	void MoveHero(const FVector& Delta, bool bStanding = false);
 	void TickCamera(float Dt);
 	void TickRings(const FVector& From);
 };
