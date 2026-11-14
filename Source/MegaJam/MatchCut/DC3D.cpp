@@ -962,6 +962,9 @@ void FDC3D::TickZones(float Dt)
 		L.FillIntensity += Z.Fill * K;
 		L.SnowColor += Z.Snow * K;
 	}
+	// the air of the base: no water to see through, the warm light of the room
+	L.FogDensity *= 1.f - 0.985f * DryAmt;
+	L.FogColor = FMath::Lerp(L.FogColor, FLinearColor(0.05f, 0.04f, 0.03f), DryAmt);
 	ZoneDepth = DepthAt(Pos.Z);
 	// the light and the water change slowly enough to read as swimming deeper, not as a switch
 	LookTime += Dt;
@@ -1416,7 +1419,64 @@ void FDC3D::Tick(float Dt)
 	{
 		Wish.Normalize();
 	}
-	const bool bThrust = Wish.SizeSquared() > 0.01;
+	const FVector StartPos = Pos;
+	// the dry base: walking on the deck, the hatch a hole down into the sea
+	const double Floor = BaseFloor();
+	const bool bInBox = FMath::Abs(Pos.X - BaseC.X) < BaseHalf.X && FMath::Abs(Pos.Y - BaseC.Y) < BaseHalf.Y && Pos.Z < BaseC.Z + BaseHalf.Z + 40.0;
+	const bool bWasDry = bDry;
+	if (!bDry && bInBox && OverHatch(Pos) && Pos.Z > HatchAt.Z - 70.0 && (Vel.Z > 0.0 || In.Z > 0.f))
+	{
+		// up through the surface: the hands on the rim, out onto the deck
+		Pos = FVector(HatchAt.X - HatchHalf - 90.0, HatchAt.Y, Floor + 118.0);
+		Vel = FVector::ZeroVector;
+		Yaw = 180.f;
+		Pitch = -5.f;
+		bDry = true;
+		if (GM->Audio)
+		{
+			GM->Audio->Play(TEXT("plate_lift"), 0.6f, 1.3f);
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("3D BASE climbed out onto the deck"));
+	}
+	else if (bDry && (!bInBox || Pos.Z < HatchAt.Z))
+	{
+		// through the surface: into the sea
+		bDry = false;
+		Vel *= 0.35;
+		if (GM->Audio)
+		{
+			GM->Audio->Play(TEXT("plate_lift"), 0.7f, 0.6f);
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("3D BASE dropped into the hatch"));
+	}
+	else if (!bDry && bInBox && Pos.Z > Floor + 30.0)
+	{
+		bDry = true; // woke in the base, or a script put the diver there
+	}
+	if (bDry)
+	{
+		const FVector Fwd = FRotationMatrix(FRotator(0.f, Yaw, 0.f)).GetUnitAxis(EAxis::X);
+		FVector Walk = Fwd * In.X + R * In.Y;
+		if (Walk.SizeSquared() > 1.0)
+		{
+			Walk.Normalize();
+		}
+		const FVector WantV = Walk * ((bFast ? 420.0 : 280.0) * FMath::Lerp(1.f, 0.6f, Aim));
+		Vel.X += (WantV.X - Vel.X) * (1.0 - FMath::Exp(-10.0 * Dt));
+		Vel.Y += (WantV.Y - Vel.Y) * (1.0 - FMath::Exp(-10.0 * Dt));
+		Vel.Z -= 1800.0 * Dt; // air: things fall
+		IdleTime = Walk.SizeSquared() > 0.01 || !Turn.IsNearlyZero() ? 0.f : IdleTime + Dt;
+		MoveHero(Vel * Dt);
+		if (!OverHatch(Pos, 30.0) && Pos.Z < Floor + 118.0)
+		{
+			Pos.Z = Floor + 118.0;
+			Vel.Z = 0.0;
+		}
+		HeadBob = FMath::Lerp(HeadBob, (float)(2.5 * FMath::Sin(Time * 9.0) * FMath::Min(1.0, FVector2D(Vel.X, Vel.Y).Size() / 280.0)), 0.3f);
+	}
+	const bool bThrust = !bDry && Wish.SizeSquared() > 0.01;
+	if (!bDry)
+	{
 	IdleTime = bThrust || !Turn.IsNearlyZero() ? 0.f : IdleTime + Dt;
 	if (bThrust)
 	{
@@ -1449,7 +1509,9 @@ void FDC3D::Tick(float Dt)
 		Pos.Z = SandTop + Radius;
 		Vel.Z = FMath::Max(Vel.Z, 0.0);
 	}
-	TickRings(From);
+	}
+	TickRings(StartPos);
+	(void)bWasDry;
 
 	ThrustTime -= Dt;
 	if (bThrust && ThrustTime <= 0.f && GM->Audio)
@@ -1536,6 +1598,19 @@ void FDC3D::Tick(float Dt)
 		const FVector C = CamPos + FVector(0.0, 0.0, Drift);
 		return FVector(FMath::RoundToDouble(C.X / P) * P + P * 0.5, FMath::RoundToDouble(C.Y / P) * P + P * 0.5, FMath::RoundToDouble(C.Z / P) * P + P * 0.5 - Drift);
 	};
+	DryAmt = Dt > 0.f ? FMath::FInterpTo(DryAmt, bDry ? 1.f : 0.f, Dt, 5.f) : (bDry ? 1.f : 0.f);
+	if (GM->Fog)
+	{
+		GM->Fog->GetComponent()->SetVolumetricFogExtinctionScale(GM->Look.VolExtinction * (1.f - 0.95f * DryAmt));
+	}
+	if (AActor* A = Snow.Get())
+	{
+		A->SetActorHiddenInGame(DryAmt > 0.5f);
+	}
+	if (AActor* A = Bubbles.Get())
+	{
+		A->SetActorHiddenInGame(DryAmt > 0.5f);
+	}
 	if (AActor* A = Snow.Get())
 	{
 		A->SetActorLocation(Around(FMath::Fmod(Time * 14.0, P)));

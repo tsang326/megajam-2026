@@ -1538,6 +1538,7 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 			++Row;
 		}
 		Text(FString::Printf(TEXT("Day %d of %d. The hearing is after day %d."), D.Day, D.Days, D.Days), 960.f, 770.f, 1.2f, Amber, 1);
+		Text(TEXT("E / ESC  close"), 1540.f, 196.f, 1.2f, Dim, 2);
 	}
 
 	// the verdict on the last clip

@@ -76,6 +76,7 @@ namespace DCCar
 	static const float HullDepth[4] = { 150.f, 250.f, 350.f, 520.f };
 	static const int32 TapeClips[3] = { 6, 10, 16 };
 	static const float Speed[3] = { 1.f, 1.2f, 1.4f };
+	static constexpr double Stand = 118.0; // body centre over the deck when standing: the eyes at about 1.4 m
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -480,7 +481,17 @@ void FDCDoc::TickDive(float Dt)
 		}
 	}
 	W->ReachAmt = FMath::FInterpTo(W->ReachAmt, Spot != INDEX_NONE ? 0.35f : 0.f, Dt, 6.f);
-	if (bUsePressed && Spot != INDEX_NONE)
+	if (bBoardOpen)
+	{
+		// the board closes on any of E, ENTER, ESC, or on walking away from it
+		const bool bAway = W->BaseSpots.IsValidIndex(3) && FVector::Dist(W->Pos, W->BaseSpots[3]) > 650.0;
+		if (bUsePressed || bBackPressed || bAway)
+		{
+			bBoardOpen = false;
+			bUsePressed = false;
+		}
+	}
+	else if (bUsePressed && Spot != INDEX_NONE)
 	{
 		W->ReachAmt = 1.f;
 		UseSpot(Spot);
@@ -696,6 +707,13 @@ void FDC3D::BuildBase()
 	{
 		Place(TEXT("scene:habitat"), 0, FVector(C.X - 2200.0, C.Y + 600.0, Terrain(C.X - 2200.0, C.Y + 600.0)), FRotator(0.f, 30.f, 0.f), 6.f);
 	}
-	BaseWake = C + FVector(-H.X * 0.35, 60.0, -H.Z + 90.0);
+	BaseWake = C + FVector(-H.X * 0.35, 60.0, -H.Z + DCCar::Stand);
+	HatchAt = FVector(Hatch.X, Hatch.Y, FloorZ + T * 0.5 - 12.0);
+	HatchHalf = HW;
+	// the sea's surface in the hatch: still, dark, a little light in it
+	if (AActor* Water = Block(HatchAt, FRotator::ZeroRotator, FVector(2.0 * HW, 2.0 * HW, 2.0), FLinearColor(0.015f, 0.07f, 0.08f)))
+	{
+		Water->SetActorEnableCollision(false);
+	}
 	UE_LOG(LogMatchCut, Display, TEXT("3D base at (%.0f,%.0f,%.0f), hatch (%.0f,%.0f,%.0f)"), C.X, C.Y, C.Z, Hatch.X, Hatch.Y, Hatch.Z);
 }

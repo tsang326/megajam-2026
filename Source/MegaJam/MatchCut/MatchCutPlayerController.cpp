@@ -25,8 +25,23 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 
 	if (WasInputKeyJustPressed(EKeys::Escape))
 	{
-		UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
-		return;
+		// in the dive ESC is "back" (menus, the board); only a second ESC, with nothing open, quits
+		FDC3D* W3 = GM->World3D();
+		FDCDoc* D3 = W3 ? W3->Doc : nullptr;
+		static double LastEsc = -10.0;
+		const double NowS = FPlatformTime::Seconds();
+		const bool bFree = !D3 || (D3->State == EDCDocState::Shooting && !D3->bBoardOpen);
+		if (!D3 || (bFree && NowS - LastEsc < 1.5))
+		{
+			UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+			return;
+		}
+		if (bFree)
+		{
+			LastEsc = NowS;
+			D3->Alert = TEXT("ESC again to quit");
+			D3->AlertTime = 1.5f;
+		}
 	}
 	if (GM->IsScriptActive())
 	{

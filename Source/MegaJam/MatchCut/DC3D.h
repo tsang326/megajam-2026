@@ -76,6 +76,13 @@ struct FDC3D
 	FVector BaseHalf = FVector(700.0, 450.0, 210.0);
 	TArray<FVector> BaseSpots; // desk, locker, bunk, board
 	FVector BaseWake = FVector::ZeroVector;
+	// the base is dry: air held in by its own pressure, the sea a flat surface in the hatch (a moon pool)
+	FVector HatchAt = FVector::ZeroVector; // the middle of the hatch, at the water's surface
+	double HatchHalf = 150.0;
+	bool bDry = false;   // the diver stands in the air of the base
+	float DryAmt = 0.f;  // 0 water .. 1 air, eased: the look
+	double BaseFloor() const { return BaseC.Z - BaseHalf.Z; }
+	bool OverHatch(const FVector& P, double Margin = 0.0) const { return FMath::Abs(P.X - HatchAt.X) < HatchHalf - Margin && FMath::Abs(P.Y - HatchAt.Y) < HatchHalf - Margin; }
 	void BuildBase();
 	bool InBase(const FVector& P) const;
 	void TickArms(float Dt, const FVector& Eye, const FRotator& View);

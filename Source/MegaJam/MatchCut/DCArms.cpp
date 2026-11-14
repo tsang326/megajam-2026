@@ -134,7 +134,7 @@ void FDC3D::TickArms(float Dt, const FVector& Eye, const FRotator& View)
 
 	const float Aim = Doc ? Doc->AimBlend : 0.f;
 	const float Speed = (float)Vel.Size();
-	const float WantStroke = FMath::Clamp(Speed / 560.f, 0.f, 1.3f) * (1.f - Aim);
+	const float WantStroke = FMath::Clamp(Speed / 560.f, 0.f, 1.3f) * (1.f - Aim) * (1.f - DryAmt); // walking in the base: no strokes
 	StrokeAmt = FMath::FInterpTo(StrokeAmt, WantStroke, Dt, 4.f);
 	StrokePhase = FMath::Frac(StrokePhase + Dt * (0.25f + 0.55f * StrokeAmt));
 	HeadBob = 1.6f * StrokeAmt * FMath::Sin(StrokePhase * 4.f * PI);
