@@ -1,0 +1,72 @@
+# what is in the way: the table in the base, big loose set dressing, big animals. stat3 prints where the diver is and
+# "animal": how near the nearest big animal's skin is (1 = touching, under 1 = inside it).
+wait 1.5
+stat3
+look3 0 -20
+key3 1 0 0 2.5
+stat3
+snap k1_table
+# a big sponge at (-585,1022): swim at it from the -x side
+tp -1100 1022 90 0 -5
+wait 0.5
+key3 1 0 0 2.5
+stat3
+snap k2_sponge
+# a light pole at (1072,-1934), 70 cm thick
+tp 600 -1934 520 0 0
+wait 0.5
+key3 1 0 0 2.5
+stat3
+snap k3_pole
+# a grouper (it does not bite), swum at head on: first as it was (through it), then solid
+solid3 0
+subject grouper 500 9
+wait 0.3
+key3 1 0 0 2.0
+stat3
+snap k4_grouper_through
+solid3 1
+subject grouper 500 9
+wait 0.3
+key3 1 0 0 2.0
+stat3
+snap k5_grouper_solid
+key3 1 0 0 1.0 boost
+stat3
+key3 1 0 0 1.0 boost
+stat3
+snap k6_grouper_pressed
+key3 -1 0 0 1.5
+stat3
+# the shark: it is solid and it still bites
+subject shark 700 6
+wait 0.3
+key3 1 0 0 2.5
+stat3
+snap k6b_shark
+# the manta
+near manta -450 0 40
+track manta 6
+wait 0.3
+key3 1 0 0 2.5
+stat3
+snap k7_manta
+key3 -1 0 0 1.0
+stat3
+# a small fish is still swum through (the shoal)
+near shoal -500 0 0
+track shoal 4
+key3 1 0 0 2.5
+stat3
+# the legend still reaches the diver: swum at with boost, it hunts and bites
+subject leviathan 1500 12
+wait 0.3
+key3 1 0 0 3.0 boost
+stat3
+snap k8_legend
+key3 1 0 0 3.0 boost
+stat3
+key3 1 0 0 3.0 boost
+stat3
+career
+quit

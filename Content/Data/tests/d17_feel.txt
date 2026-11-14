@@ -1,0 +1,81 @@
+# how steady the eyes are: walking, strafing, running in the base; swimming, strafing, boosting in open water.
+# feel3 prints how far the eyes left their steady place (cm, degrees) since the last feel3.
+wait 1.5
+feel3 settle
+look3 0 -5
+hold3 0 1 0 1.5
+wait 0.6
+snap w5_strafe
+snap w6_strafe
+wait 0.3
+feel3 walk_strafe
+wait 0.5
+hold3 1 0 0 2.4
+wait 1.0
+snap w1_walk
+snap w2_walk
+snap w3_walk
+snap w4_walk
+feel3 walk_forward
+wait 0.5
+look3 180 -5
+hold3 1 0 0 1.2 boost
+wait 0.5
+snap w7_run
+wait 0.5
+feel3 run
+wait 0.5
+bob3 0
+feel3 reset
+look3 0 -5
+hold3 1 0 0 1.5
+wait 1.4
+feel3 walk_bob_off
+wait 0.5
+bob3 1
+tp -1500 -3600 900 200 -5
+wait 1.0
+feel3 float
+hold3 1 0 0 3.2
+wait 1.2
+snap s1_swim
+snap s2_swim
+snap s3_swim
+snap s4_swim
+snap s5_swim
+wait 0.6
+feel3 swim_forward
+hold3 0 1 0 2.2
+wait 1.0
+snap s6_strafe
+snap s7_strafe
+wait 0.7
+feel3 swim_strafe
+hold3 1 0 0 3.0 boost
+wait 1.5
+snap s8_boost
+snap s9_boost
+snap s10_boost
+wait 0.7
+feel3 swim_boost
+wait 1.5
+snap s11_glide
+aim 1
+wait 0.2
+snap s12_raising
+wait 0.3
+snap s13_raising
+wait 0.8
+snap s14_aim
+aim 0
+wait 0.8
+look3 200 -45
+wait 0.5
+snap s15_lookdown
+bob3 0
+wait 0.3
+feel3 reset
+hold3 1 0 0 2.0
+wait 2.1
+feel3 swim_bob_off
+quit
