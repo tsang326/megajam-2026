@@ -568,5 +568,201 @@
    ],
    "emissive": "none"
   }
+ ],
+ "creature:brittlestar": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_brittlestar/creature_brittlestar/StaticMeshes/creature_brittlestar.creature_brittlestar",
+   "yaw": 0,
+   "file": "creature_brittlestar.glb",
+   "triangles": 3540,
+   "sizeCm": [
+    190,
+    160,
+    28
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:siphon": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_siphon/creature_siphon/StaticMeshes/creature_siphon.creature_siphon",
+   "yaw": 0,
+   "file": "creature_siphon.glb",
+   "triangles": 6108,
+   "sizeCm": [
+    189,
+    99,
+    113
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:seaangel": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_seaangel/creature_seaangel/StaticMeshes/creature_seaangel.creature_seaangel",
+   "yaw": 0,
+   "file": "creature_seaangel.glb",
+   "triangles": 3732,
+   "sizeCm": [
+    189,
+    126,
+    185
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:kelp": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_kelp/scene_kelp/StaticMeshes/scene_kelp.scene_kelp",
+   "yaw": 0,
+   "file": "scene_kelp.glb",
+   "triangles": 12944,
+   "sizeCm": [
+    120,
+    99,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:tubeworms": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_tubeworms/scene_tubeworms/StaticMeshes/scene_tubeworms.scene_tubeworms",
+   "yaw": 0,
+   "file": "scene_tubeworms.glb",
+   "triangles": 14040,
+   "sizeCm": [
+    190,
+    177,
+    151
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:clam": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_clam/scene_clam/StaticMeshes/scene_clam.scene_clam",
+   "yaw": 0,
+   "file": "scene_clam.glb",
+   "triangles": 9268,
+   "sizeCm": [
+    190,
+    177,
+    117
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:sponge": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_sponge/scene_sponge/StaticMeshes/scene_sponge.scene_sponge",
+   "yaw": 0,
+   "file": "scene_sponge.glb",
+   "triangles": 18288,
+   "sizeCm": [
+    178,
+    190,
+    165
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:anemone": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_anemone/scene_anemone/StaticMeshes/scene_anemone.scene_anemone",
+   "yaw": 0,
+   "file": "scene_anemone.glb",
+   "triangles": 13096,
+   "sizeCm": [
+    185,
+    172,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:spire": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_spire/scene_spire/StaticMeshes/scene_spire.scene_spire",
+   "yaw": 0,
+   "file": "scene_spire.glb",
+   "triangles": 6964,
+   "sizeCm": [
+    55,
+    70,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:cliff": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_cliff/scene_cliff/StaticMeshes/scene_cliff.scene_cliff",
+   "yaw": 0,
+   "file": "scene_cliff.glb",
+   "triangles": 8378,
+   "sizeCm": [
+    132,
+    190,
+    131
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:whalefall": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_whalefall/scene_whalefall/StaticMeshes/scene_whalefall.scene_whalefall",
+   "yaw": 0,
+   "file": "scene_whalefall.glb",
+   "triangles": 11350,
+   "sizeCm": [
+    51,
+    190,
+    103
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:anchor": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_anchor/scene_anchor/StaticMeshes/scene_anchor.scene_anchor",
+   "yaw": 0,
+   "file": "scene_anchor.glb",
+   "triangles": 6906,
+   "sizeCm": [
+    130,
+    190,
+    83
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:bell": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_bell/scene_bell/StaticMeshes/scene_bell.scene_bell",
+   "yaw": 0,
+   "file": "scene_bell.glb",
+   "triangles": 8294,
+   "sizeCm": [
+    191,
+    190,
+    167
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:sub": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_sub/scene_sub/StaticMeshes/scene_sub.scene_sub",
+   "yaw": 0,
+   "file": "scene_sub.glb",
+   "triangles": 9276,
+   "sizeCm": [
+    115,
+    190,
+    116
+   ],
+   "emissive": "none"
+  }
  ]
 }

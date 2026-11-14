@@ -40,3 +40,13 @@ Known problems at this point:
 Captures: `docs/captures/brief07/cp3_shooting.jpg`, `cp3_cut_film_rating.jpg`.
 
 Still open: packaged build and a packaged run of `d3_film`; jellyfish read dark and glossy; the columns of the clearing show their edges from close by; the sea floor is flat and plain; the long lens and the vent plume have not been looked at; nothing has been played by hand.
+
+## Checkpoint 4, first part (2026-11-14, ~10:15)
+
+- The first packaged build failed to compile (an editor-only call in `DC3D.cpp`). Fixed; the package is being made again.
+- World dressing and ambient life from all models that have arrived: 53 art ids in `Content/Data/art.json`, 67 ambient creatures. `d4_look.txt` takes ten views of the world.
+- Caustics light function made and switched off: far too slow on this Mac (median 152 ms against 28 ms) and not visible.
+- Softer shaft in the clearing, lit jellyfish, film music under the finished film.
+- `d3_film` alone in the editor build: 6 of 6 shots, 18 of 18 stars, median 25 ms, p90 48 ms.
+
+Captures: `docs/captures/brief07/cp4_look_a.jpg`, `cp4_look_b.jpg`.

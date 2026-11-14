@@ -162,9 +162,12 @@ void FDC3D::SpawnHero()
 				MID->SetScalarParameterValue(TEXT("EmissiveTexture_Rotation"), 0.f);
 				MID->SetVectorParameterValue(TEXT("EmissiveTexture_OffsetScale"), FLinearColor(0.f, 0.f, 1.f, 1.f));
 				MID->SetVectorParameterValue(TEXT("EmissiveTexture_TilingMethod"), FLinearColor(0.f, 0.f, 0.f, 0.f));
-				bool bMap = false;
+				// the switch can only be read in the editor; the hero model is imported with it on (Tools/import_assets.py)
+				bool bMap = true;
+#if WITH_EDITOR
 				FGuid Guid;
 				MID->GetStaticSwitchParameterValue(FName(TEXT("bHasEmissiveTexture")), bMap, Guid);
+#endif
 				// without the switch the material adds the emissive colour to the whole body: then it has to be black
 				MID->SetVectorParameterValue(TEXT("EmissiveFactor"), bMap ? FLinearColor::White : FLinearColor::Black);
 				UE_LOG(LogMatchCut, Display, TEXT("3D HERO emissive map in use: %d, strength %.1f"), bMap ? 1 : 0, Em);
@@ -346,9 +349,11 @@ void FDC3D::BuildArea()
 			C->SetRelativeScale3D(FVector(Wide / 50.0, Wide / 50.0, Len / 100.0));
 		};
 		const FLinearColor Sun(0.030f, 0.075f, 0.085f);
-		Beam(FVector(-2500.0, -2700.0, 1500.0), FVector::UpVector, 170.f, 3000.f, Sun * 0.8f * Rays);
-		Beam(FVector(-2500.0, -2700.0, 1500.0), FVector::UpVector, 300.f, 3000.f, Sun * 0.5f * Rays);
-		Beam(FVector(-2500.0, -2700.0, 1500.0), FVector::UpVector, 430.f, 3000.f, Sun * 0.35f * Rays);
+		// the clearing's shaft: seven thin shells, so its edge is a gradient and not a step
+		for (int32 i = 0; i < 7; ++i)
+		{
+			Beam(FVector(-2500.0, -2700.0, 1500.0), FVector::UpVector, 110.f + 60.f * i, 3000.f, Sun * 0.24f * Rays);
+		}
 		const FVector Down = FRotator(-62.0, 25.0, 0.0).Vector();
 		FRandomStream RayRand(4127);
 		for (int32 i = 0; i < 16; ++i)
@@ -487,6 +492,16 @@ void FDC3D::Start()
 		DLC->SetMobility(EComponentMobility::Movable);
 		DLC->SetForwardShadingPriority(1);
 		DLC->SetDynamicShadowDistanceMovableLight(12000.f);
+		// sunlight broken up by the surface: a drifting net of bright lines on everything the key light reaches
+		// off unless asked for (-MCCaustics=1): two layers of cell noise per lit pixel took the frame from 28 ms to 150 ms on this Mac
+		int32 Caustics = 0;
+		FParse::Value(FCommandLine::Get(), TEXT("-MCCaustics="), Caustics);
+		if (UMaterialInterface* Net = Caustics ? LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Caustics.M_DC_Caustics")) : nullptr)
+		{
+			DLC->SetLightFunctionMaterial(Net);
+			DLC->SetLightFunctionFadeDistance(60000.f);
+			UE_LOG(LogMatchCut, Display, TEXT("3D caustics on the key light"));
+		}
 	}
 	GM->FillLight = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 5000), FRotator(-20.0, 200.0, 0.0));
 	if (ULightComponent* LC = GM->FillLight->GetLightComponent())

@@ -5,6 +5,7 @@
 #include "MatchCutHUD.h"
 #include "DCAudio.h"
 #include "DC3D.h"
+#include "DCDoc.h"
 #include "DeepCutText.h"
 
 #include "Camera/CameraActor.h"
@@ -478,7 +479,9 @@ void AMatchCutGameMode::UpdateMusic()
 	{
 		return;
 	}
-	const bool bFilm = State == EDCState::Film;
+	// the documentary's own film (title card, takes, credits, rating card) takes the film music too
+	const bool bDocFilm = D3 && D3->Doc && (D3->Doc->State == EDCDocState::Film || D3->Doc->State == EDCDocState::Rating);
+	const bool bFilm = State == EDCState::Film || bDocFilm;
 	const bool bFlash = State == EDCState::Flashback;
 	Audio->SetLoop(TEXT("mus_opening"), bFilm ? 1.f : 0.f, 1.5f);
 	Audio->SetLoop(TEXT("projector"), bFilm || bFlash ? 1.f : 0.f, 0.6f);

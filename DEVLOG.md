@@ -145,3 +145,12 @@ All three use rules the game already had (near things come through the cut, a th
 - The unseen shadow casters that dappled the floor are off by default. Bars drew hard rectangles, round blots drew polka dots, 9000 small pieces drew camouflage; all of them fought the creatures for the eye.
 - Seven more creature models imported (vampire squid, hatchetfish, frilled shark, sea pig, coelacanth, oarfish, stingray): 52 ambient creatures, none casting shadows.
 - Frame time report now carries median and 90th percentile, because the average of a test run includes the hitch of every screenshot. `d3_film` alone, editor build at background priority: median 28 ms, p90 66 ms, average 42 ms over 3062 frames.
+
+### 2026-11-14, ~10:15: a fuller sea, and why the first package failed (brief 07, checkpoint 4 in progress)
+
+- The packaged build did not compile: `DC3D.cpp` read a material's static switch with `GetStaticSwitchParameterValue`, which exists only in editor builds. The call is now inside `WITH_EDITOR`; outside the editor the hero's emissive map is taken as present, which is how the importer saves it.
+- Imported: brittle star, comb jelly, sea angel; kelp, tube worms, clam, sponge, anemone, spire, cliff, whale fall, anchor, bell, crashed submersible. Each is placed by a seeded scatter that drops it onto whatever lies below. 67 ambient creatures.
+- Caustics as a light function (`M_DC_Caustics`, `Tools/make_caustics_material.py`: two layers of computed cell noise in world space) took the median frame from 28 ms to 152 ms in its first run and did not show on the floor. It stays in the project but off (`-MCCaustics=1`). Not investigated further.
+- The clearing's shaft is seven thin additive shells instead of three, so its edge is a gradient. The jellyfish get a stronger soft light of their own and now read pink against the rock.
+- The film music plays under the finished film and the rating card.
+- `d3_film` alone, editor build, background priority: 6 of 6 shots, 18 of 18 stars, median 25 ms, p90 48 ms, average 33.8 ms over 3398 frames.

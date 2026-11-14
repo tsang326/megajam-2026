@@ -360,7 +360,9 @@ void FDCDoc::Start()
 	}
 	SpawnAmbient();
 	ShoalLight = SoftLight(FLinearColor(0.75f, 0.9f, 1.f), 7.f, 900.f);
-	JellyLight = SoftLight(FLinearColor(1.f, 0.6f, 0.75f), 5.f, 700.f);
+	float JellyPower = 26.f; // enough to lift the bells out of the rock's shadow; they have no glow of their own
+	FParse::Value(FCommandLine::Get(), TEXT("-MCJelly="), JellyPower);
+	JellyLight = SoftLight(FLinearColor(1.f, 0.72f, 0.82f), JellyPower, 1000.f);
 	Now = Clock;
 	TickCreatures(0.f, W->Pos, true);
 	UE_LOG(LogMatchCut, Display, TEXT("DOC started: %d fish, %d jellyfish"), FishPos.Num(), Jellies.Num());
