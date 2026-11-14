@@ -1,0 +1,76 @@
+# the expedition: wake in the base, its controls, a dive, upload, the locker, sleep, the Director's Cut
+wait 1.5
+career
+snap c1_wake
+look3 -30 -10
+wait 0.5
+career
+snap c2_desk_prompt
+use 3
+wait 0.3
+snap c3_board
+use 3
+use 1
+wait 0.5
+snap c4_shop
+back
+wait 0.3
+subject ribray 700
+wait 0.5
+aim 1
+wait 0.8
+snap c5_aim_ribray
+rec
+aim 0
+career
+subject hollowdiver 500
+aim 1
+wait 0.8
+rec
+aim 0
+subject leviathan 2500
+aim 1
+wait 0.8
+snap c6_leviathan
+rec
+aim 0
+career
+base
+wait 0.5
+use 0
+wait 0.6
+snap c7_edit
+nav 1 0
+wait 0.3
+nav 0 -1
+wait 0.2
+enter
+wait 3.5
+snap c8_upload
+career
+enter
+wait 0.5
+money 5000
+use 1
+wait 0.3
+buy 1
+buy 0
+snap c9_shop_bought
+back
+wait 0.3
+career
+use 2
+wait 0.5
+career
+snap c10_day2
+day 6
+use 2
+wait 1.0
+career
+snap c11_film_title
+wait 6.0
+snap c12_exhibit
+wait 30
+career
+snap c13_ending
+quit

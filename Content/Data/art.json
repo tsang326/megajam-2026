@@ -1646,5 +1646,215 @@
    ],
    "emissive": "none"
   }
+ ],
+ "creature:hollowdiver": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_hollowdiver/creature_hollowdiver/StaticMeshes/creature_hollowdiver.creature_hollowdiver",
+   "yaw": 0,
+   "file": "creature_hollowdiver.glb",
+   "triangles": 9334,
+   "sizeCm": [
+    122,
+    57,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:widow": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_widow/creature_widow/StaticMeshes/creature_widow.creature_widow",
+   "yaw": 0,
+   "file": "creature_widow.glb",
+   "triangles": 7946,
+   "sizeCm": [
+    56,
+    190,
+    82
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:ribray": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_ribray/creature_ribray/StaticMeshes/creature_ribray.creature_ribray",
+   "yaw": 0,
+   "file": "creature_ribray.glb",
+   "triangles": 3566,
+   "sizeCm": [
+    179,
+    190,
+    77
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:mawworm": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_mawworm/creature_mawworm/StaticMeshes/creature_mawworm.creature_mawworm",
+   "yaw": 0,
+   "file": "creature_mawworm.glb",
+   "triangles": 6356,
+   "sizeCm": [
+    92,
+    192,
+    173
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:camcorder": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_camcorder/scene_camcorder/StaticMeshes/scene_camcorder.scene_camcorder",
+   "yaw": 0,
+   "file": "scene_camcorder.glb",
+   "triangles": 7108,
+   "sizeCm": [
+    125,
+    191,
+    130
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:editdesk": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_editdesk/scene_editdesk/StaticMeshes/scene_editdesk.scene_editdesk",
+   "yaw": 0,
+   "file": "scene_editdesk.glb",
+   "triangles": 6024,
+   "sizeCm": [
+    189,
+    156,
+    169
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:locker": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_locker/scene_locker/StaticMeshes/scene_locker.scene_locker",
+   "yaw": 0,
+   "file": "scene_locker.glb",
+   "triangles": 5824,
+   "sizeCm": [
+    125,
+    69,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:bunk": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_bunk/scene_bunk/StaticMeshes/scene_bunk.scene_bunk",
+   "yaw": 0,
+   "file": "scene_bunk.glb",
+   "triangles": 6306,
+   "sizeCm": [
+    190,
+    82,
+    174
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:corkboard": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_corkboard/scene_corkboard/StaticMeshes/scene_corkboard.scene_corkboard",
+   "yaw": 0,
+   "file": "scene_corkboard.glb",
+   "triangles": 3562,
+   "sizeCm": [
+    190,
+    19,
+    146
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:moonpool": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_moonpool/scene_moonpool/StaticMeshes/scene_moonpool.scene_moonpool",
+   "yaw": 0,
+   "file": "scene_moonpool.glb",
+   "triangles": 11144,
+   "sizeCm": [
+    188,
+    190,
+    106
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:habitat": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_habitat/scene_habitat/StaticMeshes/scene_habitat.scene_habitat",
+   "yaw": 0,
+   "file": "scene_habitat.glb",
+   "triangles": 14184,
+   "sizeCm": [
+    61,
+    190,
+    77
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:choir": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_choir/creature_choir/StaticMeshes/creature_choir.creature_choir",
+   "yaw": 0,
+   "file": "creature_choir.glb",
+   "triangles": 8874,
+   "sizeCm": [
+    191,
+    189,
+    154
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:warden": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_warden/creature_warden/StaticMeshes/creature_warden.creature_warden",
+   "yaw": 0,
+   "file": "creature_warden.glb",
+   "triangles": 6892,
+   "sizeCm": [
+    190,
+    149,
+    29
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:stilt": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_stilt/creature_stilt/StaticMeshes/creature_stilt.creature_stilt",
+   "yaw": 0,
+   "file": "creature_stilt.glb",
+   "triangles": 3252,
+   "sizeCm": [
+    187,
+    190,
+    128
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:drowner": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_drowner/creature_drowner/StaticMeshes/creature_drowner.creature_drowner",
+   "yaw": 0,
+   "file": "creature_drowner.glb",
+   "triangles": 5178,
+   "sizeCm": [
+    143,
+    190,
+    32
+   ],
+   "emissive": "none"
+  }
  ]
 }

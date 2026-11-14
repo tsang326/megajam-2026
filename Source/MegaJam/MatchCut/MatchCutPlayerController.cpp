@@ -76,7 +76,9 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 			D->bRecordPressed |= WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::E) || WasInputKeyJustPressed(EKeys::Gamepad_RightShoulder);
 			D->bLampPressed |= WasInputKeyJustPressed(EKeys::F) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Top);
 			D->bEnterPressed |= WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
-			D->bBackPressed |= WasInputKeyJustPressed(EKeys::BackSpace) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Right);
+			D->bUsePressed |= WasInputKeyJustPressed(EKeys::E) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Bottom);
+			if (D->State != EDCDocState::Shooting && WasInputKeyJustPressed(EKeys::E)) { D->bEnterPressed = true; }
+			D->bBackPressed |= WasInputKeyJustPressed(EKeys::Escape) || WasInputKeyJustPressed(EKeys::BackSpace) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Right);
 			if (WasInputKeyJustPressed(EKeys::MouseScrollUp)) { D->ZoomIn += 1.f; }
 			if (WasInputKeyJustPressed(EKeys::MouseScrollDown)) { D->ZoomIn -= 1.f; }
 			D->ZoomIn += (Down(EKeys::Two) + Down(EKeys::Gamepad_DPad_Up) - Down(EKeys::One) - Down(EKeys::Gamepad_DPad_Down)) * 7.f * DeltaTime;

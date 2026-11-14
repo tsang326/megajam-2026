@@ -154,6 +154,7 @@ void DCApplySwim(UStaticMeshComponent* C, const FString& Id, const FQuat& Q, flo
 }
 
 static int32 GFewFrames = 0; // frames of the running take with some of a group in the picture, but too few
+static int32 GDangerFrames = 0; // frames of the take with something that bites close by
 
 AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, bool bLampOnly, float* OutHalfHeight, float Pace)
 {
@@ -382,7 +383,16 @@ void FDCDoc::SpawnAmbient()
 		{ TEXT("creature:gulper"), 0, 2, 170.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 400.f, 800.f, 400.f, 1000.f, 35.f },
 		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(-5500.0, 19500.0, 0.0), 1000.f, 1500.f, 2200.f, 500.f, 900.f, 75.f },
 		{ TEXT("creature:barreleye"), 0, 4, 45.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 150.f, 400.f, 400.f, 1000.f, 30.f },
-		{ TEXT("creature:siphon"), 0, 5, 60.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 100.f, 300.f, 600.f, 1500.f, 15.f } };
+		{ TEXT("creature:siphon"), 0, 5, 60.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 100.f, 300.f, 600.f, 1500.f, 15.f },
+		// the things the official film says are not there: one place each, deeper is worse
+		{ TEXT("creature:ribray"), 0, 1, 520.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 900.f, 1400.f, 400.f, 900.f, 90.f },
+		{ TEXT("creature:hollowdiver"), 0, 2, 210.f, FVector(14500.0, -3900.0, 0.0), 2500.f, 300.f, 700.f, 150.f, 400.f, 45.f },
+		{ TEXT("creature:drowner"), 0, 2, 230.f, FVector(6800.0, 14500.0, 0.0), 2500.f, 300.f, 700.f, 150.f, 500.f, 50.f },
+		{ TEXT("creature:choir"), 0, 1, 320.f, FVector(-7500.0, -13000.0, 0.0), 1500.f, 400.f, 800.f, 300.f, 700.f, 30.f },
+		{ TEXT("creature:mawworm"), 1, 2, 700.f, FVector(-7500.0, -13000.0, 0.0), 2500.f, 300.f, 600.f, 0.f, 0.f, 40.f },
+		{ TEXT("creature:stilt"), 1, 1, 650.f, FVector(6800.0, -14500.0, 0.0), 2500.f, 600.f, 1200.f, 0.f, 0.f, 35.f },
+		{ TEXT("creature:widow"), 0, 2, 340.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 500.f, 1200.f, 300.f, 800.f, 60.f },
+		{ TEXT("creature:warden"), 0, 1, 1100.f, FVector(-5500.0, 19500.0, 0.0), 1500.f, 1500.f, 2200.f, 900.f, 1400.f, 70.f } };
 	float Front = -90.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCFront="), Front);
 	float Much = 1.f; // -MCLife=0.5 halves the ambient life, 0 leaves only the shot list
@@ -403,6 +413,11 @@ void FDCDoc::SpawnAmbient()
 			FAmbient One;
 			float Half = 0.f;
 			One.Actor = SpawnCreature(Row.Id, Row.Length * Rand.FRandRange(0.85f, 1.15f), Front, false, &Half, FMath::Clamp(Row.Speed / Row.Length * 4.f, 0.6f, 1.6f));
+			One.Radius = Row.Length * 0.5f;
+			for (int32 s = DCSub::Num; s < Subjects.Num(); ++s)
+			{
+				One.Subject = Subjects[s].Id == Row.Id ? s : One.Subject;
+			}
 			One.Surge = DCSwim::KindOf(Row.Id).PulseAmp > 0.f ? 0.5f : 0.f; // what swims by a jet goes in surges
 			// ambient life casts no shadow: 20k triangles each, and every caster is drawn again for each shadow cascade
 			TInlineComponentArray<UStaticMeshComponent*> Parts; One.Actor->GetComponents(Parts);
@@ -467,8 +482,9 @@ void FDCDoc::SpawnAmbient()
 
 void FDCDoc::Start()
 {
-	Seen.SetNum(DCSub::Num);
-	Tally.SetNum(DCSub::Num);
+	SetupSubjects();
+	Seen.SetNum(Subjects.Num());
+	Tally.SetNum(Subjects.Num());
 	for (int32 i = 0; i < DCSub::Num; ++i)
 	{
 		Best[i] = 0;
@@ -535,8 +551,7 @@ void FDCDoc::Start()
 	LampAt = OnTop(3300.0, -700.0);
 	LensAt = OnTop(-3600.0, 2700.0);
 	UE_LOG(LogMatchCut, Display, TEXT("DOC headlamp at (%.0f,%.0f,%.0f), lens at (%.0f,%.0f,%.0f)"), LampAt.X, LampAt.Y, LampAt.Z, LensAt.X, LensAt.Y, LensAt.Z);
-	LampItem = SpawnPickup(LampAt, FLinearColor(1.f, 0.78f, 0.4f), LampGlow);
-	LensItem = SpawnPickup(LensAt, FLinearColor(0.4f, 0.9f, 1.f), LensGlow);
+	// the headlamp and the lens are gear now: bought at the locker, not found on the floor
 	if (USpotLightComponent* L = W->Lamp.Get())
 	{
 		L->SetLightingChannels(true, false, true); // the anglerfish is lit by nothing else
@@ -560,6 +575,12 @@ void FDCDoc::Start()
 	float JellyPower = 26.f; // enough to lift the bells out of the rock's shadow; they have no glow of their own
 	FParse::Value(FCommandLine::Get(), TEXT("-MCJelly="), JellyPower);
 	JellyLight = SoftLight(FLinearColor(1.f, 0.72f, 0.82f), JellyPower, 1000.f);
+	if (Legend != INDEX_NONE)
+	{
+		Hunter = SpawnCreature(TEXT("creature:giantsquid"), 1800.f, Front);
+		TickHunter(0.f, true);
+	}
+	StartDay();
 	Now = Clock;
 	TickCreatures(0.f, W->Pos, true);
 	UE_LOG(LogMatchCut, Display, TEXT("DOC started: %d fish, %d jellyfish"), FishPos.Num(), Jellies.Num());
@@ -787,11 +808,53 @@ void FDCDoc::Look(const FVector& P, const FRotator& R, float Fov)
 	const FCollisionQueryParams Query(FName(TEXT("DCDoc")), true);
 	Lock = INDEX_NONE;
 	float BestOff = 10.f;
-	for (int32 s = 0; s < DCSub::Num; ++s)
+	// the ambient life and the legend: for each species, the one nearest the middle of the picture
+	const int32 NumSub = FMath::Min(Subjects.Num(), Seen.Num());
+	TArray<FVector> FarAt;
+	TArray<float> FarR, FarOff;
+	FarAt.Init(FVector::ZeroVector, NumSub);
+	FarR.Init(0.f, NumSub);
+	FarOff.Init(10.f, NumSub);
+	auto MaxFar = [](float Radius) { return FMath::Clamp(Radius * 14.f, 1200.f, 4500.f); };
+	auto Consider = [&](int32 Sub, const FVector& At, float Radius)
+	{
+		FVector2D In;
+		float D = 0.f;
+		if (Sub >= DCSub::Num && Sub < NumSub && Project(At, In, D) && FMath::Abs(In.X) < 1.0 && FMath::Abs(In.Y) < 1.0 && D < MaxFar(Radius) && In.Size() < FarOff[Sub])
+		{
+			FarOff[Sub] = (float)In.Size();
+			FarAt[Sub] = At;
+			FarR[Sub] = Radius;
+		}
+	};
+	for (const FAmbient& One : Ambient)
+	{
+		const AActor* A = One.Actor.Get();
+		if (!One.bAway && A && !A->IsHidden())
+		{
+			Consider(One.Subject, A->GetActorLocation(), One.Radius);
+		}
+	}
+	if (Subjects.IsValidIndex(Legend))
+	{
+		const AActor* H = Hunter.Get();
+		if (H && !H->IsHidden())
+		{
+			Consider(Legend, H->GetActorLocation(), Subjects[Legend].Radius);
+		}
+	}
+	for (int32 s = 0; s < NumSub; ++s)
 	{
 		FDCSeen& S = Seen[s];
 		S = FDCSeen();
-		FVector Mid = SubPos[s];
+		const bool bFar = s >= DCSub::Num;
+		if (bFar && FarOff[s] >= 10.f)
+		{
+			continue;
+		}
+		FVector Mid = bFar ? FarAt[s] : SubPos[s];
+		const float SubR = bFar ? FarR[s] : SubRadius[s];
+		const float MaxD = bFar ? MaxFar(SubR) : DCD::MaxDist[s];
 		float Depth = 0.f;
 		const bool bGroup = s == DCSub::Shoal || s == DCSub::Jelly;
 		if (bGroup)
@@ -803,7 +866,7 @@ void FDCDoc::Look(const FVector& P, const FRotator& R, float Fov)
 			{
 				FVector2D At;
 				float D = 0.f;
-				if (Project(Item, At, D) && FMath::Abs(At.X) < 1.0 && FMath::Abs(At.Y) < 1.0 && D < DCD::MaxDist[s])
+				if (Project(Item, At, D) && FMath::Abs(At.X) < 1.0 && FMath::Abs(At.Y) < 1.0 && D < MaxD)
 				{
 					Sum += Item;
 					++Count;
@@ -816,26 +879,27 @@ void FDCDoc::Look(const FVector& P, const FRotator& R, float Fov)
 			}
 			Mid = Sum / Count;
 		}
-		if (!Project(Mid, S.At, Depth) || Depth > DCD::MaxDist[s])
+		if (!Project(Mid, S.At, Depth) || Depth > MaxD)
 		{
 			continue;
 		}
 		S.Dist = Depth;
-		S.Size = FMath::Min(1.f, SubRadius[s] / (Depth * TanH) * DCD::Aspect);
+		S.Size = FMath::Min(1.f, SubR / (Depth * TanH) * DCD::Aspect);
 		const float SizeX = S.Size / DCD::Aspect;
 		if (FMath::Abs(S.At.X) > 1.0 || FMath::Abs(S.At.Y) > 1.0)
 		{
 			continue;
 		}
 		FHitResult Hit;
-		if (World->LineTraceSingleByChannel(Hit, P, Mid, ECC_Visibility, Query))
+		if (World->LineTraceSingleByChannel(Hit, P, Mid - (Mid - P).GetSafeNormal() * SubR * 0.8, ECC_Visibility, Query))
 		{
 			continue; // rock in the way
 		}
 		S.bIn = true;
 		S.bWhole = bGroup || (FMath::Abs(S.At.X) + SizeX < 1.03 && FMath::Abs(S.At.Y) + S.Size < 1.03);
-		switch (s)
+		switch (bFar ? -1 : s)
 		{
+		case -1: S.bAction = true; break;
 		case DCSub::Manta: S.bAction = FVector::Dist2D(SubPos[s], DCD::Wreck) < 1150.0; break;
 		case DCSub::Shoal: S.bAction = Split > 0.3f; break;
 		case DCSub::Angler: S.bAction = bLampOn || (bHasPlay && Play.bLamp); break;
@@ -936,14 +1000,24 @@ void FDCDoc::EndTake()
 	const int32 Few = GFewFrames;
 	GFewFrames = 0;
 	const int32 N = FMath::Max(1, RecFrames);
+	// what the clip is of: of all that stayed in the picture most of the take, the one worth most; else what was in it longest
 	int32 Sub = INDEX_NONE;
-	for (int32 s = 0; s < DCSub::Num; ++s)
+	for (int32 s = 0; s < Tally.Num(); ++s)
 	{
 		if (Tally[s].In > 0 && (Sub == INDEX_NONE || Tally[s].In > Tally[Sub].In))
 		{
 			Sub = s;
 		}
 	}
+	int32 Worth = INDEX_NONE;
+	for (int32 s = 0; s < Tally.Num() && s < Subjects.Num(); ++s)
+	{
+		if (Tally[s].In * 2 >= N && (Worth == INDEX_NONE || Subjects[s].Value > Subjects[Worth].Value))
+		{
+			Worth = s;
+		}
+	}
+	Sub = Worth != INDEX_NONE ? Worth : Sub;
 	ResultTime = 5.f;
 	ResultShot = Sub;
 	ResultStars = 0;
@@ -1006,66 +1080,20 @@ void FDCDoc::EndTake()
 		}
 		return;
 	}
-	const int32 Before = ShotsDone();
 	Rec.Shot = Sub;
 	Rec.Stars = ResultStars;
+	Rec.bDanger = GDangerFrames * 4 > N;
+	GDangerFrames = 0;
 	Takes.Add(Rec);
-	// three takes a shot are kept: the weakest, then the oldest, makes room
-	TArray<int32> Mine;
-	if (TakesOf(Sub, &Mine) > 3)
-	{
-		int32 Drop = Mine[0];
-		for (int32 i : Mine)
-		{
-			if (Takes[i].Stars < Takes[Drop].Stars)
-			{
-				Drop = i;
-			}
-		}
-		Takes.RemoveAt(Drop);
-	}
-	for (int32 s = 0; s < DCSub::Num; ++s)
-	{
-		Pick[s] = INDEX_NONE;
-		Best[s] = 0;
-	}
-	for (int32 i = 0; i < Takes.Num(); ++i)
-	{
-		const int32 s = Takes[i].Shot;
-		if (Takes[i].Stars >= Best[s]) // the newer of two equal takes
-		{
-			Best[s] = Takes[i].Stars;
-			Pick[s] = i;
-		}
-	}
-	ListTime = 6.f;
+	UE_LOG(LogMatchCut, Display, TEXT("DOC CLIP %d/%d: %s, %d stars%s"), Takes.Num(), TapeCap(), *SubjectName(Sub), ResultStars, Rec.bDanger ? TEXT(", danger") : TEXT(""));
 	if (GM->Audio)
 	{
 		GM->Audio->Play(TEXT("take_clapper"), 0.8f, 1.f);
 	}
-	const int32 After = ShotsDone();
-	if (After > Before)
+	if (Takes.Num() >= TapeCap())
 	{
-		// the director says why you move on, and where to
-		SinceProgress = 0.f;
-		int32 Next = INDEX_NONE;
-		for (int32 k = 0; k < DCSub::Num && Next == INDEX_NONE; ++k)
-		{
-			Next = Best[DCD::Order[k]] == 0 ? DCD::Order[k] : INDEX_NONE;
-		}
-		if (Next == INDEX_NONE)
-		{
-			Say(DCDocText::DirWrap, 600.f);
-		}
-		else
-		{
-			Say(DCDocText::DirNext[Next], 9.f);
-		}
-		UE_LOG(LogMatchCut, Display, TEXT("DOC GUIDE shot %d done, next %d: %s"), Sub, Next, *Note);
-	}
-	else if (ResultStars < 3 && NoteTime <= 0.f)
-	{
-		Say(DCDocText::DirBetter, 5.f);
+		Alert = TEXT("TAPE FULL. Go home and upload.");
+		AlertTime = 5.f;
 	}
 }
 
@@ -1089,66 +1117,8 @@ void FDCDoc::TickShooting(float Dt)
 			GM->Audio->Play(TEXT("lamp_on"), 0.8f, bLampOn ? 1.f : 0.8f);
 		}
 	}
-	if (!bLampOwned && FVector::Dist(W->Pos, LampAt) < 190.0)
-	{
-		bLampOwned = bLampOn = true;
-		Say(DCDocText::LampFound, 8.f);
-		if (AActor* A = LampItem.Get())
-		{
-			A->SetActorHiddenInGame(true);
-		}
-		if (UPointLightComponent* L = LampGlow.Get())
-		{
-			L->SetIntensity(0.f);
-		}
-		if (GM->Audio)
-		{
-			GM->Audio->Play(TEXT("part_pickup"), 0.8f, 1.f);
-		}
-		UE_LOG(LogMatchCut, Display, TEXT("DOC headlamp picked up"));
-	}
-	if (!bLens && FVector::Dist(W->Pos, LensAt) < 190.0)
-	{
-		bLens = true;
-		MinFov = 14.f;
-		Say(DCDocText::LensFound, 8.f);
-		if (AActor* A = LensItem.Get())
-		{
-			A->SetActorHiddenInGame(true);
-		}
-		if (UPointLightComponent* L = LensGlow.Get())
-		{
-			L->SetIntensity(0.f);
-		}
-		if (GM->Audio)
-		{
-			GM->Audio->Play(TEXT("part_pickup"), 0.8f, 1.1f);
-		}
-		UE_LOG(LogMatchCut, Display, TEXT("DOC long lens picked up"));
-	}
-
-	// the current shot and where its marker points
-	Goal = INDEX_NONE;
-	for (int32 k = 0; k < DCSub::Num && Goal == INDEX_NONE; ++k)
-	{
-		Goal = Best[DCD::Order[k]] == 0 ? DCD::Order[k] : INDEX_NONE;
-	}
-	bGoalIsItem = Goal == DCSub::Angler && !bLampOwned;
-	if (Goal != INDEX_NONE)
-	{
-		GoalAt = bGoalIsItem ? LampAt : SubPos[Goal];
-		if (Goal == DCSub::Giant && GoalAt.Z < -1000.0)
-		{
-			GoalAt = (DCD::GiantA + DCD::GiantB) * 0.5; // it is away: wait where it will pass
-		}
-	}
-	SinceProgress += Dt;
+	TickDive(Dt);
 	NoteAge += Dt;
-	if (!bDirStarted && Clock > 2.5f)
-	{
-		bDirStarted = true;
-		Say(DCDocText::DirStart, 9.f);
-	}
 
 	// focus: on what the lens is locked to, else on whatever is straight ahead
 	float Want = 1500.f;
@@ -1166,7 +1136,12 @@ void FDCDoc::TickShooting(float Dt)
 	}
 	Focus = DCD::Ease(Focus, FMath::Max(80.f, Want), 6.f, Dt);
 
-	if (bRecordPressed && bAim && !bRecording)
+	if (bRecordPressed && bAim && !bRecording && !bBlackout && Takes.Num() >= TapeCap())
+	{
+		Alert = TEXT("TAPE FULL. Go home and upload.");
+		AlertTime = 3.f;
+	}
+	else if (bRecordPressed && bAim && !bRecording && !bBlackout)
 	{
 		bRecording = true;
 		bEverRecorded = true;
@@ -1177,10 +1152,11 @@ void FDCDoc::TickShooting(float Dt)
 		Rec = FDCTake();
 		Rec.T0 = Clock;
 		Rec.Len = DCD::TakeLen;
-		for (int32 s = 0; s < DCSub::Num; ++s)
+		for (FTally& Each : Tally)
 		{
-			Tally[s] = FTally();
+			Each = FTally();
 		}
+		GDangerFrames = 0;
 		ResultTime = 0.f;
 		if (GM->Audio)
 		{
@@ -1198,9 +1174,12 @@ void FDCDoc::TickShooting(float Dt)
 		F.Split = Split;
 		F.Wave = Wave;
 		F.bLamp = bLampOn;
+		F.Hunt = HuntPos;
+		F.HuntYaw = HuntYaw;
 		Rec.Frames.Add(F);
 		++RecFrames;
-		for (int32 s = 0; s < DCSub::Num; ++s)
+		GDangerFrames += DangerNear > 0.f ? 1 : 0;
+		for (int32 s = 0; s < FMath::Min(Seen.Num(), Tally.Num()); ++s)
 		{
 			const FDCSeen& S = Seen[s];
 			if (!S.bIn)
@@ -1243,10 +1222,6 @@ void FDCDoc::TickShooting(float Dt)
 	ListTime = FMath::Max(0.f, ListTime - Dt);
 	NoteTime = FMath::Max(0.f, NoteTime - Dt);
 
-	if (bEnterPressed && CanEnd() && !bRecording)
-	{
-		SetState(EDCDocState::Edit);
-	}
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1259,7 +1234,7 @@ void FDCDoc::SetState(EDCDocState S)
 	StateTime = 0.f;
 	bAimToggle = false;
 	bRecording = false;
-	UE_LOG(LogMatchCut, Display, TEXT("DOC state %d, shots %d/%d, stars %d"), (int32)S, ShotsDone(), (int32)DCSub::Num, StarsTotal());
+	UE_LOG(LogMatchCut, Display, TEXT("DOC state %d, day %d, clips %d, money %d, proofs %d/%d"), (int32)S, Day, Takes.Num(), Money, EvidenceCount(), EvidenceTotal());
 	if (S == EDCDocState::Shooting)
 	{
 		bHasPlay = false;
@@ -1269,18 +1244,8 @@ void FDCDoc::SetState(EDCDocState S)
 	}
 	else if (S == EDCDocState::Edit)
 	{
-		if (!Takes.IsValidIndex(Pick[EditShot]))
-		{
-			for (int32 s = 0; s < DCSub::Num; ++s)
-			{
-				if (Takes.IsValidIndex(Pick[s]))
-				{
-					EditShot = s;
-					break;
-				}
-			}
-		}
-		StartPlayTake(Pick[EditShot]);
+		EditShot = FMath::Clamp(EditShot, 0, FMath::Max(0, Takes.Num() - 1));
+		StartPlayTake(EditShot);
 	}
 	else if (S == EDCDocState::Film)
 	{
@@ -1333,6 +1298,22 @@ void FDCDoc::TickPlay(float Dt, bool bLoop)
 	Now = T.T0 + PlayT;
 	Split = Play.Split;
 	Wave = Play.Wave;
+	// a clip is what the lens saw: what only the lens sees is in it
+	HuntPos = FMath::Lerp(F0.Hunt, F1.Hunt, (double)A);
+	HuntYaw = F0.HuntYaw;
+	TickHunter(0.f, false);
+	for (const FAmbient& One : Ambient)
+	{
+		AActor* Act = One.Actor.Get();
+		if (Act && !One.bAway && Subjects.IsValidIndex(One.Subject) && Subjects[One.Subject].bLensOnly)
+		{
+			Act->SetActorHiddenInGame(false);
+		}
+	}
+	if (AActor* H = Hunter.Get())
+	{
+		H->SetActorHiddenInGame(Play.Hunt.IsZero());
+	}
 }
 
 bool FDCDoc::ViewOverride(FVector& OutPos, FRotator& OutRot, float& OutFov) const
@@ -1362,34 +1343,63 @@ void FDCDoc::Tick(float Dt)
 	{
 		if (State == EDCDocState::Edit)
 		{
-			if (NavX != 0)
+			// the cutting room: A/D a clip, W the thumbnail, S in or out, ENTER uploads, ESC back to the base
+			if (NavX != 0 && Takes.Num() > 0)
 			{
-				// the next shot, that way, that has a take
-				for (int32 k = 1; k <= DCSub::Num; ++k)
-				{
-					const int32 s = ((EditShot + NavX * k) % DCSub::Num + DCSub::Num) % DCSub::Num;
-					if (Takes.IsValidIndex(Pick[s]))
-					{
-						EditShot = s;
-						StartPlayTake(Pick[s]);
-						break;
-					}
-				}
+				EditShot = ((EditShot + NavX) % Takes.Num() + Takes.Num()) % Takes.Num();
+				StartPlayTake(EditShot);
 			}
-			if (NavY != 0)
+			if (NavY < 0 && Takes.IsValidIndex(EditShot))
 			{
-				TArray<int32> Mine;
-				if (TakesOf(EditShot, &Mine) > 1)
+				Headline = EditShot;
+				Takes[EditShot].bKeep = true;
+			}
+			if (NavY > 0 && Takes.IsValidIndex(EditShot))
+			{
+				Takes[EditShot].bKeep = !Takes[EditShot].bKeep;
+				if (!Takes[EditShot].bKeep && Headline == EditShot)
 				{
-					const int32 At = Mine.Find(Pick[EditShot]);
-					Pick[EditShot] = Mine[((At + NavY) % Mine.Num() + Mine.Num()) % Mine.Num()];
-					StartPlayTake(Pick[EditShot]);
+					Headline = INDEX_NONE;
 				}
 			}
 			TickPlay(Dt, true);
-			if (bEnterPressed)
+			if (bEnterPressed && StateTime > 0.2f)
 			{
-				SetState(EDCDocState::Film);
+				if (ClipsKept() == 0)
+				{
+					Alert = TEXT("Every clip is cut. Keep at least one (S).");
+					AlertTime = 3.f;
+				}
+				else
+				{
+					MakeUpload();
+					SetState(EDCDocState::Upload);
+				}
+			}
+			else if (bBackPressed)
+			{
+				SetState(EDCDocState::Shooting);
+			}
+		}
+		else if (State == EDCDocState::Upload)
+		{
+			bHasPlay = false;
+			if ((bEnterPressed || bBackPressed) && StateTime > 1.f)
+			{
+				SetState(EDCDocState::Shooting);
+			}
+		}
+		else if (State == EDCDocState::Shop)
+		{
+			bHasPlay = false;
+			ShopNoteTime = FMath::Max(0.f, ShopNoteTime - Dt);
+			if (NavY != 0)
+			{
+				ShopSel = ((ShopSel + NavY) % DCGear::Num + DCGear::Num) % DCGear::Num;
+			}
+			if (bEnterPressed && StateTime > 0.2f)
+			{
+				Buy(ShopSel);
 			}
 			else if (bBackPressed)
 			{
@@ -1398,40 +1408,40 @@ void FDCDoc::Tick(float Dt)
 		}
 		else if (State == EDCDocState::Film)
 		{
-			TArray<int32> Order;
-			for (int32 s = 0; s < DCSub::Num; ++s)
-			{
-				if (Takes.IsValidIndex(Pick[s]))
-				{
-					Order.Add(Pick[s]);
-				}
-			}
+			// the Director's Cut: title, every proof in the order found, the closing card
 			FilmTime += Dt;
-			const float PartLen = FilmPart == 0 ? 4.f : FilmPart <= Order.Num() ? Takes[Order[FilmPart - 1]].Len : 6.f;
-			if (FilmPart >= 1 && FilmPart <= Order.Num())
+			const int32 NumClips = Takes.Num();
+			const float PartLen = FilmPart == 0 ? 5.f : FilmPart <= NumClips ? Takes[FilmPart - 1].Len + 0.5f : 7.f;
+			if (FilmPart >= 1 && FilmPart <= NumClips)
 			{
 				TickPlay(Dt, false);
 			}
-			if (FilmTime >= PartLen)
+			if (FilmTime >= PartLen || (bEnterPressed && StateTime > 1.f))
 			{
 				FilmTime = 0.f;
 				++FilmPart;
-				if (FilmPart <= Order.Num())
+				if (FilmPart <= NumClips)
 				{
-					StartPlayTake(Order[FilmPart - 1]);
+					StartPlayTake(FilmPart - 1);
 					TickPlay(0.f, false);
 				}
-				else if (FilmPart > Order.Num() + 1)
+				else
 				{
-					SetState(EDCDocState::Rating);
+					bHasPlay = false;
+					if (FilmPart > NumClips + 1)
+					{
+						SetState(EDCDocState::Rating);
+					}
 				}
 			}
 		}
 		else if (State == EDCDocState::Rating)
 		{
-			if (bEnterPressed && StateTime > 1.f)
+			bHasPlay = false;
+			if (bEnterPressed && StateTime > 2.f)
 			{
-				SetState(EDCDocState::Edit);
+				// once more from the start of the film
+				SetState(EDCDocState::Film);
 			}
 		}
 		if (State != EDCDocState::Shooting)
@@ -1444,7 +1454,7 @@ void FDCDoc::Tick(float Dt)
 			}
 		}
 	}
-	bEnterPressed = bBackPressed = false;
+	bEnterPressed = bBackPressed = bUsePressed = false;
 	NavX = NavY = 0;
 
 	// the headlamp looks where the lens looks
@@ -1455,20 +1465,6 @@ void FDCDoc::Tick(float Dt)
 		const FRotator R = State == EDCDocState::Shooting ? FRotator(W->Pitch, W->Yaw, 0.f) : Play.Rot;
 		const FVector From = State == EDCDocState::Shooting ? W->Pos + FVector(0.0, 0.0, 40.0) : Play.Cam - FVector(0.0, 0.0, 20.0);
 		L->SetWorldLocationAndRotation(From + R.Vector() * 62.0, R);
-	}
-	if (UPointLightComponent* L = LampGlow.Get())
-	{
-		if (!bLampOwned)
-		{
-			L->SetIntensity(4000.f + 1800.f * FMath::Sin(Clock * 2.4f));
-		}
-	}
-	if (UPointLightComponent* L = LensGlow.Get())
-	{
-		if (!bLens)
-		{
-			L->SetIntensity(4000.f + 1800.f * FMath::Sin(Clock * 2.4f + 1.f));
-		}
 	}
 }
 
@@ -1492,6 +1488,91 @@ int32 FDCDoc::RunLine(const TArray<FString>& T)
 		}
 		return (int32)INDEX_NONE;
 	};
+	// the expedition, for test scripts
+	if (Cmd == TEXT("use"))
+	{
+		UseSpot((int32)Num(1));
+		return 1;
+	}
+	if (Cmd == TEXT("base"))
+	{
+		W->Pos = W->BaseWake;
+		W->Vel = FVector::ZeroVector;
+		return 1;
+	}
+	if (Cmd == TEXT("money"))
+	{
+		Money = (int32)Num(1);
+		return 1;
+	}
+	if (Cmd == TEXT("buy"))
+	{
+		Buy((int32)Num(1));
+		return 1;
+	}
+	if (Cmd == TEXT("o2"))
+	{
+		O2 = Num(1);
+		return 1;
+	}
+	if (Cmd == TEXT("day"))
+	{
+		Day = (int32)Num(1);
+		return 1;
+	}
+	if (Cmd == TEXT("subject"))
+	{
+		// subject NAME DIST: put the diver DIST from the nearest one of that species, looking at it, camera up
+		const FString Want = FString(TEXT("creature:")) + (T.IsValidIndex(1) ? T[1] : FString());
+		const AActor* Best1 = nullptr;
+		FVector Home = FVector::ZeroVector;
+		for (const FAmbient& One : Ambient)
+		{
+			const AActor* A = One.Actor.Get();
+			if (A && Subjects.IsValidIndex(One.Subject) && Subjects[One.Subject].Id == Want && (!Best1 || FVector::Dist(One.Centre, W->Pos) < FVector::Dist(Home, W->Pos)))
+			{
+				Best1 = A;
+				Home = One.Centre;
+			}
+		}
+		if (Best1)
+		{
+			// where it lives: being there wakes it
+			W->Pos = Home;
+			TickCreatures(0.f, W->Pos, true);
+		}
+		if (Want == TEXT("creature:leviathan"))
+		{
+			Best1 = Hunter.Get();
+		}
+		if (Best1)
+		{
+			// go there once so it wakes and moves to where the clock says, then stand off from where it is now
+			W->Pos = Best1->GetActorLocation();
+			TickCreatures(0.f, W->Pos, true);
+			TickHunter(0.f, true);
+			const FVector At = Best1->GetActorLocation();
+			W->Pos = At + FVector(-Num(2), 0.0, 60.0);
+			W->Vel = FVector::ZeroVector;
+			W->ScriptMoveLeft = 0.f;
+			const FRotator Aim = (At - W->Pos).Rotation();
+			W->Yaw = W->BodyYaw = Aim.Yaw;
+			W->Pitch = Aim.Pitch;
+			W->Pivot = W->Pos;
+			TrackActor = const_cast<AActor*>(Best1);
+			TrackSub = 0;
+			TrackLeft = T.IsValidIndex(3) ? Num(3) : 5.f;
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("DOC SUBJECT %s %s"), *Want, Best1 ? TEXT("found") : TEXT("missing"));
+		return 1;
+	}
+	if (Cmd == TEXT("career"))
+	{
+		UE_LOG(LogMatchCut, Display, TEXT("DOC CAREER day %d/%d state %d base %d spot %d money %d views %lld subs %d air %.0f/%.0f depth %.0f hull %.0f tape %d/%d proofs %d/%d hunt %.2f ending %d gear %d%d%d%d%d%d"),
+			Day, Days, (int32)State, bInBase ? 1 : 0, Spot, Money, TotalViews, Subscribers, O2, O2Max, W->ZoneDepth, HullLimit(), Takes.Num(), TapeCap(), EvidenceCount(), EvidenceTotal(), HuntAlert, Ending,
+			Gear[0], Gear[1], Gear[2], Gear[3], Gear[4], Gear[5]);
+		return 1;
+	}
 	if (Cmd == TEXT("aim"))
 	{
 		bAimToggle = Num(1) > 0.f;

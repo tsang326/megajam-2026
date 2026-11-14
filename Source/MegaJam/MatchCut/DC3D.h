@@ -71,6 +71,13 @@ struct FDC3D
 	float ShieldAmt = 0.f;   // both arms up: a bite
 	float HeadBob = 0.f;
 	void SpawnArms();
+	// the base (DCCareer.cpp): a flooded habitat on legs over the station, its controls, the hatch in its floor
+	FVector BaseC = FVector(1150.0, -1150.0, 1150.0);
+	FVector BaseHalf = FVector(700.0, 450.0, 210.0);
+	TArray<FVector> BaseSpots; // desk, locker, bunk, board
+	FVector BaseWake = FVector::ZeroVector;
+	void BuildBase();
+	bool InBase(const FVector& P) const;
 	void TickArms(float Dt, const FVector& Eye, const FRotator& View);
 	void SolveArm(const FArmRef& A, const FVector& Target, const FVector& Pole, const FQuat& HandTurn);
 

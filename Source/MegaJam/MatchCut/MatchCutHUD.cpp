@@ -1195,53 +1195,73 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 			}
 		}
 	};
-	int32 InFilm = 0;
-	for (int32 s = 0; s < DCSub::Num; ++s)
-	{
-		InFilm += D.Takes.IsValidIndex(D.Pick[s]) ? 1 : 0;
-	}
+	auto Fade = [](const FLinearColor& C, float A) { return FLinearColor(C.R, C.G, C.B, C.A * A); };
+	auto Money = [](int64 V) { return FString::Printf(TEXT("$%lld"), V); };
+	auto Big = [](int64 V) { return V >= 10000 ? FString::Printf(TEXT("%.1fk"), V / 1000.0) : FString::Printf(TEXT("%lld"), V); };
 
-	// ---------------- the finished film
+	// ---------------- the Director's Cut, and how it ends
 	if (D.State == EDCDocState::Film || D.State == EDCDocState::Rating)
 	{
 		Rect(0.f, 0.f, 1920.f, 104.f, FLinearColor::Black);
 		Rect(0.f, 976.f, 1920.f, 104.f, FLinearColor::Black);
 		if (D.State == EDCDocState::Rating)
 		{
-			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.f, 0.f, 0.f, FMath::Clamp(D.StateTime * 1.5f, 0.f, 0.9f)));
-			const int32 Stars = D.StarsTotal();
-			const float Part = (float)Stars / (3.f * DCSub::Num);
-			Text(DCDocText::FilmTitle, 960.f, 250.f, 6.f, White, 1);
-			Text(DCDocText::Rating[Part < 0.35f ? 0 : Part < 0.6f ? 1 : Part < 0.85f ? 2 : 3], 960.f, 440.f, 4.f, Amber, 1);
-			Text(FString::Printf(TEXT("%d / %d STARS"), Stars, 3 * DCSub::Num), 960.f, 560.f, 2.2f, White, 1);
-			for (int32 s = 0; s < DCSub::Num; ++s)
+			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.f, 0.f, 0.f, FMath::Clamp(D.StateTime * 1.5f, 0.f, 0.94f)));
+			static const TCHAR* Heads[4] = { TEXT(""), TEXT("THE TRUTH"), TEXT("DOUBT"), TEXT("THE OFFICIAL STORY") };
+			static const TCHAR* Lines1[4] = { TEXT(""),
+				TEXT("The hearing watched your film twice. Nobody spoke."),
+				TEXT("Some of the panel believed it. The company called it a fake."),
+				TEXT("Without proof, the company's film stands as the record.") };
+			static const TCHAR* Lines2[4] = { TEXT(""),
+				TEXT("The trench is closed to drilling. What lives there is left alone."),
+				TEXT("The drilling goes on, slower, with cameras watching."),
+				TEXT("The trench opens for drilling next spring. Something down there will notice.") };
+			const int32 E = FMath::Clamp(D.Ending, 1, 3);
+			Text(TEXT("DEEP CUT"), 960.f, 190.f, 3.f, Dim, 1);
+			Text(Heads[E], 960.f, 280.f, 6.f, E == 1 ? Green : E == 2 ? Amber : Red, 1);
+			Text(Lines1[E], 960.f, 450.f, 1.9f, White, 1);
+			Text(Lines2[E], 960.f, 500.f, 1.9f, White, 1);
+			Text(FString::Printf(TEXT("PROOFS  %d / %d"), D.EvidenceCount(), D.EvidenceTotal()), 960.f, 620.f, 2.2f, Amber, 1);
+			Text(FString::Printf(TEXT("%s views   %s subscribers   %s earned"), *Big(D.TotalViews), *Big(D.Subscribers), *Money(D.Money)), 960.f, 680.f, 1.5f, Dim, 1);
+			int32 Col = 0;
+			for (int32 s = 0; s < D.Subjects.Num(); ++s)
 			{
-				const float X = 960.f + (s - 2.5f) * 250.f;
-				Text(DCDocText::ShotCaption[s], X, 660.f, 1.2f, Dim, 1);
-				Pips(X - 28.f, 712.f, D.Takes.IsValidIndex(D.Pick[s]) ? D.Takes[D.Pick[s]].Stars : 0, 9.f);
+				if (!D.Subjects[s].bEvidence)
+				{
+					continue;
+				}
+				bool bHave = false;
+				for (const FDCTake& Kept : D.Archive)
+				{
+					bHave |= Kept.Shot == s;
+				}
+				const float X = 960.f + (Col % 5 - 2) * 330.f, Y = 760.f + (Col / 5) * 44.f;
+				Text(bHave ? D.Subjects[s].Name : FString(TEXT("? ? ?")), X, Y, 1.2f, bHave ? Green : Dim, 1);
+				++Col;
 			}
-			Text(DCDocText::RatingKeys, 960.f, 880.f, 1.5f, Dim, 1);
+			Text(TEXT("ENTER  watch it again"), 960.f, 900.f, 1.4f, Dim, 1);
 			return;
 		}
 		if (D.FilmPart == 0)
 		{
 			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor::Black);
-			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 1.2f, (4.f - D.FilmTime) * 2.f), 0.f, 1.f);
-			Text(DCDocText::FilmTitle, 960.f, 400.f, 9.f, FLinearColor(1.f, 1.f, 1.f, A), 1);
-			Text(DCDocText::FilmSub, 960.f, 600.f, 2.f, FLinearColor(Amber.R, Amber.G, Amber.B, A), 1);
+			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 1.2f, (5.f - D.FilmTime) * 2.f), 0.f, 1.f);
+			Text(TEXT("THE DIRECTOR'S CUT"), 960.f, 400.f, 7.f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+			Text(TEXT("what the official film left out"), 960.f, 580.f, 2.f, Fade(Amber, A), 1);
 		}
-		else if (D.FilmPart > InFilm)
+		else if (D.FilmPart > D.Takes.Num())
 		{
 			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor::Black);
-			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 1.2f, (6.f - D.FilmTime) * 2.f), 0.f, 1.f);
-			Text(DCDocText::Credits1, 960.f, 450.f, 2.6f, FLinearColor(1.f, 1.f, 1.f, A), 1);
-			Text(DCDocText::Credits2, 960.f, 560.f, 1.6f, FLinearColor(Dim.R, Dim.G, Dim.B, A), 1);
+			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 1.2f, (7.f - D.FilmTime) * 2.f), 0.f, 1.f);
+			Text(FString::Printf(TEXT("%d of %d proofs on film."), D.EvidenceCount(), D.EvidenceTotal()), 960.f, 450.f, 2.6f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+			Text(TEXT("The hearing is in the morning."), 960.f, 540.f, 1.8f, Fade(Dim, A), 1);
 		}
 		else if (D.Takes.IsValidIndex(D.PlayTake))
 		{
-			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 3.f, (2.2f - D.FilmTime) * 2.f), 0.f, 1.f);
-			Text(DCDocText::ShotCaption[D.Takes[D.PlayTake].Shot], 120.f, 880.f, 2.4f, FLinearColor(1.f, 1.f, 1.f, A));
-			Rect(120.f, 936.f, 90.f * A, 3.f, FLinearColor(Amber.R, Amber.G, Amber.B, A));
+			const float A = FMath::Clamp(FMath::Min(D.FilmTime * 3.f, (2.6f - D.FilmTime) * 2.f), 0.f, 1.f);
+			Text(D.SubjectName(D.Takes[D.PlayTake].Shot).ToUpper(), 120.f, 880.f, 2.4f, FLinearColor(1.f, 1.f, 1.f, A));
+			Text(FString::Printf(TEXT("EXHIBIT %d"), D.FilmPart), 120.f, 840.f, 1.2f, Fade(Amber, A));
+			Rect(120.f, 936.f, 90.f * A, 3.f, Fade(Amber, A));
 			if (D.FilmTime < 0.12f)
 			{
 				Rect(0.f, 104.f, 1920.f, 872.f, FLinearColor(1.f, 1.f, 1.f, 0.35f)); // the splice
@@ -1250,51 +1270,124 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		return;
 	}
 
-	// ---------------- the cutting room
+	// ---------------- the cutting room: today's clips, the thumbnail, what is cut
 	if (D.State == EDCDocState::Edit)
 	{
 		Rect(0.f, 0.f, 1920.f, 96.f, FLinearColor::Black);
 		Rect(0.f, 850.f, 1920.f, 230.f, FLinearColor::Black);
-		Text(DCDocText::EditTitle, 60.f, 30.f, 2.2f, White);
-		Text(FString::Printf(TEXT("%d / %d STARS"), D.StarsTotal(), 3 * DCSub::Num), 1860.f, 34.f, 1.8f, Amber, 2);
-		for (int32 s = 0; s < DCSub::Num; ++s)
+		Text(FString::Printf(TEXT("CUTTING ROOM   DAY %d"), D.Day), 60.f, 30.f, 2.2f, White);
+		Text(FString::Printf(TEXT("%d CLIPS   %d IN THE VIDEO"), D.Takes.Num(), D.ClipsKept()), 1860.f, 34.f, 1.8f, Amber, 2);
+		const int32 First = FMath::Clamp(D.EditShot - 2, 0, FMath::Max(0, D.Takes.Num() - 6));
+		for (int32 k = 0; k < 6 && First + k < D.Takes.Num(); ++k)
 		{
-			const float X = 60.f + s * 302.f;
-			const bool bSel = s == D.EditShot;
-			const bool bHas = D.Takes.IsValidIndex(D.Pick[s]);
+			const int32 i = First + k;
+			const FDCTake& T = D.Takes[i];
+			const float X = 60.f + k * 302.f;
+			const bool bSel = i == D.EditShot;
+			const FDCSubject* S = D.Subjects.IsValidIndex(T.Shot) ? &D.Subjects[T.Shot] : nullptr;
 			Rect(X, 872.f, 290.f, 128.f, FLinearColor(1.f, 1.f, 1.f, bSel ? 0.10f : 0.04f));
 			Frame(X, 872.f, 290.f, 128.f, bSel ? Amber : FLinearColor(1.f, 1.f, 1.f, 0.25f), bSel ? 3.f : 1.5f);
-			// sprocket holes, as on a strip of film
 			for (int32 h = 0; h < 7; ++h)
 			{
 				Rect(X + 14.f + h * 40.f, 862.f, 18.f, 6.f, FLinearColor(1.f, 1.f, 1.f, 0.25f));
 				Rect(X + 14.f + h * 40.f, 1004.f, 18.f, 6.f, FLinearColor(1.f, 1.f, 1.f, 0.25f));
 			}
-			Text(FString::Printf(TEXT("%d  %s"), s + 1, DCDocText::ShotCaption[s]), X + 16.f, 884.f, 1.25f, bHas ? White : Dim);
-			if (bHas)
+			Text(D.SubjectName(T.Shot), X + 16.f, 884.f, 1.25f, T.bKeep ? White : Dim);
+			Pips(X + 28.f, 940.f, T.Stars, 9.f);
+			FString Tags;
+			Tags += i == D.Headline ? TEXT("THUMBNAIL  ") : TEXT("");
+			Tags += S && S->bEvidence ? TEXT("PROOF  ") : TEXT("");
+			Tags += T.bDanger ? TEXT("CLOSE CALL  ") : TEXT("");
+			Tags += T.Shot == D.Trending ? TEXT("TRENDING") : TEXT("");
+			Text(Tags, X + 16.f, 962.f, 0.95f, S && S->bEvidence ? Green : Amber);
+			if (!T.bKeep)
 			{
-				TArray<int32> Mine;
-				const int32 N = D.TakesOf(s, &Mine);
-				Pips(X + 28.f, 946.f, D.Takes[D.Pick[s]].Stars, 10.f);
-				Text(FString::Printf(TEXT("TAKE %d / %d"), Mine.Find(D.Pick[s]) + 1, N), X + 274.f, 962.f, 1.1f, Dim, 2);
-			}
-			else
-			{
-				Text(DCDocText::NoTake, X + 16.f, 940.f, 1.2f, Dim);
+				Rect(X, 934.f, 290.f, 3.f, Red);
+				Text(TEXT("CUT"), X + 274.f, 884.f, 1.2f, Red, 2);
 			}
 		}
-		Text(DCDocText::EditKeys, 960.f, 1030.f, 1.4f, Dim, 1);
+		Text(TEXT("A / D  clip     W  thumbnail (x2.5 views)     S  keep / cut     ENTER  upload     ESC  back"), 960.f, 1030.f, 1.3f, Dim, 1);
 		if (D.Takes.IsValidIndex(D.PlayTake))
 		{
-			Text(DCDocText::ShotTitle[D.Takes[D.PlayTake].Shot], 960.f, 790.f, 1.8f, White, 1);
 			const float P = D.PlayT / FMath::Max(0.1f, D.Takes[D.PlayTake].Len);
 			Rect(660.f, 836.f, 600.f, 3.f, FLinearColor(1.f, 1.f, 1.f, 0.2f));
 			Rect(660.f, 836.f, 600.f * P, 3.f, Amber);
 		}
+		if (D.AlertTime > 0.f)
+		{
+			Text(D.Alert, 960.f, 130.f, 1.6f, Red, 1);
+		}
 		return;
 	}
 
-	// ---------------- shooting
+	// ---------------- the upload: what each clip brought
+	if (D.State == EDCDocState::Upload)
+	{
+		Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.02f, 0.025f, 0.03f, 0.96f));
+		Text(TEXT("UPLOADED"), 120.f, 90.f, 1.4f, Dim);
+		Text(D.VideoTitle, 120.f, 124.f, 2.6f, White);
+		const int32 Shown = FMath::Min(D.UploadLines.Num(), (int32)(D.StateTime * 5.f));
+		for (int32 i = 0; i < Shown && i < 14; ++i)
+		{
+			const FDCUploadLine& L = D.UploadLines[i];
+			const float Y = 230.f + i * 46.f;
+			const bool bProof = D.Subjects.IsValidIndex(L.Subject) && D.Subjects[L.Subject].bEvidence;
+			Text(D.SubjectName(L.Subject), 120.f, Y, 1.4f, bProof ? Green : White);
+			Pips(560.f, Y + 14.f, L.Stars, 7.f);
+			Text(L.bDup ? TEXT("again in this video") : L.bNew ? TEXT("NEW") : TEXT("seen before"), 680.f, Y + 2.f, 1.1f, L.bNew && !L.bDup ? Amber : Dim);
+			Text(FString::Printf(TEXT("%s views"), *Big(L.Views)), 1080.f, Y, 1.4f, White, 2);
+		}
+		if (D.StateTime * 5.f > D.UploadLines.Num() + 2)
+		{
+			const float Y = 260.f + FMath::Min(D.UploadLines.Num(), 14) * 46.f;
+			Rect(120.f, Y - 10.f, 960.f, 2.f, FLinearColor(1.f, 1.f, 1.f, 0.3f));
+			Text(FString::Printf(TEXT("%s views    +%s    +%d subscribers"), *Big(D.VideoViews), *Money(D.Earned), D.NewSubs), 120.f, Y + 6.f, 2.f, Amber);
+			Text(FString::Printf(TEXT("BANK %s"), *Money(D.Money)), 1080.f, Y + 6.f, 2.f, White, 2);
+			Text(TEXT("COMMENTS"), 1240.f, 230.f, 1.2f, Dim);
+			for (int32 i = 0; i < D.Comments.Num(); ++i)
+			{
+				Text(D.Comments[i], 1240.f, 270.f + i * 56.f, 1.15f, White);
+			}
+			Text(FString::Printf(TEXT("PROOFS IN THE ARCHIVE  %d / %d"), D.EvidenceCount(), D.EvidenceTotal()), 1240.f, 270.f + D.Comments.Num() * 56.f + 30.f, 1.3f, Green);
+			Text(TEXT("ENTER  back to the base"), 960.f, 1010.f, 1.4f, Dim, 1);
+		}
+		return;
+	}
+
+	// ---------------- the locker: gear for money
+	if (D.State == EDCDocState::Shop)
+	{
+		Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.02f, 0.025f, 0.03f, 0.9f));
+		Text(TEXT("THE LOCKER"), 160.f, 120.f, 3.f, White);
+		Text(Money(D.Money), 1760.f, 128.f, 2.6f, Amber, 2);
+		for (int32 g = 0; g < DCGear::Num; ++g)
+		{
+			const float Y = 260.f + g * 100.f;
+			const bool bSel = g == D.ShopSel;
+			const int32 Cost = D.GearCost(g);
+			Rect(160.f, Y - 14.f, 1600.f, 84.f, FLinearColor(1.f, 1.f, 1.f, bSel ? 0.10f : 0.03f));
+			if (bSel)
+			{
+				Frame(160.f, Y - 14.f, 1600.f, 84.f, Amber, 2.f);
+			}
+			Text(D.GearName(g), 200.f, Y, 1.8f, White);
+			for (int32 l = 0; l < D.GearLevels(g); ++l)
+			{
+				if (l <= D.Gear[g]) { Disc(560.f + l * 26.f, Y + 20.f, 8.f, Amber); }
+				else { Ring(560.f + l * 26.f, Y + 20.f, 8.f, FLinearColor(1.f, 1.f, 1.f, 0.4f), 1.5f); }
+			}
+			Text(D.GearLine(g), 700.f, Y + 4.f, 1.5f, Dim);
+			Text(Cost == INDEX_NONE ? FString(TEXT("BEST")) : Money(Cost), 1720.f, Y, 1.8f, Cost == INDEX_NONE ? Dim : Cost <= D.Money ? Green : Red, 2);
+		}
+		if (D.ShopNoteTime > 0.f)
+		{
+			Text(D.ShopNote, 960.f, 900.f, 1.6f, Amber, 1);
+		}
+		Text(TEXT("W / S  choose     ENTER  buy     ESC  close"), 960.f, 1000.f, 1.4f, Dim, 1);
+		return;
+	}
+
+	// ---------------- diving
 	const float Aim = D.AimBlend;
 	const FLinearColor Edge(1.f, 1.f, 1.f, 0.35f);
 	const float M = 44.f, L = 54.f;
@@ -1314,22 +1407,43 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 	{
 		Text(TEXT("STBY"), 76.f, 78.f, 1.5f, Dim);
 	}
-	Text(Timecode(Time, 0), 190.f, 78.f, 1.5f, Dim);
+	Text(FString::Printf(TEXT("DAY %d / %d"), D.Day, D.Days), 190.f, 78.f, 1.5f, White);
+	Text(FString::Printf(TEXT("TAPE %d / %d"), D.Takes.Num(), D.TapeCap()), 360.f, 78.f, 1.5f, D.Takes.Num() >= D.TapeCap() ? Red : Dim);
+	Text(Money(D.Money), 560.f, 78.f, 1.5f, Amber);
 	const int32 Heading = ((int32)FMath::RoundToInt(W.Yaw) % 360 + 360) % 360;
-	Text(FString::Printf(TEXT("DEPTH %.1f m   HDG %03d"), W.ZoneDepth, Heading), 1836.f, 78.f, 1.5f, Dim, 2);
+	Text(FString::Printf(TEXT("DEPTH %.0f m / %.0f   HDG %03d"), W.ZoneDepth, D.HullLimit(), Heading), 1836.f, 78.f, 1.5f, D.bOverDepth ? Red : Dim, 2);
+	// air
+	{
+		const float P = FMath::Clamp(D.O2 / FMath::Max(1.f, D.O2Max), 0.f, 1.f);
+		const bool bLow = P < 0.25f;
+		const float Blink = bLow && !D.bInBase ? 0.6f + 0.4f * FMath::Sin(Time * 9.f) : 1.f;
+		Text(TEXT("AIR"), 1476.f, 118.f, 1.2f, Fade(bLow ? Red : Dim, Blink));
+		Rect(1530.f, 126.f, 306.f, 10.f, FLinearColor(1.f, 1.f, 1.f, 0.15f));
+		Rect(1530.f, 126.f, 306.f * P, 10.f, Fade(bLow ? Red : P < 0.5f ? Amber : Green, Blink));
+		Text(FString::Printf(TEXT("%d s"), FMath::CeilToInt(D.O2 / ((W.bBoost ? 2.f : 1.f) * (D.bOverDepth ? 5.f : 1.f)))), 1836.f, 146.f, 1.1f, Dim, 2);
+	}
 	if (W.ZoneTitleTime >= 0.f && !W.ZoneTitle.IsEmpty())
 	{
-		// a zone's name, as a documentary's chapter card: fades in, holds, fades out
 		const float T = W.ZoneTitleTime;
 		const float A = FMath::Clamp(T / 0.8f, 0.f, 1.f) * FMath::Clamp((6.f - T) / 1.2f, 0.f, 1.f);
-		Text(W.ZoneTitle, 960.f, 300.f, 2.6f, FLinearColor(1.f, 0.86f, 0.55f, 0.9f * A), 1);
-		Text(FString::Printf(TEXT("%.0f m"), W.ZoneDepth), 960.f, 352.f, 1.4f, FLinearColor(1.f, 1.f, 1.f, 0.6f * A), 1);
+		Text(W.ZoneTitle, 960.f, 640.f, 2.6f, FLinearColor(1.f, 0.86f, 0.55f, 0.9f * A), 1);
+		Text(FString::Printf(TEXT("%.0f m"), W.ZoneDepth), 960.f, 692.f, 1.4f, FLinearColor(1.f, 1.f, 1.f, 0.6f * A), 1);
+	}
+	// something that bites is close; a bite
+	if (D.DangerNear > 0.f || D.bHunting)
+	{
+		const float A = 0.10f + 0.08f * FMath::Sin(Time * (D.bHunting ? 10.f : 5.f));
+		Rect(0.f, 0.f, 26.f, 1080.f, FLinearColor(Red.R, Red.G, Red.B, A));
+		Rect(1894.f, 0.f, 26.f, 1080.f, FLinearColor(Red.R, Red.G, Red.B, A));
+	}
+	if (D.HurtTime > 0.f)
+	{
+		Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.6f, 0.f, 0.f, 0.45f * D.HurtTime));
 	}
 
 	if (Aim > 0.5f)
 	{
 		const float A = (Aim - 0.5f) * 2.f;
-		// the viewfinder: thirds, a small cross, and a bracket on what the lens has found
 		const FLinearColor Thin(1.f, 1.f, 1.f, 0.13f * A);
 		Rect(640.f, 120.f, 1.5f, 840.f, Thin);
 		Rect(1280.f, 120.f, 1.5f, 840.f, Thin);
@@ -1337,106 +1451,96 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		Rect(120.f, 720.f, 1680.f, 1.5f, Thin);
 		Rect(948.f, 539.f, 24.f, 2.f, FLinearColor(1.f, 1.f, 1.f, 0.5f * A));
 		Rect(959.f, 528.f, 2.f, 24.f, FLinearColor(1.f, 1.f, 1.f, 0.5f * A));
-		if (D.Lock != INDEX_NONE)
+		if (D.Seen.IsValidIndex(D.Lock))
 		{
 			const FDCSeen& S = D.Seen[D.Lock];
-			const FLinearColor C = S.bAction && S.bWhole ? Green : S.bAction ? Amber : FLinearColor(1.f, 1.f, 1.f, 0.7f);
-			Brackets(960.f + (float)S.At.X * 960.f, 540.f - (float)S.At.Y * 540.f, FMath::Clamp(S.Size * 540.f * 1.15f, 34.f, 420.f), C, 2.5f);
+			const FDCSubject* Sub = D.Subjects.IsValidIndex(D.Lock) ? &D.Subjects[D.Lock] : nullptr;
+			const FLinearColor C = Sub && Sub->bEvidence ? Green : S.bAction && S.bWhole ? Green : S.bAction ? Amber : FLinearColor(1.f, 1.f, 1.f, 0.7f);
+			const float X = 960.f + (float)S.At.X * 960.f, Y = 540.f - (float)S.At.Y * 540.f;
+			const float R = FMath::Clamp(S.Size * 540.f * 1.15f, 34.f, 420.f);
+			Brackets(X, Y, R, C, 2.5f);
+			const bool bKnown = D.TimesUploaded.Contains(D.Lock);
+			Text(FString::Printf(TEXT("%s%s"), *D.SubjectName(D.Lock), Sub && Sub->bEvidence ? TEXT("   PROOF") : bKnown ? TEXT("") : TEXT("   NEW")), X, Y + R + 10.f, 1.2f, C, 1);
 		}
 		const float Focal = 18.f / FMath::Tan(FMath::DegreesToRadians(W.ViewFov * 0.5f));
 		Text(FString::Printf(TEXT("%.0f mm     FOCUS %.1f m"), Focal, D.Focus / 100.f), 960.f, 1000.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, 0.8f * A), 1);
 		if (D.bRecording)
 		{
-			// the take: three seconds, and a light that says whether this is the moment
 			const float P = FMath::Clamp(D.RecTime / 3.f, 0.f, 1.f);
 			Rect(760.f, 84.f, 400.f, 6.f, FLinearColor(1.f, 1.f, 1.f, 0.2f));
 			Rect(760.f, 84.f, 400.f * P, 6.f, Red);
 			Frame(96.f, 110.f, 1728.f, 860.f, FLinearColor(Red.R, Red.G, Red.B, 0.55f), 2.f);
 		}
 	}
-	else
-	{
-		// swimming: how fast
-		const float Speed = FMath::Clamp((float)W.Vel.Size() / 980.f, 0.f, 1.f);
-		Rect(84.f, 1000.f, 220.f, 4.f, FLinearColor(1.f, 1.f, 1.f, 0.18f));
-		Rect(84.f, 1000.f, 220.f * Speed, 4.f, Speed > 0.62f ? Amber : Green);
-	}
 
-	// the current shot: one at a time, with one line on what to film and where; six small marks for the whole list
+	// the way home: the hatch under the base
+	if (!D.bInBase && D.bLeftBase && !D.bRecording)
 	{
-		const float CardA = 1.f - 0.45f * Aim;
-		int32 Done = 0;
-		for (int32 s = 0; s < DCSub::Num; ++s)
+		const FVector Hatch = W.BaseC + FVector(W.BaseHalf.X - 260.0, 0.0, -W.BaseHalf.Z - 120.0);
+		FVector2D At;
+		const bool bFront = D.Bearing(Hatch, At);
+		const float Metres = (float)FVector::Dist(Hatch, W.Pos) / 100.f;
+		const bool bLowAir = D.O2 < D.O2Max * 0.35f;
+		const FLinearColor C = Fade(bLowAir ? Red : FLinearColor(0.6f, 0.85f, 1.f, 1.f), bLowAir ? 0.95f : 0.6f);
+		const FString Label = FString::Printf(TEXT("BASE  %.0f m"), Metres);
+		if (bFront && FMath::Abs(At.X) < 0.9 && FMath::Abs(At.Y) < 0.8)
 		{
-			Done += D.Best[s] > 0 ? 1 : 0;
-		}
-		Rect(64.f, 126.f, 1000.f, 124.f, FLinearColor(0.f, 0.f, 0.f, 0.5f * CardA));
-		Rect(64.f, 126.f, 4.f, 124.f, FLinearColor(Amber.R, Amber.G, Amber.B, CardA));
-		if (D.Goal != INDEX_NONE)
-		{
-			Text(FString::Printf(TEXT("%s   %d / %d"), DCDocText::CurrentShot, FMath::Min(Done + 1, (int32)DCSub::Num), (int32)DCSub::Num), 84.f, 134.f, 1.25f, FLinearColor(Amber.R, Amber.G, Amber.B, CardA));
-			Text(DCDocText::ShotCaption[D.Goal], 84.f, 164.f, 1.9f, FLinearColor(1.f, 1.f, 1.f, 0.95f * CardA));
-			Text(D.bGoalIsItem ? DCDocText::LampFirst : DCDocText::ShotWhere[D.Goal], 84.f, 210.f, 1.3f, FLinearColor(1.f, 1.f, 1.f, 0.9f * CardA));
+			const float X = 960.f + (float)At.X * 960.f, Y = 540.f - (float)At.Y * 540.f;
+			Ring(X, Y, 12.f, C, 2.f);
+			Text(Label, X, Y + 20.f, 1.1f, C, 1);
 		}
 		else
 		{
-			Text(DCDocText::ShotList, 84.f, 134.f, 1.1f, FLinearColor(Amber.R, Amber.G, Amber.B, CardA));
-			Text(DCDocText::AllShots, 84.f, 166.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, 0.95f * CardA));
-		}
-		for (int32 s = 0; s < DCSub::Num; ++s)
-		{
-			const float X = 700.f + s * 58.f;
-			Frame(X, 136.f, 48.f, 20.f, s == D.Goal ? FLinearColor(Amber.R, Amber.G, Amber.B, CardA) : FLinearColor(1.f, 1.f, 1.f, (D.Best[s] > 0 ? 0.5f : 0.25f) * CardA), 1.5f);
-			for (int32 i = 0; i < D.Best[s]; ++i)
-			{
-				Disc(X + 10.f + i * 14.f, 146.f, 4.5f, Amber);
-			}
+			const double Kx = FMath::Abs(At.X) / 0.86, Ky = FMath::Abs(At.Y) / 0.74;
+			const FVector2D E = At / FMath::Max(1.0, FMath::Max(Kx, Ky));
+			const FVector2D P(960.0 + E.X * 960.0, 540.0 - E.Y * 540.0);
+			const FVector2D Dir = FVector2D(At.X, -At.Y).GetSafeNormal();
+			Arrow(P - Dir * 22.f, P + Dir * 22.f, C, 3.f);
+			Text(Label, FMath::Clamp((float)(P.X - Dir.X * 70.0), 150.f, 1770.f), FMath::Clamp((float)(P.Y - Dir.Y * 60.0) - 10.f, 200.f, 900.f), 1.1f, C, 1);
 		}
 	}
 
-	// the marker: on the subject's place while it is in the picture, else an arrow at the edge; with the distance
-	if (D.Goal != INDEX_NONE && !D.bRecording)
+	// in the base: what the control in front of the diver does
+	if (D.Spot != INDEX_NONE)
 	{
-		FVector2D At;
-		const bool bFront = D.Bearing(D.GoalAt, At);
-		const float Metres = (float)FVector::Dist(D.GoalAt, W.Pos) / 100.f;
-		const bool bOn = bFront && FMath::Abs(At.X) < 0.9 && FMath::Abs(At.Y) < 0.8;
-		const bool bSeen = !D.bGoalIsItem && D.Seen[D.Goal].bIn;
-		const bool bPulse = D.SinceProgress > 60.f;
-		const float Beat = bPulse ? 0.5f + 0.5f * FMath::Sin(Time * 6.f) : 0.f;
-		float A = bSeen ? (Metres < 25.f ? 0.f : 0.3f) : bOn && Metres < 6.f ? 0.25f : 0.9f;
-		A = FMath::Min(1.f, A + (A > 0.f ? 0.1f * Beat : 0.f));
-		const FString Label = FString::Printf(TEXT("%s  %.0f m"), D.bGoalIsItem ? DCDocText::MarkLamp : DCDocText::ShotCaption[D.Goal], Metres);
-		if (A > 0.f)
+		static const TCHAR* What[4] = { TEXT("E   EDIT DESK: cut and upload today's tape"), TEXT("E   LOCKER: buy gear"), TEXT("E   BUNK: sleep to the next day"), TEXT("E   BOARD: the proofs") };
+		FString Line = What[D.Spot];
+		if (D.Spot == 2 && D.Day >= D.Days)
 		{
-			const FLinearColor C(Amber.R, Amber.G, Amber.B, A);
-			if (bOn)
-			{
-				const float X = 960.f + (float)At.X * 960.f, Y = 540.f - (float)At.Y * 540.f;
-				const float R = 15.f + 9.f * Beat;
-				Ring(X, Y, R, C, 2.5f);
-				Disc(X, Y, 3.5f, C);
-				Text(Label, X, Y + R + 8.f, 1.3f, C, 1);
-			}
-			else
-			{
-				// out of the picture: slide to the edge, and point
-				const double Kx = FMath::Abs(At.X) / 0.86, Ky = FMath::Abs(At.Y) / 0.74;
-				const FVector2D E = At / FMath::Max(1.0, FMath::Max(Kx, Ky));
-				FVector2D P(960.0 + E.X * 960.0, 540.0 - E.Y * 540.0);
-				if (P.X < 1120.0)
-				{
-					P.Y = FMath::Max(P.Y, 300.0); // below the shot card
-				}
-				const FVector2D Dir = FVector2D(At.X, -At.Y).GetSafeNormal();
-				const float Len = 26.f + 12.f * Beat;
-				Arrow(P - Dir * Len, P + Dir * Len, C, 4.f);
-				Text(Label, FMath::Clamp((float)(P.X - Dir.X * 70.0), 150.f, 1770.f), FMath::Clamp((float)(P.Y - Dir.Y * 60.0) - 10.f, 270.f, 900.f), 1.3f, C, 1);
-			}
+			Line = TEXT("E   BUNK: last night. The Director's Cut goes out.");
 		}
+		Rect(660.f, 690.f, 600.f, 52.f, FLinearColor(0.f, 0.f, 0.f, 0.55f));
+		Text(Line, 960.f, 700.f, 1.4f, Amber, 1);
+	}
+	if (D.bBoardOpen)
+	{
+		Rect(360.f, 170.f, 1200.f, 640.f, FLinearColor(0.05f, 0.04f, 0.03f, 0.92f));
+		Frame(360.f, 170.f, 1200.f, 640.f, FLinearColor(0.6f, 0.45f, 0.25f, 1.f), 3.f);
+		Text(FString::Printf(TEXT("THE PROOFS   %d / %d"), D.EvidenceCount(), D.EvidenceTotal()), 960.f, 196.f, 2.2f, White, 1);
+		Text(TEXT("The company's film says the trench is empty. Film what is there, upload it, and it goes in the archive."), 960.f, 250.f, 1.05f, Dim, 1);
+		int32 Row = 0;
+		for (int32 s = 0; s < D.Subjects.Num(); ++s)
+		{
+			const FDCSubject& S = D.Subjects[s];
+			if (!S.bEvidence)
+			{
+				continue;
+			}
+			bool bHave = false;
+			for (const FDCTake& Kept : D.Archive)
+			{
+				bHave |= Kept.Shot == s;
+			}
+			const float Y = 300.f + Row * 52.f;
+			const FString Where = W.Zones.IsValidIndex(S.Zone) ? FString(W.Zones[S.Zone].Title) : FString(TEXT("near the station"));
+			Text(bHave ? S.Name : FString(TEXT("? ? ?")), 420.f, Y, 1.5f, bHave ? Green : White);
+			Text(FString::Printf(TEXT("%s%s"), *Where, S.bLensOnly ? TEXT("   (seen only through the camera)") : TEXT("")), 900.f, Y + 4.f, 1.1f, Dim);
+			++Row;
+		}
+		Text(FString::Printf(TEXT("Day %d of %d. The hearing is after day %d."), D.Day, D.Days, D.Days), 960.f, 770.f, 1.2f, Amber, 1);
 	}
 
-	// the verdict on the last take
+	// the verdict on the last clip
 	if (D.ResultTime > 0.f)
 	{
 		const float A = FMath::Clamp(D.ResultTime, 0.f, 1.f);
@@ -1449,42 +1553,42 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		if (D.ResultStars > 0)
 		{
 			Pips(960.f - 50.f, 290.f, D.ResultStars, 18.f);
-			Text(DCDocText::ShotTitle[D.ResultShot], 960.f, 322.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+			Text(D.SubjectName(D.ResultShot), 960.f, 322.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, A), 1);
 		}
 		else
 		{
 			Text(DCDocText::NoGood, 960.f, 268.f, 2.6f, FLinearColor(Red.R, Red.G, Red.B, A), 1);
 		}
-		Text(D.ResultReason, 960.f, 358.f, 1.5f, FLinearColor(Amber.R, Amber.G, Amber.B, A), 1);
+		Text(D.ResultReason, 960.f, 358.f, 1.5f, Fade(Amber, A), 1);
 	}
 
-	// one line at a time: the first shot is taught step by step, each prompt only while it is the thing to do;
-	// else what the director says (typed out), else the control that is needed next
+	// one warning line
+	if (D.AlertTime > 0.f && !D.Alert.IsEmpty())
+	{
+		const float A = FMath::Clamp(D.AlertTime * 2.f, 0.f, 1.f);
+		Rect(460.f, 196.f, 1000.f, 46.f, FLinearColor(0.f, 0.f, 0.f, 0.5f * A));
+		Text(D.Alert, 960.f, 204.f, 1.35f, Fade(D.bOverDepth || D.O2 < D.O2Max * 0.25f || D.HurtTime > 0.f ? Red : Amber, A), 1);
+	}
+
+	// one line of help at a time
 	FString Line;
 	FLinearColor LineColor(1.f, 1.f, 1.f, 0.85f);
-	const bool bTeach = D.Goal == DCSub::Crew && D.Best[DCSub::Crew] == 0 && !D.bRecording && D.ResultTime <= 0.f && Time > 5.f;
-	if (bTeach && (D.NoteTime <= 0.f || D.NoteAge > 6.f))
+	if (D.Day == 1 && !D.bLeftBase && D.Spot == INDEX_NONE && !D.bBoardOpen)
 	{
-		Line = D.Wave < 0.5f ? DCDocText::TutSwim : Aim < 0.5f ? DCDocText::TutAim : !D.Seen[DCSub::Crew].bIn ? DCDocText::TutFrame : DCDocText::TutRecord;
-		LineColor = FLinearColor(1.f, 1.f, 1.f, 0.95f);
+		Line = TEXT("The hatch in the floor leads out. Film what you find. Come back before the air runs out.");
 	}
-	else if (D.NoteTime > 0.f)
+	else if (D.bInBase && D.Takes.Num() > 0 && !D.bUploadedToday && D.Spot == INDEX_NONE)
 	{
-		Line = D.Note.Left(FMath::Max(1, (int32)(D.NoteAge * 45.f)));
-		LineColor = FLinearColor(Amber.R, Amber.G, Amber.B, FMath::Clamp(D.NoteTime, 0.f, 1.f));
-	}
-	else if (D.Goal == INDEX_NONE)
-	{
-		Line = DCDocText::DirWrap;
+		Line = TEXT("Tape to upload: the edit desk.");
 		LineColor = Amber;
 	}
-	else if (!D.bEverAimed)
+	else if (!D.bEverAimed && !D.bInBase)
 	{
 		Line = DCDocText::TutAim;
 	}
-	else if (!D.bEverRecorded)
+	else if (!D.bEverRecorded && Aim > 0.5f)
 	{
-		Line = Aim > 0.5f ? DCDocText::TutRecord : TEXT("");
+		Line = DCDocText::TutRecord;
 	}
 	else if (!D.bEverZoomed && Aim > 0.5f && !D.bRecording)
 	{
@@ -1492,11 +1596,19 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 	}
 	else if (W.IdleTime > 12.f && Aim < 0.5f)
 	{
-		Line = D.CanEnd() ? DCDocText::TeachEnd : DCText::Controls3D;
+		Line = DCText::Controls3D;
 		LineColor.A = FMath::Clamp((W.IdleTime - 12.f) * 0.8f, 0.f, 0.85f);
 	}
 	if (!Line.IsEmpty())
 	{
-		Text(Line, 960.f, Aim > 0.5f ? 920.f : 962.f, 1.5f, LineColor, 1);
+		Text(Line, 960.f, Aim > 0.5f ? 920.f : 962.f, 1.4f, LineColor, 1);
+	}
+
+	// the air ran out
+	if (D.bBlackout)
+	{
+		const float A = FMath::Clamp(D.BlackT / 1.5f, 0.f, 1.f);
+		Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(0.f, 0.f, 0.f, A));
+		Text(TEXT("OUT OF AIR"), 960.f, 480.f, 3.f, Fade(Red, A), 1);
 	}
 }

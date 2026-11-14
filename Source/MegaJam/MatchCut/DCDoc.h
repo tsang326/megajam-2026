@@ -40,7 +40,10 @@ struct FDCSubject
 	FString Name;    // what the upload calls it
 	int32 Value = 0; // views for a three-star clip the first time it is seen
 	float Radius = 50.f;
-	bool bDanger = false; // it bites
+	bool bDanger = false;   // it bites
+	bool bEvidence = false; // one of the proofs the Director's Cut needs
+	bool bLensOnly = false; // seen only through the camera
+	int32 Zone = -1;        // where it lives (FDC3D::Zones), -1 the station's site
 };
 
 /** One clip on the uploaded video. */
@@ -80,6 +83,7 @@ struct FDCTake
 	float T0 = 0.f;   // the clock when the take began
 	float Len = 3.f;
 	bool bKeep = true;  // in the cut
+	bool bDanger = false; // something that bites was close while it rolled: viewers love it
 	TArray<FDCDocFrame> Frames; // evenly spread over Len
 };
 
@@ -112,7 +116,9 @@ struct FDCDoc
 	bool bLampPressed = false;
 	bool bEnterPressed = false;
 	bool bBackPressed = false;
+	bool bUsePressed = false; // E / ENTER: the base's desk, locker, bunk, board
 	int32 TrackSub = INDEX_NONE; // test script: keep the lens on this subject
+	TWeakObjectPtr<AActor> TrackActor; // test script: or on this one creature
 	float TrackLeft = 0.f;
 	float ZoomIn = 0.f;      // wheel clicks or held keys, used up each frame
 	int32 NavX = 0, NavY = 0; // the cutting room: presses, used up each frame
@@ -235,6 +241,22 @@ struct FDCDoc
 	FString ShopNote;
 	float ShopNoteTime = 0.f;
 	int32 Trending = INDEX_NONE; // the subject viewers ask for today: double views
+	// the base: a flooded habitat over the station. The day starts and ends here.
+	bool bInBase = true;
+	bool bLeftBase = false;     // went out on today's dive
+	int32 Spot = INDEX_NONE;    // the base's control the diver looks at: 0 desk, 1 locker, 2 bunk, 3 board
+	int32 Headline = INDEX_NONE; // index in Takes: the clip on the thumbnail
+	bool bUploadedToday = false;
+	TArray<FDCTake> Archive;    // the best clip of every proof found, kept for the Director's Cut
+	int32 Ending = 0;           // 0 none yet, 1 the truth, 2 doubt, 3 the official story
+	int32 EvidenceCount() const;
+	int32 EvidenceTotal() const;
+	bool bFinalCut = false;     // the film now playing is the Director's Cut
+	float DangerNear = 0.f;     // seconds a biter or the legend was close during this take
+	bool bBoardOpen = false;    // the board on the wall: the proofs found and missing
+	float SleepAsk = 0.f;       // the bunk asks once when there is footage not uploaded
+	void UseSpot(int32 S);
+	void Sleep();
 	// the legend of the abyss: it hunts what makes light or noise in its water
 	TWeakObjectPtr<AActor> Hunter;
 	FVector HuntPos = FVector::ZeroVector;

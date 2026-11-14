@@ -1122,6 +1122,7 @@ void FDC3D::Start()
 	}
 
 	FParse::Value(FCommandLine::Get(), TEXT("-MCSens="), Sens);
+	BuildBase();
 	Doc = new FDCDoc(GM, this);
 	Doc->Start();
 	Pivot = Pos + FVector(0.0, 0.0, 45.0);
@@ -1276,6 +1277,12 @@ void FDC3D::TickCamera(float Dt)
 		{
 			PM->SetVisibility(!bPlaying && (!Doc || Doc->AimBlend < 0.85f), true);
 		}
+		// the camera in the hand goes with the arms: up at the eye it would fill the picture
+		const bool bHands = !bPlaying && (!Doc || Doc->AimBlend < 0.85f);
+		if (UStaticMeshComponent* C = HandCam.Get())
+		{
+			C->SetVisibility(bHands, true);
+		}
 	}
 }
 
@@ -1391,7 +1398,8 @@ void FDC3D::Tick(float Dt)
 	{
 		// test script: the lens follows a subject
 		Doc->TrackLeft -= Dt;
-		const FRotator To = (Doc->SubPos[Doc->TrackSub] - CamPos).Rotation();
+		const AActor* Tracked = Doc->TrackActor.Get();
+		const FRotator To = ((Tracked ? Tracked->GetActorLocation() : Doc->SubPos[Doc->TrackSub]) - CamPos).Rotation();
 		Yaw = DC3::TurnTo(Yaw, To.Yaw, 9.f, Dt);
 		Pitch = DC3::TurnTo(Pitch, FMath::Clamp(To.Pitch, -80.f, 80.f), 9.f, Dt);
 	}
@@ -1412,7 +1420,7 @@ void FDC3D::Tick(float Dt)
 	IdleTime = bThrust || !Turn.IsNearlyZero() ? 0.f : IdleTime + Dt;
 	if (bThrust)
 	{
-		Vel += (Wish * ((bFast ? DC3::Boost : DC3::Swim) * FMath::Lerp(1.f, 0.5f, Aim)) - Vel) * (1.0 - FMath::Exp(-DC3::Push * Dt)); // slower with the camera up
+		Vel += (Wish * ((bFast ? DC3::Boost : DC3::Swim) * FMath::Lerp(1.f, 0.5f, Aim) * (Doc ? Doc->SpeedMul() : 1.f)) - Vel) * (1.0 - FMath::Exp(-DC3::Push * Dt)); // slower with the camera up
 	}
 	else
 	{
