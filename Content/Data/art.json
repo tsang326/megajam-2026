@@ -1856,5 +1856,159 @@
    ],
    "emissive": "none"
   }
+ ],
+ "scene:wallwindow": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_wallwindow/scene_wallwindow/StaticMeshes/scene_wallwindow.scene_wallwindow",
+   "yaw": 0,
+   "file": "scene_wallwindow.glb",
+   "triangles": 2078,
+   "sizeCm": [
+    121,
+    64,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:rib": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_rib/scene_rib/StaticMeshes/scene_rib.scene_rib",
+   "yaw": 0,
+   "file": "scene_rib.glb",
+   "triangles": 4656,
+   "sizeCm": [
+    175,
+    44,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:ceilingpanel": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_ceilingpanel/scene_ceilingpanel/StaticMeshes/scene_ceilingpanel.scene_ceilingpanel",
+   "yaw": 0,
+   "file": "scene_ceilingpanel.glb",
+   "triangles": 5924,
+   "sizeCm": [
+    173,
+    14,
+    189
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:bulkhead": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_bulkhead/scene_bulkhead/StaticMeshes/scene_bulkhead.scene_bulkhead",
+   "yaw": 0,
+   "file": "scene_bulkhead.glb",
+   "triangles": 7462,
+   "sizeCm": [
+    190,
+    48,
+    181
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:workstation": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_workstation/scene_workstation/StaticMeshes/scene_workstation.scene_workstation",
+   "yaw": 0,
+   "file": "scene_workstation.glb",
+   "triangles": 6880,
+   "sizeCm": [
+    190,
+    163,
+    133
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:console": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_console/scene_console/StaticMeshes/scene_console.scene_console",
+   "yaw": 0,
+   "file": "scene_console.glb",
+   "triangles": 1580,
+   "sizeCm": [
+    190,
+    141,
+    90
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:pipes": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_pipes/scene_pipes/StaticMeshes/scene_pipes.scene_pipes",
+   "yaw": 0,
+   "file": "scene_pipes.glb",
+   "triangles": 4912,
+   "sizeCm": [
+    72,
+    32,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:gearcases": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_gearcases/scene_gearcases/StaticMeshes/scene_gearcases.scene_gearcases",
+   "yaw": 0,
+   "file": "scene_gearcases.glb",
+   "triangles": 6832,
+   "sizeCm": [
+    190,
+    152,
+    187
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:moonring": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_moonring/scene_moonring/StaticMeshes/scene_moonring.scene_moonring",
+   "yaw": 0,
+   "file": "scene_moonring.glb",
+   "triangles": 3250,
+   "sizeCm": [
+    184,
+    183,
+    189
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:wallpanel": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_wallpanel/scene_wallpanel/StaticMeshes/scene_wallpanel.scene_wallpanel",
+   "yaw": 0,
+   "file": "scene_wallpanel.glb",
+   "triangles": 4648,
+   "sizeCm": [
+    126,
+    24,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:floortile": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_floortile/scene_floortile/StaticMeshes/scene_floortile.scene_floortile",
+   "yaw": 0,
+   "file": "scene_floortile.glb",
+   "triangles": 3552,
+   "sizeCm": [
+    184,
+    190,
+    14
+   ],
+   "emissive": "none"
+  }
  ]
 }
