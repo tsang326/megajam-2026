@@ -23,6 +23,16 @@
 
 DEFINE_LOG_CATEGORY(LogMatchCut);
 
+#if UE_BUILD_SHIPPING
+void MCShipLog(const FString& Line)
+{
+	static const bool bOn = FCString::Strifind(FCommandLine::Get(), TEXT("-MCScript=")) != nullptr;
+	if (!bOn) return;
+	const FTCHARToUTF8 U(*Line);
+	fputs(U.Get(), stdout); fputc('\n', stdout); fflush(stdout);
+}
+#endif
+
 namespace DCFlow
 {
 	const float TakeSeconds = 0.85f;

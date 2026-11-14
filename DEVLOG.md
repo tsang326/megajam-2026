@@ -160,3 +160,21 @@ All three use rules the game already had (near things come through the cut, a th
 - `Tools/package_mac.sh` succeeded after the compile fix. `Tools/run_packaged.sh d3_film Saved/DeepCut/d3_pkg`: 6 of 6 shots, 18 of 18 stars, cutting room, film, rating card, back to the cutting room, back to shooting.
 - Packaged frame time in that run: median 23 ms, p90 47 ms, average 31.6 ms over 3570 frames (background priority, Mac in use).
 - `docs/brief07-report.md` now has the play commands, every new English line, the frame times, what is not verified and what to cut first.
+
+### 2026-11-14, ~11:20: the packaged app crashed on a normal launch; the release is now a Shipping build
+
+- Launching the Development package with `open` (or a double-click) crashed within seconds: the engine's memory tracker (LLM) was being torn down on the game thread (`FLLMGlobals::ProcessCommandLineInner` -> `Clear`) while AppKit allocated on the main thread and ran into the half-freed tracker. The scripted runs start the executable directly and never met it.
+- The engine is an installed build, so the tracker cannot be compiled out of a Development game target. The fix is to ship the Shipping configuration, which has no memory tracker at all (`nm` finds 0 `FLLMTracker` symbols in the new binary, 167 in the old). `Tools/package_mac.sh` now packages Shipping; the app is `Saved/Package/Mac/MegaJam-Mac-Shipping.app`.
+- Shipping builds compile `UE_LOG` out. The test scripts read the game's lines, so in Shipping those lines are printed to stdout, and only when a test script runs (`-MCScript=`). `Tools/run_packaged.sh` finds the newest app and its executable by itself.
+- Bundle id is `com.tsangfx.DeepCut` (was `com.YourCompany.MegaJam`); the project's name is Deep Cut.
+- Verified: three launches through `open -g -n` (offscreen), no crash report. The first ran `d3_film`: 6 of 6 shots, 18 of 18 stars, median 21 ms, p90 26 ms over 4617 frames (the editor was compiling at the same time). A launch with a visible window was not made by the agent.
+- Models imported: buoy, container, pipe, sonar dish, habitat module, ruins, chimney; octopus, barreleye, goblin shark, gulper eel, sunfish, sea dragon, seahorse, lobster. 68 ids in `art.json`.
+- The sea floor is a sand material without a texture (`M_DC_Sand`, `Tools/make_sand_material.py`) with up to 70 low mounds; vents and chimneys have a rising plume of specks and haze.
+
+### 2026-11-14, ~11:25: the shoot is guided (first playtest: "I don't know how to play")
+
+- One shot is the current one, in a fixed order (crewmate, shoal, manta, jellyfish, giant, anglerfish). A card names it and says in one line what to film and where. Any shot can still be filmed out of order.
+- A marker leads to it: a ring with the distance in metres while its place is in the picture, an arrow at the edge of the screen otherwise. It fades when the lens has the subject and pulses after a minute without a new shot. For the anglerfish it points to the headlamp first.
+- The first shot is taught one prompt at a time: swim up, raise the camera, frame, record.
+- The director types one line between shots, and a take of one star or none comes with a tip for its reason.
+- Test: `Content/Data/tests/d6_guide.txt`.

@@ -29,6 +29,14 @@ class FJsonObject;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMatchCut, Log, All);
 
+// The released build is a Shipping build, where UE_LOG compiles to nothing. The test scripts read the game's
+// lines from stdout, so in Shipping they are printed there, and only when a test script runs (-MCScript=).
+#if UE_BUILD_SHIPPING
+void MCShipLog(const FString& Line);
+#undef UE_LOG
+#define UE_LOG(Category, Verbosity, Format, ...) MCShipLog(FString::Printf(Format, ##__VA_ARGS__))
+#endif
+
 UENUM()
 enum class EDCState : uint8
 {

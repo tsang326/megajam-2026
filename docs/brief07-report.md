@@ -110,3 +110,25 @@ Lumen does not run on this Mac (the engine falls back to SM5), so there is no wi
 1. The long lens (it is optional and untested).
 2. The eel and the far whale and oarfish (ambient only).
 3. Film playback as moving takes: fall back to a still frame per take.
+
+## Crash on launch, guidance (2026-11-14, ~11:25)
+
+### The crash
+- Cause: a race in the engine's memory tracker (LLM) at start-up in Development builds; it only shows when the app is launched the normal way (`open`, double-click).
+- Fix: the release is a Shipping build, which has no memory tracker. App: `Saved/Package/Mac/MegaJam-Mac-Shipping.app`, bundle id `com.tsangfx.DeepCut`.
+- Verified by three `open` launches offscreen (one ran the whole `d3_film`: 6/6 shots, 18/18 stars, median 21 ms, p90 26 ms). Not verified: a launch with a visible window, by hand.
+
+### Guidance: every new English line
+- Card: "CURRENT SHOT  n / 6", the shot's caption, and one of:
+  - "Find the manta. It circles over the wreck."
+  - "Find the shoal over the reef. Swim into it fast, then film it opening."
+  - "Film the anglerfish at the end of the trench, with your lamp on it."
+  - "Film the jellyfish rising in the shaft of light."
+  - "The giant crosses high overhead every two minutes. Get under it and film upwards."
+  - "Film your crewmate waving. Swim up in front of them."
+  - "The trench is dark. First fetch the headlamp: it lies on the wreck."
+- Marker labels: the caption or "HEADLAMP", then the distance, e.g. "THE SHOAL  40 m".
+- Director: "DIRECTOR:  Rolling. Start easy: film your crewmate, just ahead." / "DIRECTOR:  Good take. Next: the manta, over the wreck." / "... Next: the shoal over the reef." / "... Last one: the anglerfish, down in the trench." / "... Next: the jellyfish in the light shaft." / "... Next: the giant. Watch the water above you." / "... Next: your crewmate." / "DIRECTOR:  We have that one. A better take replaces it." / "DIRECTOR:  That's a wrap. Press ENTER to cut your film."
+- First shot: "Swim up to your crewmate     W A S D swim     MOUSE look" / "Hold RIGHT MOUSE to raise the camera     (or press C)" / "Frame your crewmate" / "LEFT MOUSE: record     Hold the frame for three seconds     (or E)" / "WHEEL zooms the lens     (or 1 / 2)".
+- Tips: "TIP: swim closer, or zoom in with the WHEEL." / "TIP: back off or zoom out until all of it fits." / "TIP: wait until the manta is over the wreck." / "TIP: swim into the shoal fast, then film it opening." / "TIP: fetch the headlamp from the wreck, then switch it on with F." / "TIP: film them while they rise in the light." / "TIP: get under the giant and tilt the camera up." / "TIP: come close, in front of them, until they wave." / "TIP: move the camera slowly while it records." / "TIP: keep the subject in the middle, or on a third line." / "TIP: keep it in the frame for the whole three seconds." / "TIP: the brackets show what the lens has found." / "TIP: get more of them into the picture."
+- The ending keeps the ENTER key (there is no swim back to the dock): the wrap line stays on screen until ENTER.

@@ -116,6 +116,16 @@ struct FDCDoc
 	FString Note;            // one short line from the director
 	float NoteTime = 0.f;
 
+	// ---- guidance: one shot is the current one; a marker leads to it; the director talks between shots
+	int32 Goal = INDEX_NONE;      // the current shot, or INDEX_NONE when every shot is done
+	FVector GoalAt = FVector::ZeroVector; // where the marker points (the subject, or the headlamp first)
+	bool bGoalIsItem = false;     // the marker is on the headlamp, not on the subject
+	float SinceProgress = 0.f;    // seconds since the last new shot: the marker pulses after a minute
+	float NoteAge = 0.f;          // the director's line types itself out
+	FString Tip;                  // one tip after a weak take
+	bool bDirStarted = false;
+	bool Bearing(const FVector& P, FVector2D& Out) const; // true when P is in front of the lens; Out as Project, or the way to turn
+
 	TArray<FDCTake> Takes;
 	int32 Best[DCSub::Num];   // most stars so far per shot
 	int32 Pick[DCSub::Num];   // index into Takes of the take that goes into the film, or INDEX_NONE

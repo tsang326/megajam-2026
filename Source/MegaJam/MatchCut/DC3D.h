@@ -80,6 +80,14 @@ struct FDC3D
 	bool bLumen = false;
 	float Time = 0.f;
 
+	// ---- the sea floor's low mounds (seen, not solid) and what rises from the vents
+	struct FMound { FVector2D At; float Yaw; FVector Radii; float CentreZ; };
+	TArray<FMound> Mounds;
+	float GroundZ(double X, double Y) const; // height of the sand at a place: 0 on the flat
+	struct FPlumeBit { TWeakObjectPtr<UStaticMeshComponent> Part; TWeakObjectPtr<UMaterialInstanceDynamic> MID; FVector Base; float Phase; float Speed; float Size; };
+	TArray<FPlumeBit> PlumeBits;
+	TArray<FVector> PlumeAt; // the mouth of each vent and chimney
+
 	// ---- test script
 	FVector ScriptMove = FVector::ZeroVector;
 	float ScriptMoveLeft = 0.f;
@@ -95,6 +103,7 @@ private:
 	void SpawnHero();
 	void SpawnFlecks();
 	AActor* Place(const TCHAR* Id, int32 Variant, const FVector& Base, const FRotator& Rot, float Scale, bool bCollide = true);
+	UStaticMeshComponent* Bare(UStaticMesh* Mesh, UMaterialInterface* Mat, const FVector& At, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, UMaterialInstanceDynamic** OutMID = nullptr);
 	AActor* Block(const FVector& Centre, const FRotator& Rot, const FVector& Size, const FLinearColor& Color);
 	void AddRing(const FVector& At, float YawDeg, float PitchDeg);
 	UPointLightComponent* Glow(const FVector& At, const FLinearColor& Color, float Power, float Reach);

@@ -1,0 +1,40 @@
+# guidance: the director's first line, the taught first shot, a weak take with its tip, the next shot and its marker
+wait 3.6
+snap g01_director
+wait 6.5
+snap g02_teach_swim
+near crew -520 330 60
+wait 1.2
+snap g03_teach_aim
+aim 1
+zoom 50
+track crew 8
+wait 1.5
+snap g04_teach_record
+track none 0
+aim 0
+# a weak take from far off: the verdict comes with a tip
+near crew -1500 900 200
+aim 1
+zoom 72
+track crew 8
+wait 1.2
+rec
+wait 3.6
+snap g05_tip
+# a good one
+near crew -520 330 60
+zoom 50
+wait 1.5
+rec
+wait 4.2
+snap g06_next_shot
+aim 0
+track none 0
+wait 5.0
+snap g07_marker_ahead
+tp 0 0 400 -40 0
+wait 1.0
+snap g08_marker_behind
+stat4
+quit

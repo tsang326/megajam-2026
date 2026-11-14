@@ -1354,36 +1354,76 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		Rect(84.f, 1000.f, 220.f * Speed, 4.f, Speed > 0.62f ? Amber : Green);
 	}
 
-	// the shot list: in full for a few seconds at the start and after a take, otherwise six small marks
-	const float ListA = FMath::Clamp(D.ListTime, 0.f, 1.f);
-	if (ListA > 0.f)
+	// the current shot: one at a time, with one line on what to film and where; six small marks for the whole list
 	{
-		Rect(64.f, 126.f, 560.f, 46.f + 36.f * DCSub::Num, FLinearColor(0.f, 0.f, 0.f, 0.45f * ListA));
-		Text(DCDocText::ShotList, 84.f, 134.f, 1.2f, FLinearColor(Amber.R, Amber.G, Amber.B, ListA));
+		const float CardA = 1.f - 0.45f * Aim;
+		int32 Done = 0;
 		for (int32 s = 0; s < DCSub::Num; ++s)
 		{
-			const float Y = 170.f + 36.f * s;
-			const bool bDone = D.Best[s] > 0;
-			Text(DCDocText::ShotTitle[s], 150.f, Y, 1.25f, FLinearColor(1.f, 1.f, 1.f, (bDone ? 0.45f : 0.95f) * ListA));
-			if (bDone)
+			Done += D.Best[s] > 0 ? 1 : 0;
+		}
+		Rect(64.f, 126.f, 1000.f, 124.f, FLinearColor(0.f, 0.f, 0.f, 0.5f * CardA));
+		Rect(64.f, 126.f, 4.f, 124.f, FLinearColor(Amber.R, Amber.G, Amber.B, CardA));
+		if (D.Goal != INDEX_NONE)
+		{
+			Text(FString::Printf(TEXT("%s   %d / %d"), DCDocText::CurrentShot, FMath::Min(Done + 1, (int32)DCSub::Num), (int32)DCSub::Num), 84.f, 134.f, 1.25f, FLinearColor(Amber.R, Amber.G, Amber.B, CardA));
+			Text(DCDocText::ShotCaption[D.Goal], 84.f, 164.f, 1.9f, FLinearColor(1.f, 1.f, 1.f, 0.95f * CardA));
+			Text(D.bGoalIsItem ? DCDocText::LampFirst : DCDocText::ShotWhere[D.Goal], 84.f, 210.f, 1.3f, FLinearColor(1.f, 1.f, 1.f, 0.9f * CardA));
+		}
+		else
+		{
+			Text(DCDocText::ShotList, 84.f, 134.f, 1.1f, FLinearColor(Amber.R, Amber.G, Amber.B, CardA));
+			Text(DCDocText::AllShots, 84.f, 166.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, 0.95f * CardA));
+		}
+		for (int32 s = 0; s < DCSub::Num; ++s)
+		{
+			const float X = 700.f + s * 58.f;
+			Frame(X, 136.f, 48.f, 20.f, s == D.Goal ? FLinearColor(Amber.R, Amber.G, Amber.B, CardA) : FLinearColor(1.f, 1.f, 1.f, (D.Best[s] > 0 ? 0.5f : 0.25f) * CardA), 1.5f);
+			for (int32 i = 0; i < D.Best[s]; ++i)
 			{
-				Pips(92.f, Y + 14.f, D.Best[s], 6.f);
-			}
-			else
-			{
-				Frame(88.f, Y + 5.f, 44.f, 18.f, FLinearColor(1.f, 1.f, 1.f, 0.4f * ListA), 1.5f);
+				Disc(X + 10.f + i * 14.f, 146.f, 4.5f, Amber);
 			}
 		}
 	}
-	else
+
+	// the marker: on the subject's place while it is in the picture, else an arrow at the edge; with the distance
+	if (D.Goal != INDEX_NONE && !D.bRecording)
 	{
-		for (int32 s = 0; s < DCSub::Num; ++s)
+		FVector2D At;
+		const bool bFront = D.Bearing(D.GoalAt, At);
+		const float Metres = (float)FVector::Dist(D.GoalAt, W.Pos) / 100.f;
+		const bool bOn = bFront && FMath::Abs(At.X) < 0.9 && FMath::Abs(At.Y) < 0.8;
+		const bool bSeen = !D.bGoalIsItem && D.Seen[D.Goal].bIn;
+		const bool bPulse = D.SinceProgress > 60.f;
+		const float Beat = bPulse ? 0.5f + 0.5f * FMath::Sin(Time * 6.f) : 0.f;
+		float A = bSeen ? (Metres < 25.f ? 0.f : 0.3f) : bOn && Metres < 6.f ? 0.25f : 0.9f;
+		A = FMath::Min(1.f, A + (A > 0.f ? 0.1f * Beat : 0.f));
+		const FString Label = FString::Printf(TEXT("%s  %.0f m"), D.bGoalIsItem ? DCDocText::MarkLamp : DCDocText::ShotCaption[D.Goal], Metres);
+		if (A > 0.f)
 		{
-			const float X = 84.f + s * 58.f;
-			Frame(X, 132.f, 48.f, 20.f, FLinearColor(1.f, 1.f, 1.f, D.Best[s] > 0 ? 0.5f : 0.25f), 1.5f);
-			for (int32 i = 0; i < D.Best[s]; ++i)
+			const FLinearColor C(Amber.R, Amber.G, Amber.B, A);
+			if (bOn)
 			{
-				Disc(X + 10.f + i * 14.f, 142.f, 4.5f, Amber);
+				const float X = 960.f + (float)At.X * 960.f, Y = 540.f - (float)At.Y * 540.f;
+				const float R = 15.f + 9.f * Beat;
+				Ring(X, Y, R, C, 2.5f);
+				Disc(X, Y, 3.5f, C);
+				Text(Label, X, Y + R + 8.f, 1.3f, C, 1);
+			}
+			else
+			{
+				// out of the picture: slide to the edge, and point
+				const double Kx = FMath::Abs(At.X) / 0.86, Ky = FMath::Abs(At.Y) / 0.74;
+				const FVector2D E = At / FMath::Max(1.0, FMath::Max(Kx, Ky));
+				FVector2D P(960.0 + E.X * 960.0, 540.0 - E.Y * 540.0);
+				if (P.X < 1120.0)
+				{
+					P.Y = FMath::Max(P.Y, 300.0); // below the shot card
+				}
+				const FVector2D Dir = FVector2D(At.X, -At.Y).GetSafeNormal();
+				const float Len = 26.f + 12.f * Beat;
+				Arrow(P - Dir * Len, P + Dir * Len, C, 4.f);
+				Text(Label, FMath::Clamp((float)(P.X - Dir.X * 70.0), 150.f, 1770.f), FMath::Clamp((float)(P.Y - Dir.Y * 60.0) - 10.f, 270.f, 900.f), 1.3f, C, 1);
 			}
 		}
 	}
@@ -1392,38 +1432,55 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 	if (D.ResultTime > 0.f)
 	{
 		const float A = FMath::Clamp(D.ResultTime, 0.f, 1.f);
-		Rect(660.f, 150.f, 600.f, 150.f, FLinearColor(0.f, 0.f, 0.f, 0.55f * A));
+		const bool bTip = !D.Tip.IsEmpty();
+		Rect(bTip ? 520.f : 660.f, 256.f, bTip ? 880.f : 600.f, bTip ? 190.f : 150.f, FLinearColor(0.f, 0.f, 0.f, 0.55f * A));
+		if (bTip)
+		{
+			Text(D.Tip, 960.f, 400.f, 1.45f, FLinearColor(1.f, 1.f, 1.f, 0.9f * A), 1);
+		}
 		if (D.ResultStars > 0)
 		{
-			Pips(960.f - 50.f, 190.f, D.ResultStars, 18.f);
-			Text(DCDocText::ShotTitle[D.ResultShot], 960.f, 222.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, A), 1);
+			Pips(960.f - 50.f, 290.f, D.ResultStars, 18.f);
+			Text(DCDocText::ShotTitle[D.ResultShot], 960.f, 322.f, 1.5f, FLinearColor(1.f, 1.f, 1.f, A), 1);
 		}
 		else
 		{
-			Text(DCDocText::NoGood, 960.f, 168.f, 2.6f, FLinearColor(Red.R, Red.G, Red.B, A), 1);
+			Text(DCDocText::NoGood, 960.f, 268.f, 2.6f, FLinearColor(Red.R, Red.G, Red.B, A), 1);
 		}
-		Text(D.ResultReason, 960.f, 258.f, 1.5f, FLinearColor(Amber.R, Amber.G, Amber.B, A), 1);
+		Text(D.ResultReason, 960.f, 358.f, 1.5f, FLinearColor(Amber.R, Amber.G, Amber.B, A), 1);
 	}
 
-	// one line at a time: what the director says, else the control that is needed next
+	// one line at a time: the first shot is taught step by step, each prompt only while it is the thing to do;
+	// else what the director says (typed out), else the control that is needed next
 	FString Line;
 	FLinearColor LineColor(1.f, 1.f, 1.f, 0.85f);
-	if (D.NoteTime > 0.f)
+	const bool bTeach = D.Goal == DCSub::Crew && D.Best[DCSub::Crew] == 0 && !D.bRecording && D.ResultTime <= 0.f && Time > 5.f;
+	if (bTeach && (D.NoteTime <= 0.f || D.NoteAge > 6.f))
 	{
-		Line = D.Note;
+		Line = D.Wave < 0.5f ? DCDocText::TutSwim : Aim < 0.5f ? DCDocText::TutAim : !D.Seen[DCSub::Crew].bIn ? DCDocText::TutFrame : DCDocText::TutRecord;
+		LineColor = FLinearColor(1.f, 1.f, 1.f, 0.95f);
+	}
+	else if (D.NoteTime > 0.f)
+	{
+		Line = D.Note.Left(FMath::Max(1, (int32)(D.NoteAge * 45.f)));
 		LineColor = FLinearColor(Amber.R, Amber.G, Amber.B, FMath::Clamp(D.NoteTime, 0.f, 1.f));
 	}
-	else if (Time < 12.f)
+	else if (D.Goal == INDEX_NONE)
 	{
-		Line = DCText::Controls3D;
+		Line = DCDocText::DirWrap;
+		LineColor = Amber;
 	}
 	else if (!D.bEverAimed)
 	{
-		Line = DCDocText::TeachAim;
+		Line = DCDocText::TutAim;
 	}
 	else if (!D.bEverRecorded)
 	{
-		Line = Aim > 0.5f ? DCDocText::TeachRecord : TEXT("");
+		Line = Aim > 0.5f ? DCDocText::TutRecord : TEXT("");
+	}
+	else if (!D.bEverZoomed && Aim > 0.5f && !D.bRecording)
+	{
+		Line = DCDocText::TutZoom;
 	}
 	else if (W.IdleTime > 12.f && Aim < 0.5f)
 	{

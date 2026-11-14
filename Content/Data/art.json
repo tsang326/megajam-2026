@@ -764,5 +764,215 @@
    ],
    "emissive": "none"
   }
+ ],
+ "scene:buoy": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_buoy/scene_buoy/StaticMeshes/scene_buoy.scene_buoy",
+   "yaw": 0,
+   "file": "scene_buoy.glb",
+   "triangles": 6032,
+   "sizeCm": [
+    135,
+    123,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:container": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_container/scene_container/StaticMeshes/scene_container.scene_container",
+   "yaw": 0,
+   "file": "scene_container.glb",
+   "triangles": 9148,
+   "sizeCm": [
+    95,
+    189,
+    94
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:pipe": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_pipe/scene_pipe/StaticMeshes/scene_pipe.scene_pipe",
+   "yaw": 0,
+   "file": "scene_pipe.glb",
+   "triangles": 6516,
+   "sizeCm": [
+    25,
+    190,
+    36
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:sonar": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_sonar/scene_sonar/StaticMeshes/scene_sonar.scene_sonar",
+   "yaw": 0,
+   "file": "scene_sonar.glb",
+   "triangles": 13296,
+   "sizeCm": [
+    55,
+    55,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:module": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_module/scene_module/StaticMeshes/scene_module.scene_module",
+   "yaw": 0,
+   "file": "scene_module.glb",
+   "triangles": 8456,
+   "sizeCm": [
+    108,
+    190,
+    123
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:ruins": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_ruins/scene_ruins/StaticMeshes/scene_ruins.scene_ruins",
+   "yaw": 0,
+   "file": "scene_ruins.glb",
+   "triangles": 15986,
+   "sizeCm": [
+    174,
+    108,
+    189
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:chimney": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_chimney/scene_chimney/StaticMeshes/scene_chimney.scene_chimney",
+   "yaw": 0,
+   "file": "scene_chimney.glb",
+   "triangles": 10906,
+   "sizeCm": [
+    136,
+    152,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:octopus": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_octopus/creature_octopus/StaticMeshes/creature_octopus.creature_octopus",
+   "yaw": 0,
+   "file": "creature_octopus.glb",
+   "triangles": 6208,
+   "sizeCm": [
+    190,
+    182,
+    47
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:barreleye": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_barreleye/creature_barreleye/StaticMeshes/creature_barreleye.creature_barreleye",
+   "yaw": 0,
+   "file": "creature_barreleye.glb",
+   "triangles": 1908,
+   "sizeCm": [
+    165,
+    190,
+    82
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:goblin": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_goblin/creature_goblin/StaticMeshes/creature_goblin.creature_goblin",
+   "yaw": 0,
+   "file": "creature_goblin.glb",
+   "triangles": 1232,
+   "sizeCm": [
+    98,
+    190,
+    55
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:gulper": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_gulper/creature_gulper/StaticMeshes/creature_gulper.creature_gulper",
+   "yaw": 0,
+   "file": "creature_gulper.glb",
+   "triangles": 4648,
+   "sizeCm": [
+    78,
+    190,
+    68
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:sunfish": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_sunfish/creature_sunfish/StaticMeshes/creature_sunfish.creature_sunfish",
+   "yaw": 0,
+   "file": "creature_sunfish.glb",
+   "triangles": 5044,
+   "sizeCm": [
+    36,
+    190,
+    178
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:seadragon": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_seadragon/creature_seadragon/StaticMeshes/creature_seadragon.creature_seadragon",
+   "yaw": 0,
+   "file": "creature_seadragon.glb",
+   "triangles": 7332,
+   "sizeCm": [
+    51,
+    190,
+    89
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:seahorse": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_seahorse/creature_seahorse/StaticMeshes/creature_seahorse.creature_seahorse",
+   "yaw": 0,
+   "file": "creature_seahorse.glb",
+   "triangles": 11618,
+   "sizeCm": [
+    53,
+    180,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:lobster": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_lobster/creature_lobster/StaticMeshes/creature_lobster.creature_lobster",
+   "yaw": 0,
+   "file": "creature_lobster.glb",
+   "triangles": 6798,
+   "sizeCm": [
+    115,
+    190,
+    34
+   ],
+   "emissive": "none"
+  }
  ]
 }

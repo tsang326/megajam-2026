@@ -34,6 +34,8 @@ namespace DCD
 	const float MaxDist[DCSub::Num] = { 3600.f, 2200.f, 1500.f, 2600.f, 5200.f, 1800.f };
 	const int32 Need[DCSub::Num] = { 1, 12, 1, 2, 1, 1 };
 
+	const int32 Order[DCSub::Num] = { DCSub::Crew, DCSub::Shoal, DCSub::Manta, DCSub::Jelly, DCSub::Giant, DCSub::Angler };
+
 	float Ease(float Current, float Target, float Rate, float Dt)
 	{
 		return Current + (Target - Current) * (1.f - FMath::Exp(-Rate * Dt));
@@ -65,6 +67,17 @@ AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, boo
 	if (OutHalfHeight)
 	{
 		*OutHalfHeight = B.GetSize().Z * S * 0.5;
+	}
+	if (FString(Id) == TEXT("creature:jelly") || FString(Id) == TEXT("creature:lionsmane") || FString(Id) == TEXT("creature:siphon"))
+	{
+		// the bells came out like polished metal: jelly is matte. The roughness map is multiplied up until nothing glints.
+		for (int32 m = 0; m < C->GetNumMaterials(); ++m)
+		{
+			if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(C->GetMaterial(m)))
+			{
+				MID->SetScalarParameterValue(TEXT("RoughnessFactor"), 8.f);
+			}
+		}
 	}
 	if (bLampOnly)
 	{
@@ -196,7 +209,19 @@ void FDCDoc::SpawnAmbient()
 		{ TEXT("creature:cuttle"), 0, 2, 70.f, FVector(-3300.0, 2700.0, 0.0), 700.f, 150.f, 350.f, 350.f, 650.f, 30.f },
 		{ TEXT("creature:brittlestar"), 1, 6, 45.f, FVector(-3300.0, 2400.0, 0.0), 1300.f, 20.f, 60.f, 0.f, 0.f, 3.f },
 		{ TEXT("creature:siphon"), 0, 4, 60.f, FVector(-2500.0, -2700.0, 0.0), 800.f, 100.f, 300.f, 900.f, 1500.f, 15.f },
-		{ TEXT("creature:seaangel"), 0, 5, 30.f, FVector(-1800.0, -300.0, 0.0), 1100.f, 60.f, 200.f, 400.f, 1100.f, 18.f } };
+		{ TEXT("creature:seaangel"), 0, 5, 30.f, FVector(-1800.0, -300.0, 0.0), 1100.f, 60.f, 200.f, 400.f, 1100.f, 18.f },
+		{ TEXT("creature:octopus"), 0, 2, 60.f, FVector(2600.0, -2300.0, 0.0), 900.f, 120.f, 320.f, 350.f, 800.f, 16.f },
+		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(3600.0, 1000.0, 0.0), 300.f, 1000.f, 1500.f, 500.f, 700.f, 75.f },
+		{ TEXT("creature:gulper"), 0, 1, 170.f, FVector(4300.0, -2300.0, 0.0), 500.f, 400.f, 800.f, 400.f, 800.f, 35.f },
+		{ TEXT("creature:sunfish"), 2, 1, 420.f, FVector(300.0, 300.0, 0.0), 0.f, 3300.f, 3700.f, 1500.f, 1900.f, 55.f },
+		{ TEXT("creature:seadragon"), 0, 3, 45.f, FVector(-3000.0, 2300.0, 0.0), 800.f, 80.f, 220.f, 250.f, 550.f, 10.f },
+		{ TEXT("creature:seahorse"), 0, 4, 24.f, FVector(-3500.0, 2600.0, 0.0), 800.f, 30.f, 90.f, 250.f, 500.f, 5.f },
+		{ TEXT("creature:grouper"), 0, 1, 190.f, FVector(2700.0, -200.0, 0.0), 300.f, 500.f, 800.f, 250.f, 400.f, 30.f },
+		{ TEXT("creature:lobster"), 1, 3, 50.f, FVector(1800.0, -1900.0, 0.0), 1200.f, 60.f, 200.f, 0.f, 0.f, 8.f },
+		{ TEXT("creature:lionsmane"), 0, 2, 150.f, FVector(-900.0, -3500.0, 0.0), 1100.f, 150.f, 400.f, 700.f, 1300.f, 12.f },
+		{ TEXT("creature:nudibranch"), 1, 5, 22.f, FVector(-3200.0, 2000.0, 0.0), 1200.f, 15.f, 50.f, 0.f, 0.f, 2.f },
+		{ TEXT("creature:krill"), 0, 10, 12.f, FVector(-200.0, 1100.0, 0.0), 700.f, 60.f, 180.f, 500.f, 900.f, 30.f },
+		{ TEXT("creature:turtle2"), 0, 1, 170.f, FVector(-1700.0, -1500.0, 0.0), 400.f, 900.f, 1300.f, 800.f, 1100.f, 55.f } };
 	float Front = -90.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCFront="), Front);
 	float Much = 1.f; // -MCLife=0.5 halves the ambient life, 0 leaves only the shot list
@@ -222,6 +247,10 @@ void FDCDoc::SpawnAmbient()
 			for (UStaticMeshComponent* Part : Parts)
 			{
 				Part->SetCastShadow(false);
+				if (Row.Length < 130.f)
+				{
+					Part->SetCullDistance(FMath::Clamp(Row.Length * 70.f, 1800.f, 5200.f)); // too small to see from further off
+				}
 			}
 			One.Ra = Rand.FRandRange(Row.RMin, Row.RMax);
 			One.Rb = Row.Kind == 2 ? One.Ra : One.Ra * Rand.FRandRange(0.5f, 1.f);
@@ -511,7 +540,11 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 		if (AActor* A = One.Actor.Get())
 		{
 			const double Th = One.Phase + One.Omega * T;
-			const FVector P = One.Centre + FVector(One.Ra * FMath::Cos(Th), One.Rb * FMath::Sin(Th), One.Bob * FMath::Sin(T * 0.6 + One.Phase * 3.0));
+			FVector P = One.Centre + FVector(One.Ra * FMath::Cos(Th), One.Rb * FMath::Sin(Th), One.Bob * FMath::Sin(T * 0.6 + One.Phase * 3.0));
+			if (One.Bob <= 0.f)
+			{
+				P.Z += W->GroundZ(P.X, P.Y); // a crawler walks over the mounds
+			}
 			const FVector Dir = FVector(-One.Ra * FMath::Sin(Th), One.Rb * FMath::Cos(Th), 0.0) * (One.Omega < 0.f ? -1.0 : 1.0);
 			A->SetActorLocationAndRotation(P, FRotator(0.f, Dir.Rotation().Yaw + One.Wiggle * FMath::Sin(T * 4.0 + One.Phase * 7.0), One.Bob > 0.f ? 4.f * FMath::Sin(T * 0.9 + One.Phase) : 0.f));
 		}
@@ -673,6 +706,37 @@ void FDCDoc::Say(const FString& Line, float Seconds)
 {
 	Note = Line;
 	NoteTime = Seconds;
+	NoteAge = 0.f;
+}
+
+bool FDCDoc::Bearing(const FVector& P, FVector2D& Out) const
+{
+	const FVector V = CamR.UnrotateVector(P - CamP);
+	if (V.X > 20.0)
+	{
+		const double TanH = FMath::Tan(FMath::DegreesToRadians(CamFov * 0.5f));
+		Out = FVector2D(V.Y / (V.X * TanH), V.Z / (V.X * TanH) * DCD::Aspect);
+		return true;
+	}
+	Out = FVector2D(V.Y, V.Z).GetSafeNormal() * 50.0; // behind: far off the edge, the way to turn
+	if (Out.IsNearlyZero())
+	{
+		Out = FVector2D(50.0, 0.0);
+	}
+	return false;
+}
+
+static const TCHAR* TipFor(const FString& Reason, int32 Sub)
+{
+	if (Reason == DCDocText::TooFar) return DCDocText::TipFar;
+	if (Reason == DCDocText::CutOff) return DCDocText::TipCutOff;
+	if (Reason == DCDocText::Shaky) return DCDocText::TipShaky;
+	if (Reason == DCDocText::OffCentre) return DCDocText::TipCentre;
+	if (Reason == DCDocText::Lost) return DCDocText::TipLost;
+	if (Reason == DCDocText::Nothing) return DCDocText::TipNothing;
+	if (Reason == DCDocText::Few) return DCDocText::TipFew;
+	if ((Reason == DCDocText::Missed || Reason == DCDocText::TooDark) && Sub >= 0 && Sub < DCSub::Num) return DCDocText::TipMoment[Sub];
+	return TEXT("");
 }
 
 void FDCDoc::EndTake()
@@ -734,6 +798,11 @@ void FDCDoc::EndTake()
 		UE_LOG(LogMatchCut, Display, TEXT("DOC TAKE shot=%d stars=%d reason=\"%s\" in=%.2f whole=%.2f action=%.2f size=%.3f off=%.2f shake=%.2f frames=%d"),
 			Sub, ResultStars, *ResultReason, In, Whole, Act, Size, Off, Shake, N);
 	}
+	Tip = ResultStars <= 1 ? TipFor(ResultReason, Sub) : TEXT("");
+	if (ResultStars <= 1)
+	{
+		ResultTime = 8.f; // time to read the tip
+	}
 	if (ResultStars == 0)
 	{
 		if (Sub == INDEX_NONE)
@@ -784,13 +853,28 @@ void FDCDoc::EndTake()
 		GM->Audio->Play(TEXT("take_clapper"), 0.8f, 1.f);
 	}
 	const int32 After = ShotsDone();
-	if (After > Before && After == DCSub::Num)
+	if (After > Before)
 	{
-		Say(DCDocText::AllShots, 12.f);
+		// the director says why you move on, and where to
+		SinceProgress = 0.f;
+		int32 Next = INDEX_NONE;
+		for (int32 k = 0; k < DCSub::Num && Next == INDEX_NONE; ++k)
+		{
+			Next = Best[DCD::Order[k]] == 0 ? DCD::Order[k] : INDEX_NONE;
+		}
+		if (Next == INDEX_NONE)
+		{
+			Say(DCDocText::DirWrap, 600.f);
+		}
+		else
+		{
+			Say(DCDocText::DirNext[Next], 9.f);
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("DOC GUIDE shot %d done, next %d: %s"), Sub, Next, *Note);
 	}
-	else if (After > Before && After == 4)
+	else if (ResultStars < 3 && NoteTime <= 0.f)
 	{
-		Say(DCDocText::TeachEnd, 9.f);
+		Say(DCDocText::DirBetter, 5.f);
 	}
 }
 
@@ -850,6 +934,29 @@ void FDCDoc::TickShooting(float Dt)
 			GM->Audio->Play(TEXT("part_pickup"), 0.8f, 1.1f);
 		}
 		UE_LOG(LogMatchCut, Display, TEXT("DOC long lens picked up"));
+	}
+
+	// the current shot and where its marker points
+	Goal = INDEX_NONE;
+	for (int32 k = 0; k < DCSub::Num && Goal == INDEX_NONE; ++k)
+	{
+		Goal = Best[DCD::Order[k]] == 0 ? DCD::Order[k] : INDEX_NONE;
+	}
+	bGoalIsItem = Goal == DCSub::Angler && !bLampOwned;
+	if (Goal != INDEX_NONE)
+	{
+		GoalAt = bGoalIsItem ? LampAt : SubPos[Goal];
+		if (Goal == DCSub::Giant && GoalAt.Z < -1000.0)
+		{
+			GoalAt = (DCD::GiantA + DCD::GiantB) * 0.5; // it is away: wait where it will pass
+		}
+	}
+	SinceProgress += Dt;
+	NoteAge += Dt;
+	if (!bDirStarted && Clock > 2.5f)
+	{
+		bDirStarted = true;
+		Say(DCDocText::DirStart, 9.f);
 	}
 
 	// focus: on what the lens is locked to, else on whatever is straight ahead
@@ -1227,6 +1334,33 @@ int32 FDCDoc::RunLine(const TArray<FString>& T)
 		// track NAME SECONDS: the lens follows the subject; the script goes on at once
 		TrackSub = Sub(1);
 		TrackLeft = Num(2);
+		return 1;
+	}
+	if (Cmd == TEXT("parade"))
+	{
+		// every creature model in rows high in open water, all at one length, noses along +x: seen from the +y side
+		// (yaw -90) every nose must point to the right of the picture
+		TArray<FString> Ids;
+		for (const TPair<FString, TArray<FDCArtRef>>& Pair : GM->Art)
+		{
+			if (Pair.Key.StartsWith(TEXT("creature:")))
+			{
+				Ids.Add(Pair.Key);
+			}
+		}
+		Ids.Sort();
+		float Front = -90.f;
+		FParse::Value(FCommandLine::Get(), TEXT("-MCFront="), Front);
+		for (int32 i = 0; i < Ids.Num(); ++i)
+		{
+			const int32 Page = i / 8, Slot = i % 8;
+			const FVector At(-6000.0 + 3000.0 * Page + 420.0 * (Slot % 4) - 630.0, 0.0, 3100.0 - 330.0 * (Slot / 4));
+			if (AActor* A = SpawnCreature(*Ids[i], 260.f, Front, false, nullptr))
+			{
+				A->SetActorLocation(At);
+			}
+			UE_LOG(LogMatchCut, Display, TEXT("DOC PARADE page %d row %d column %d: %s"), Page, Slot / 4, Slot % 4, *Ids[i]);
+		}
 		return 1;
 	}
 	if (Cmd == TEXT("near"))

@@ -76,6 +76,11 @@ AActor* FDC3D::Place(const TCHAR* Id, int32 Variant, const FVector& Base, const 
 	// one uniform scale: the model is never stretched
 	if (UStaticMeshComponent* C = GM->AddArt(A, Id, FVector(0.0, 0.0, Size.Z * 0.5), Size, Variant, false))
 	{
+		if (!bCollide && Size.GetMax() < 320.0)
+		{
+			C->SetCullDistance(4200.f); // small loose things are not drawn across the whole site: the haze hides them there anyway
+			C->SetCastShadow(false);
+		}
 		if (bCollide)
 		{
 			C->SetCollisionObjectType(ECC_WorldStatic);
@@ -84,6 +89,44 @@ AActor* FDC3D::Place(const TCHAR* Id, int32 Variant, const FVector& Base, const 
 		}
 	}
 	return A;
+}
+
+UStaticMeshComponent* FDC3D::Bare(UStaticMesh* Mesh, UMaterialInterface* Mat, const FVector& At, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, UMaterialInstanceDynamic** OutMID)
+{
+	// a part with its own material and no paint: painted parts get the look's material again later (GM->Paints)
+	AActor* A = GM->SpawnGroup(At);
+	UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(A);
+	C->SetMobility(EComponentMobility::Movable);
+	C->SetStaticMesh(Mesh);
+	C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	C->SetCastShadow(false);
+	C->SetupAttachment(A->GetRootComponent());
+	UMaterialInstanceDynamic* M = UMaterialInstanceDynamic::Create(Mat, C);
+	M->SetVectorParameterValue(TEXT("Color"), Color);
+	C->SetMaterial(0, M);
+	C->RegisterComponent();
+	C->SetRelativeRotation(Rot);
+	C->SetRelativeScale3D(Scale);
+	if (OutMID)
+	{
+		*OutMID = M;
+	}
+	return C;
+}
+
+float FDC3D::GroundZ(double X, double Y) const
+{
+	double Z = 0.0;
+	for (const FMound& M : Mounds)
+	{
+		const FVector2D D = (FVector2D(X, Y) - M.At).GetRotated(-M.Yaw);
+		const double Q = FMath::Square(D.X / M.Radii.X) + FMath::Square(D.Y / M.Radii.Y);
+		if (Q < 1.0)
+		{
+			Z = FMath::Max(Z, M.CentreZ + M.Radii.Z * FMath::Sqrt(1.0 - Q));
+		}
+	}
+	return (float)Z;
 }
 
 AActor* FDC3D::Block(const FVector& Centre, const FRotator& Rot, const FVector& Size, const FLinearColor& Color)
@@ -248,7 +291,18 @@ void FDC3D::BuildArea()
 	float ShaftPower = 14.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCShaft="), ShaftPower);
 	const FLinearColor Sand(0.20f, 0.19f, 0.16f);
-	Block(FVector(0.0, 0.0, -150.0), FRotator::ZeroRotator, FVector(22000.0, 22000.0, 300.0), Sand);
+	AActor* FloorBlock = Block(FVector(0.0, 0.0, -150.0), FRotator::ZeroRotator, FVector(22000.0, 22000.0, 300.0), Sand);
+	// sand and silt: colour from noise in world space, so it never repeats (Tools/make_sand_material.py)
+	UMaterialInterface* SandMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Sand.M_DC_Sand"));
+	if (FParse::Param(FCommandLine::Get(), TEXT("MCPlainFloor")))
+	{
+		SandMat = nullptr;
+	}
+	if (SandMat)
+	{
+		Bare(GM->CubeMesh, SandMat, FVector(0.0, 0.0, -50.0), FRotator::ZeroRotator, FVector(220.0, 220.0, 1.0), FLinearColor::White);
+		FloorBlock->SetActorHiddenInGame(true); // still what things collide with
+	}
 	const TCHAR* Boulder = TEXT("scene:boulder");
 	const TCHAR* Ledge = TEXT("scene:ledge");
 	const TCHAR* Coral = TEXT("scene:coral");
@@ -271,7 +325,11 @@ void FDC3D::BuildArea()
 	const float VentScale[] = { 2.6f, 2.0f, 1.6f, 3.0f };
 	for (int32 i = 0; i < 4; ++i)
 	{
-		Place(TEXT("scene:vent"), 0, Vents[i] - FVector(0.0, 0.0, 20.0), FRotator(0.f, 75.f * i, 0.f), VentScale[i]);
+		if (AActor* Made = Place(TEXT("scene:vent"), 0, Vents[i] - FVector(0.0, 0.0, 20.0), FRotator(0.f, 75.f * i, 0.f), VentScale[i]))
+		{
+			const FBox Box = Made->GetComponentsBoundingBox();
+			PlumeAt.Add(FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Max.Z));
+		}
 		Glow(Vents[i] + FVector(120.0, 0.0, 120.0 * VentScale[i]), FLinearColor(1.f, 0.45f, 0.12f), 4200.f, 1100.f);
 	}
 
@@ -377,6 +435,34 @@ void FDC3D::BuildArea()
 	// loose rock and coral, and a rim of big rock so the site reads as a bowl in the sea floor
 	const FVector Keep[] = { FVector(0.0, 0.0, 700.0), FVector(1500.0, 0.0, 1000.0), FVector(3300.0, -700.0, 1500.0), FVector(1250.0, -2900.0, 1300.0),
 		FVector(-1500.0, 800.0, 1100.0), FVector(1050.0, -900.0, 1000.0), FVector(2600.0, 2390.0, 2900.0), FVector(-3400.0, 2500.0, 1300.0), FVector(-2500.0, -2700.0, 1300.0) };
+	// low mounds of sand so the floor is not a table. They are seen, not solid: what stands on them asks GroundZ.
+	if (SandMat)
+	{
+		FRandomStream MoundRand(3355);
+		for (int32 Try = 0; Try < 600 && Mounds.Num() < 70; ++Try)
+		{
+			const FVector2D At(MoundRand.FRandRange(-7200.f, 7200.f), MoundRand.FRandRange(-7200.f, 7200.f));
+			bool bFree = At.Size() > 800.0 && FVector2D::Distance(At, FVector2D(700.0, -560.0)) > 900.0;
+			for (const FVector& K : Keep)
+			{
+				bFree &= FVector2D::Distance(At, FVector2D(K.X, K.Y)) > K.Z * 0.75;
+			}
+			if (!bFree)
+			{
+				continue;
+			}
+			const float High = MoundRand.FRandRange(22.f, 62.f), Deep = 260.f; // the part above the floor, and the ball's half height
+			const float Part = FMath::Sqrt(1.f - FMath::Square((Deep - High) / Deep)); // how much of the ball's width shows at floor level
+			const float Wide = MoundRand.FRandRange(650.f, 1700.f);
+			FMound M;
+			M.At = At;
+			M.Yaw = MoundRand.FRandRange(0.f, 180.f);
+			M.Radii = FVector(Wide / Part, Wide * MoundRand.FRandRange(0.5f, 1.f) / Part, Deep);
+			M.CentreZ = High - Deep;
+			Mounds.Add(M);
+			Bare(GM->SphereMesh, SandMat, FVector(At.X, At.Y, M.CentreZ), FRotator(0.f, M.Yaw, 0.f), M.Radii / 50.0, FLinearColor::White);
+		}
+	}
 	FRandomStream Rand(9041);
 	int32 Loose = 0;
 	for (int32 Try = 0; Try < 400 && Loose < 24; ++Try)
@@ -395,7 +481,7 @@ void FDC3D::BuildArea()
 		}
 		const int32 V = Rand.RandRange(0, 3);
 		const float S = V == 1 ? Rand.FRandRange(0.8f, 1.8f) : Rand.FRandRange(1.2f, 3.4f);
-		Place(V == 1 ? Coral : V == 2 ? Ledge : Boulder, 0, At - FVector(0.0, 0.0, 12.0 * S), FRotator(0.f, Rand.FRandRange(0.f, 360.f), 0.f), S);
+		Place(V == 1 ? Coral : V == 2 ? Ledge : Boulder, 0, At + FVector(0.0, 0.0, GroundZ(At.X, At.Y) - 12.0 * S), FRotator(0.f, Rand.FRandRange(0.f, 360.f), 0.f), S);
 		++Loose;
 	}
 	for (int32 i = 0; i < 16; ++i)
@@ -438,12 +524,17 @@ void FDC3D::BuildArea()
 				continue;
 			}
 			FHitResult Hit;
-			At.Z = World->LineTraceSingleByChannel(Hit, At + FVector(0.0, 0.0, 2400.0), At, DC3::Channel, DC3::Query()) ? Hit.Location.Z - 8.0 : -6.0;
+			At.Z = FMath::Max(World->LineTraceSingleByChannel(Hit, At + FVector(0.0, 0.0, 2400.0), At, DC3::Channel, DC3::Query()) ? Hit.Location.Z : 0.0, (double)GroundZ(At.X, At.Y)) - 8.0;
 			if (At.Z > 900.0)
 			{
 				continue; // not on top of the big rock
 			}
-			Place(Id, 0, At, FRotator(0.f, R.FRandRange(0.f, 360.f), 0.f), R.FRandRange(SMin, SMax), bCollide);
+			AActor* Made = Place(Id, 0, At, FRotator(0.f, R.FRandRange(0.f, 360.f), 0.f), R.FRandRange(SMin, SMax), bCollide);
+			if (Made && FString(Id) == TEXT("scene:chimney"))
+			{
+				const FBox Box = Made->GetComponentsBoundingBox();
+				PlumeAt.Add(FVector(Box.GetCenter().X, Box.GetCenter().Y, Box.Max.Z));
+			}
 			++Done;
 		}
 	};
@@ -469,6 +560,53 @@ void FDC3D::BuildArea()
 	Scatter(TEXT("scene:sonar"), 1, 1.4f, 1.4f, StationC + FVector(-500.0, 700.0, 0.0), 100.f, true, false, 28);
 	Scatter(TEXT("scene:sub"), 1, 4.f, 4.f, FVector(-2300.0, -700.0, 0.0), 300.f, true, true, 29);
 	Scatter(TEXT("scene:ruins"), 1, 7.f, 7.f, FVector(-400.0, 4000.0, 0.0), 300.f, true, true, 30);
+	// third batch of set dressing
+	Scatter(TEXT("scene:seafan"), 9, 0.7f, 1.4f, ReefC, 1400.f, false, false, 31);
+	Scatter(TEXT("scene:coraltable"), 5, 1.2f, 2.2f, ReefC, 1500.f, true, false, 32);
+	Scatter(TEXT("scene:seagrass"), 26, 0.5f, 1.1f, Mid, 5000.f, false, false, 33);
+	Scatter(TEXT("scene:seagrass"), 10, 0.5f, 1.1f, ShaftC, 1300.f, false, false, 34);
+	Scatter(TEXT("scene:propeller"), 1, 1.6f, 1.6f, WreckC + FVector(-700.0, -1000.0, 0.0), 200.f, true, false, 35);
+	Scatter(TEXT("scene:mast"), 1, 4.f, 4.f, WreckC + FVector(1200.0, 300.0, 0.0), 300.f, true, false, 36);
+	Scatter(TEXT("scene:plane"), 1, 6.f, 6.f, FVector(-4300.0, -900.0, 0.0), 400.f, true, true, 37);
+	Scatter(TEXT("scene:crates"), 3, 1.1f, 1.6f, StationC + FVector(-300.0, 600.0, 0.0), 600.f, true, false, 38);
+	Scatter(TEXT("scene:rov"), 1, 1.1f, 1.1f, StationC + FVector(600.0, 800.0, 0.0), 150.f, true, false, 39);
+	Scatter(TEXT("scene:spool"), 2, 1.2f, 1.5f, StationC + FVector(700.0, -700.0, 0.0), 400.f, true, false, 40);
+	Scatter(TEXT("scene:statue"), 1, 3.f, 3.f, FVector(-900.0, 3600.0, 0.0), 300.f, true, false, 41);
+	Scatter(TEXT("scene:rigleg"), 1, 14.f, 14.f, FVector(4600.0, -3600.0, 0.0), 300.f, true, true, 42);
+	Scatter(TEXT("scene:lightpole"), 3, 1.6f, 1.6f, StationC, 900.f, false, false, 43);
+	// small things on the sand: stones everywhere, urchins in loose groups
+	Scatter(Boulder, 46, 0.14f, 0.42f, Mid, 5600.f, false, false, 44);
+	Scatter(TEXT("creature:urchin"), 12, 0.16f, 0.3f, ReefC, 1500.f, false, false, 45);
+	Scatter(TEXT("creature:urchin"), 14, 0.16f, 0.3f, Mid, 4600.f, false, false, 46);
+
+	// what the vents give off: warm specks that rise, swell and fade, and a still haze over each mouth. No particle system:
+	// a dozen additive balls per mouth, moved by hand in Tick.
+	if (UMaterialInterface* AddMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Add.M_DC_Add")))
+	{
+		FRandomStream PR(8128);
+		for (const FVector& Mouth : PlumeAt)
+		{
+			for (int32 i = 0; i < 3; ++i)
+			{
+				Bare(GM->SphereMesh, AddMat, Mouth + FVector(PR.FRandRange(-30.f, 30.f), PR.FRandRange(-30.f, 30.f), 90.0 + 170.0 * i), FRotator::ZeroRotator,
+					FVector(1.6 + 1.3 * i, 1.6 + 1.3 * i, 2.6 + 1.2 * i), FLinearColor(0.050f, 0.030f, 0.016f) * (1.f - 0.25f * i));
+			}
+			for (int32 i = 0; i < 12; ++i)
+			{
+				FPlumeBit Bit;
+				Bit.Base = Mouth + FVector(PR.FRandRange(-22.f, 22.f), PR.FRandRange(-22.f, 22.f), -10.0);
+				Bit.Phase = PR.FRand();
+				Bit.Speed = PR.FRandRange(0.11f, 0.2f);
+				Bit.Size = PR.FRandRange(0.10f, 0.26f);
+				UMaterialInstanceDynamic* M = nullptr;
+				Bit.Part = Bare(GM->SphereMesh, AddMat, Bit.Base, FRotator::ZeroRotator, FVector(Bit.Size), FLinearColor::Black, &M);
+				Bit.MID = M;
+				PlumeBits.Add(Bit);
+			}
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("3D plumes: %d mouths, %d specks, %d mounds"), PlumeAt.Num(), PlumeBits.Num(), Mounds.Num());
+	}
+
 	if (GM->Art.Contains(TEXT("scene:buoy")))
 	{
 		// amber beacons: one by each place the shot list sends you
@@ -685,7 +823,7 @@ void FDC3D::TickCamera(float Dt)
 	}
 	BoomFrac = Free < BoomFrac ? Free : FMath::Min(Free, BoomFrac + 1.4f * Dt);
 	CamPos = Pivot + Boom * BoomFrac;
-	CamPos.Z = FMath::Max(CamPos.Z, (double)DC3::CamRadius);
+	CamPos.Z = FMath::Max(CamPos.Z, (double)DC3::CamRadius + GroundZ(CamPos.X, CamPos.Y));
 	Fov = FMath::FInterpTo(Fov, 72.f + 9.f * Fast, Dt, 3.f);
 	ViewFov = Fov;
 	FRotator Rot = View;
@@ -780,6 +918,20 @@ void FDC3D::TickRings(const FVector& From)
 void FDC3D::Tick(float Dt)
 {
 	Time += Dt;
+	for (const FPlumeBit& Bit : PlumeBits)
+	{
+		UStaticMeshComponent* Part = Bit.Part.Get();
+		UMaterialInstanceDynamic* M = Bit.MID.Get();
+		if (Part && M)
+		{
+			const float U = FMath::Frac(Time * Bit.Speed + Bit.Phase); // 0 at the mouth, 1 where it is gone
+			const float Sway = 70.f * U * U;
+			Part->SetWorldLocation(Bit.Base + FVector(Sway * FMath::Sin(Time * 0.7f + Bit.Phase * 20.f), Sway * FMath::Cos(Time * 0.5f + Bit.Phase * 33.f), 620.0 * U));
+			Part->SetWorldScale3D(FVector(Bit.Size * (0.6f + 2.6f * U)));
+			const float Shimmer = 0.6f + 0.4f * FMath::Sin(Time * 9.f + Bit.Phase * 50.f);
+			M->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.55f, 0.26f, 0.09f) * (FMath::Square(1.f - U) * FMath::Min(1.f, U * 8.f) * Shimmer));
+		}
+	}
 	BumpTime = FMath::Max(0.f, BumpTime - Dt);
 	RingFlash = FMath::Max(0.f, RingFlash - Dt);
 
@@ -877,6 +1029,13 @@ void FDC3D::Tick(float Dt)
 	}
 	const FVector From = Pos;
 	MoveHero(Vel * Dt);
+	// the mounds are not solid: the diver is lifted over them here
+	const double SandTop = GroundZ(Pos.X, Pos.Y);
+	if (SandTop > 0.0 && Pos.Z < SandTop + Radius)
+	{
+		Pos.Z = SandTop + Radius;
+		Vel.Z = FMath::Max(Vel.Z, 0.0);
+	}
 	TickRings(From);
 
 	ThrustTime -= Dt;
