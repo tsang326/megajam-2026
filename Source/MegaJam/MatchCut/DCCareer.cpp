@@ -893,7 +893,11 @@ void FDC3D::BuildBase()
 	}
 
 	// a plotting table in the middle: the sea floor drawn in light
-	if (!(bKit && Kit(TEXT("scene:console"), FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator(0.f, 0.f, 0.f), FVector(210.0, 150.0, 100.0))))
+	if (bKit && Kit(TEXT("scene:console"), FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator(0.f, 0.f, 0.f), FVector(210.0, 150.0, 100.0)))
+	{
+		Shell.Add(Block(FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator::ZeroRotator, FVector(200.0, 140.0, 100.0), FrameC)); // the kit's table is in the way too
+	}
+	else
 	{
 		Block(FVector(C.X + 120.0, C.Y, FloorTop + 42.0), FRotator::ZeroRotator, FVector(200.0, 110.0, 84.0), FrameC);
 		LightPanel(FVector(C.X + 120.0, C.Y, FloorTop + 85.0), FVector(184.0, 94.0, 2.0), FLinearColor(0.2f, 1.4f, 1.6f));

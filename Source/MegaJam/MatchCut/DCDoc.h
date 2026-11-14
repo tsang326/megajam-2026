@@ -265,6 +265,16 @@ struct FDCDoc
 	float HuntAlert = 0.f;     // 0 calm .. 1 chasing
 	bool bHunting = false;
 
+	// what is big enough to be in the way: the diver cannot swim through it (small life is swum through as before).
+	// Each is a rounded body (an ellipsoid) fitted inside the model's own box, moving with the creature.
+	struct FSolid { TWeakObjectPtr<AActor> Actor; FVector Centre = FVector::ZeroVector; FVector Semi = FVector(50.0); };
+	TArray<FSolid> Solids;
+	void AddSolid(AActor* A, float MaxSemi = 0.f); // MaxSemi > 0: never bigger than this (the legend must still reach the diver to bite)
+	/** P inside one of the solids (a ball of radius R): the way out to its skin and the direction, true when there is one. */
+	bool Blocked(const FVector& P, float R, FVector& OutPush, FVector& OutNormal) const;
+	bool bSolidsOff = false; // test scripts (solid3 0): the sea as it was, everything swum through
+	mutable float SolidNear = 99.f; // test scripts: how near the nearest big animal's skin is, 1 = touching, less = inside it
+
 	void SetupSubjects();
 	void StartDay();
 	void TickDive(float Dt);

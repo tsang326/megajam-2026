@@ -201,6 +201,75 @@ AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, boo
 	return A;
 }
 
+void FDCDoc::AddSolid(AActor* A, float MaxSemi)
+{
+	if (!A)
+	{
+		return;
+	}
+	TInlineComponentArray<UStaticMeshComponent*> Parts;
+	A->GetComponents(Parts);
+	FBox Box(ForceInit);
+	for (const UStaticMeshComponent* Part : Parts)
+	{
+		if (Part->GetStaticMesh())
+		{
+			Box += Part->GetStaticMesh()->GetBoundingBox().TransformBy(Part->GetRelativeTransform()); // in the actor's own space
+		}
+	}
+	if (!Box.IsValid)
+	{
+		return;
+	}
+	FSolid S;
+	S.Actor = A;
+	S.Centre = Box.GetCenter();
+	// inside the box: nearly its whole length, less of its width and height (fins, wings and arms reach the box, the body does not)
+	S.Semi = (Box.GetExtent() * FVector(0.88, 0.68, 0.68)).ComponentMax(FVector(12.0));
+	if (MaxSemi > 0.f && S.Semi.GetMax() > MaxSemi)
+	{
+		S.Semi *= MaxSemi / S.Semi.GetMax();
+	}
+	Solids.Add(S);
+	UE_LOG(LogMatchCut, Display, TEXT("DOC solid %d: half (%.0f,%.0f,%.0f) cm"), Solids.Num(), S.Semi.X, S.Semi.Y, S.Semi.Z);
+}
+
+bool FDCDoc::Blocked(const FVector& P, float R, FVector& OutPush, FVector& OutNormal) const
+{
+	OutPush = OutNormal = FVector::ZeroVector;
+	SolidNear = 99.f;
+	for (const FSolid& S : Solids)
+	{
+		const AActor* A = S.Actor.Get();
+		const FVector Semi = S.Semi + FVector(R);
+		if (!A || A->IsHidden() || FVector::DistSquared(A->GetActorLocation(), P + OutPush) > FMath::Square(Semi.GetMax() + S.Centre.Size()))
+		{
+			continue;
+		}
+		const FTransform T(A->GetActorQuat(), A->GetActorLocation());
+		FVector L = T.InverseTransformPositionNoScale(P + OutPush) - S.Centre;
+		const FVector Inv2(1.0 / (Semi.X * Semi.X), 1.0 / (Semi.Y * Semi.Y), 1.0 / (Semi.Z * Semi.Z));
+		const double K = FVector::DotProduct(L * L, Inv2);
+		SolidNear = FMath::Min(SolidNear, (float)FMath::Sqrt(K));
+		if (K >= 1.0 || bSolidsOff)
+		{
+			continue;
+		}
+		if (K < 1.e-4)
+		{
+			L = FVector(0.0, 0.0, 1.0); // dead centre: out the top
+		}
+		// out along the skin's own normal there: the shortest way, or nearly. t from |(L + t G) / Semi| = 1.
+		const FVector G = (L * Inv2).GetSafeNormal();
+		const double Qa = FVector::DotProduct(G * G, Inv2), Qb = 2.0 * FVector::DotProduct(L * G, Inv2), Qc = FVector::DotProduct(L * L, Inv2) - 1.0;
+		const double Step = (-Qb + FMath::Sqrt(FMath::Max(0.0, Qb * Qb - 4.0 * Qa * Qc))) / (2.0 * Qa);
+		const FVector N = T.TransformVectorNoScale(G);
+		OutPush += N * Step;
+		OutNormal = N;
+	}
+	return !OutNormal.IsZero();
+}
+
 void FDCDoc::SpawnShoal()
 {
 	AActor* A = GM->SpawnGroup(FVector::ZeroVector);
@@ -473,6 +542,10 @@ void FDCDoc::SpawnAmbient()
 					break;
 				}
 			}
+			if (Row.Length >= 150.f && Row.Id != FString(TEXT("creature:lionsmane")))
+			{
+				AddSolid(One.Actor.Get()); // a big animal is in the way; small life and the soft bells are swum through
+			}
 			Ambient.Add(One);
 			++Total;
 		}
@@ -504,6 +577,10 @@ void FDCDoc::Start()
 	Giant = SpawnCreature(TEXT("creature:giant"), 760.f, Front);
 	Angler = SpawnCreature(TEXT("creature:angler"), 180.f, Front, true);
 	Crew = SpawnCreature(TEXT("hero"), 190.f, 1000.f); // a second diver in the same suit
+	for (AActor* Big : { Manta.Get(), Giant.Get(), Angler.Get(), Crew.Get() })
+	{
+		AddSolid(Big);
+	}
 	for (int32 i = 0; i < DCD::NumJelly; ++i)
 	{
 		Jellies.Add(SpawnCreature(TEXT("creature:jelly"), 110.f + 22.f * (i % 3), Front));
@@ -578,6 +655,7 @@ void FDCDoc::Start()
 	if (Legend != INDEX_NONE)
 	{
 		Hunter = SpawnCreature(TEXT("creature:giantsquid"), 1800.f, Front);
+		AddSolid(Hunter.Get(), 320.f); // its bite reaches 420 cm from its middle: the diver is never held further off than that
 		TickHunter(0.f, true);
 	}
 	StartDay();
@@ -1564,6 +1642,11 @@ int32 FDCDoc::RunLine(const TArray<FString>& T)
 			TrackLeft = T.IsValidIndex(3) ? Num(3) : 5.f;
 		}
 		UE_LOG(LogMatchCut, Display, TEXT("DOC SUBJECT %s %s"), *Want, Best1 ? TEXT("found") : TEXT("missing"));
+		return 1;
+	}
+	if (Cmd == TEXT("solid3"))
+	{
+		bSolidsOff = Num(1) < 0.5f; // solid3 0: big animals are swum through, as before; solid3 1: they are in the way
 		return 1;
 	}
 	if (Cmd == TEXT("career"))
