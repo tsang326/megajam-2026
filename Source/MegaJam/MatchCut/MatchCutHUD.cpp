@@ -1316,7 +1316,15 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 	}
 	Text(Timecode(Time, 0), 190.f, 78.f, 1.5f, Dim);
 	const int32 Heading = ((int32)FMath::RoundToInt(W.Yaw) % 360 + 360) % 360;
-	Text(FString::Printf(TEXT("DEPTH %.1f m   HDG %03d"), 212.0 - W.Pos.Z / 100.0, Heading), 1836.f, 78.f, 1.5f, Dim, 2);
+	Text(FString::Printf(TEXT("DEPTH %.1f m   HDG %03d"), 212.0 + W.ZoneDepth - W.Pos.Z / 100.0, Heading), 1836.f, 78.f, 1.5f, Dim, 2);
+	if (W.ZoneTitleTime >= 0.f && !W.ZoneTitle.IsEmpty())
+	{
+		// a zone's name, as a documentary's chapter card: fades in, holds, fades out
+		const float T = W.ZoneTitleTime;
+		const float A = FMath::Clamp(T / 0.8f, 0.f, 1.f) * FMath::Clamp((6.f - T) / 1.2f, 0.f, 1.f);
+		Text(W.ZoneTitle, 960.f, 300.f, 2.6f, FLinearColor(1.f, 0.86f, 0.55f, 0.9f * A), 1);
+		Text(FString::Printf(TEXT("%.0f m"), 212.0 + W.ZoneDepth - W.Pos.Z / 100.0), 960.f, 352.f, 1.4f, FLinearColor(1.f, 1.f, 1.f, 0.6f * A), 1);
+	}
 
 	if (Aim > 0.5f)
 	{

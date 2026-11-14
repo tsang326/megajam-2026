@@ -36,7 +36,7 @@ namespace DC3
 	const float BoomLen = 440.f;
 	const float BoomUp = 70.f;
 	const float CamRadius = 26.f;
-	const float AreaRadius = 5500.f; // a current turns Unit 0 back past this
+	const float AreaRadius = 25000.f; // a current turns Unit 0 back past this (brief 08: the wider sea)
 	const float Ceiling = 2900.f;
 	const double FleckPeriod = 1600.0;
 	const ECollisionChannel Channel = ECC_Visibility;
@@ -80,6 +80,11 @@ AActor* FDC3D::Place(const TCHAR* Id, int32 Variant, const FVector& Base, const 
 		{
 			C->SetCullDistance(4200.f); // small loose things are not drawn across the whole site: the haze hides them there anyway
 			C->SetCastShadow(false);
+		}
+		else if (Base.Size2D() > 7800.0)
+		{
+			// out in the wider sea: drawn only when near enough to matter (the haze has taken it long before)
+			C->SetCullDistance(Size.GetMax() < 700.0 ? 9000.f : 20000.f);
 		}
 		if (bCollide)
 		{
@@ -291,7 +296,7 @@ void FDC3D::BuildArea()
 	float ShaftPower = 14.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCShaft="), ShaftPower);
 	const FLinearColor Sand(0.20f, 0.19f, 0.16f);
-	AActor* FloorBlock = Block(FVector(0.0, 0.0, -150.0), FRotator::ZeroRotator, FVector(22000.0, 22000.0, 300.0), Sand);
+	AActor* FloorBlock = Block(FVector(0.0, 0.0, -150.0), FRotator::ZeroRotator, FVector(64000.0, 64000.0, 300.0), Sand);
 	// sand and silt: colour from noise in world space, so it never repeats (Tools/make_sand_material.py)
 	UMaterialInterface* SandMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Sand.M_DC_Sand"));
 	if (FParse::Param(FCommandLine::Get(), TEXT("MCPlainFloor")))
@@ -300,7 +305,7 @@ void FDC3D::BuildArea()
 	}
 	if (SandMat)
 	{
-		Bare(GM->CubeMesh, SandMat, FVector(0.0, 0.0, -50.0), FRotator::ZeroRotator, FVector(220.0, 220.0, 1.0), FLinearColor::White);
+		Bare(GM->CubeMesh, SandMat, FVector(0.0, 0.0, -50.0), FRotator::ZeroRotator, FVector(640.0, 640.0, 1.0), FLinearColor::White);
 		FloorBlock->SetActorHiddenInGame(true); // still what things collide with
 	}
 	const TCHAR* Boulder = TEXT("scene:boulder");
@@ -439,9 +444,9 @@ void FDC3D::BuildArea()
 	if (SandMat)
 	{
 		FRandomStream MoundRand(3355);
-		for (int32 Try = 0; Try < 600 && Mounds.Num() < 70; ++Try)
+		for (int32 Try = 0; Try < 3000 && Mounds.Num() < 230; ++Try)
 		{
-			const FVector2D At(MoundRand.FRandRange(-7200.f, 7200.f), MoundRand.FRandRange(-7200.f, 7200.f));
+			const FVector2D At(MoundRand.FRandRange(-25000.f, 25000.f), MoundRand.FRandRange(-25000.f, 25000.f));
 			bool bFree = At.Size() > 800.0 && FVector2D::Distance(At, FVector2D(700.0, -560.0)) > 900.0;
 			for (const FVector& K : Keep)
 			{
@@ -487,6 +492,16 @@ void FDC3D::BuildArea()
 	for (int32 i = 0; i < 16; ++i)
 	{
 		const float Ang = 2.f * PI * i / 16.f + 0.11f * FMath::Sin(i * 2.3f);
+		// a gap in the rim towards each zone of the wider sea
+		bool bGate = false;
+		for (const FZone& Z : Zones)
+		{
+			bGate |= FMath::Abs(FMath::FindDeltaAngleRadians(Ang, FMath::Atan2(Z.At.Y, Z.At.X))) < 0.30f;
+		}
+		if (bGate)
+		{
+			continue;
+		}
 		const float Rad = 7300.f + 350.f * FMath::Sin(i * 1.7f);
 		const float S = 15.f + 4.f * FMath::Sin(i * 3.1f);
 		Place(i % 3 == 2 ? Ledge : Boulder, 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), -260.0), FRotator(0.f, 67.f * i, 0.f), i % 3 == 2 ? S * 1.4f : S);
@@ -579,6 +594,128 @@ void FDC3D::BuildArea()
 	Scatter(TEXT("creature:urchin"), 12, 0.16f, 0.3f, ReefC, 1500.f, false, false, 45);
 	Scatter(TEXT("creature:urchin"), 14, 0.16f, 0.3f, Mid, 4600.f, false, false, 46);
 
+	// ---- the wider sea (brief 08): a zone in each direction, each built from its own models, with a trail to it
+	{
+		auto ZoneAt = [this](int32 i) { return FVector(Zones[i].At.X, Zones[i].At.Y, 0.0); };
+		int32 Seed = 500;
+		auto Z = [&](int32 Zi, const TCHAR* Id, int32 Count, float SMin, float SMax, const FVector2D& Off, float Spread, bool bCollide)
+		{
+			if (Zones.IsValidIndex(Zi))
+			{
+				Scatter(Id, Count, SMin, SMax, ZoneAt(Zi) + FVector(Off.X, Off.Y, 0.0), Spread, bCollide, false, ++Seed);
+			}
+		};
+		const FVector2D O(0.0, 0.0);
+		// 0 the kelp forest: tall kelp everywhere, coral and grass under it
+		Z(0, TEXT("scene:kelp"), 46, 2.6f, 5.2f, O, 4800.f, false);
+		Z(0, TEXT("scene:seagrass"), 40, 0.6f, 1.2f, O, 5000.f, false);
+		Z(0, TEXT("scene:braincoral"), 8, 0.8f, 1.8f, O, 3800.f, true);
+		Z(0, TEXT("scene:staghorn"), 10, 0.8f, 1.6f, O, 3800.f, false);
+		Z(0, TEXT("scene:seafan"), 10, 0.8f, 1.6f, O, 4000.f, false);
+		Z(0, TEXT("scene:coraltable"), 5, 1.4f, 2.4f, O, 3500.f, true);
+		Z(0, TEXT("scene:barnaclerock"), 8, 1.2f, 3.0f, O, 4500.f, true);
+		Z(0, TEXT("scene:boulder"), 10, 2.f, 6.f, O, 5200.f, true);
+		Z(0, TEXT("creature:starfish"), 14, 0.2f, 0.35f, O, 4000.f, false);
+		Z(0, TEXT("creature:urchin"), 14, 0.16f, 0.3f, O, 4000.f, false);
+		// 1 the wreck graveyard: ships' parts on open sand
+		Z(1, TEXT("scene:wreck"), 2, 7.f, 9.f, FVector2D(-900.0, 1200.0), 1800.f, true);
+		Z(1, TEXT("scene:plane"), 1, 6.f, 6.f, FVector2D(1800.0, -1500.0), 400.f, true);
+		Z(1, TEXT("scene:propeller"), 2, 1.6f, 2.2f, O, 3200.f, true);
+		Z(1, TEXT("scene:mast"), 3, 3.5f, 4.5f, O, 3600.f, true);
+		Z(1, TEXT("scene:lifeboat"), 3, 1.6f, 2.2f, O, 3600.f, true);
+		Z(1, TEXT("scene:cannon"), 5, 1.0f, 1.4f, O, 3200.f, true);
+		Z(1, TEXT("scene:wheel"), 2, 0.9f, 1.1f, O, 2800.f, false);
+		Z(1, TEXT("scene:anchor"), 3, 1.6f, 2.4f, O, 3800.f, true);
+		Z(1, TEXT("scene:container"), 6, 2.6f, 3.2f, O, 4200.f, true);
+		Z(1, TEXT("scene:crates"), 6, 1.0f, 1.6f, O, 4000.f, true);
+		Z(1, TEXT("scene:debris"), 6, 2.f, 3.5f, O, 4500.f, true);
+		Z(1, TEXT("scene:seagrass"), 16, 0.5f, 1.0f, O, 4800.f, false);
+		// 2 the sunken ruins: columns, stairs and an old face in the sand
+		Z(2, TEXT("scene:ruins"), 4, 6.f, 8.f, O, 3600.f, true);
+		Z(2, TEXT("scene:statue"), 1, 4.f, 4.f, FVector2D(600.0, -400.0), 300.f, true);
+		Z(2, TEXT("scene:obelisk"), 4, 4.f, 7.f, O, 3800.f, true);
+		Z(2, TEXT("scene:stairs"), 2, 4.f, 5.f, FVector2D(-800.0, 900.0), 1200.f, true);
+		Z(2, TEXT("scene:pillar"), 7, 3.f, 4.5f, O, 4000.f, true);
+		Z(2, TEXT("scene:arch"), 1, 7.f, 7.f, FVector2D(1800.0, 1600.0), 300.f, true);
+		Z(2, TEXT("scene:sponge"), 10, 0.6f, 1.3f, O, 4200.f, false);
+		Z(2, TEXT("scene:seafan"), 8, 0.7f, 1.4f, O, 4200.f, false);
+		Z(2, TEXT("scene:anemone"), 10, 0.35f, 0.7f, O, 4000.f, false);
+		// 3 the whale fall: a plain of grey silt, bones, and the things that live on them
+		Z(3, TEXT("scene:whalefall"), 2, 6.f, 8.f, O, 2200.f, true);
+		Z(3, TEXT("scene:bonepile"), 8, 1.2f, 2.4f, O, 4200.f, false);
+		Z(3, TEXT("scene:crinoid"), 12, 0.8f, 1.5f, O, 4400.f, false);
+		Z(3, TEXT("scene:seapen"), 16, 0.6f, 1.2f, O, 4600.f, false);
+		Z(3, TEXT("scene:sponge"), 8, 0.6f, 1.2f, O, 4500.f, false);
+		Z(3, TEXT("scene:boulder"), 6, 1.5f, 4.f, O, 5000.f, true);
+		Z(3, TEXT("creature:brittlestar"), 14, 0.18f, 0.3f, O, 4000.f, false);
+		// 4 the black smokers: chimneys, worms and lava
+		Z(4, TEXT("scene:blacksmoker"), 6, 2.f, 3.4f, O, 3200.f, true);
+		Z(4, TEXT("scene:chimney"), 6, 2.f, 3.4f, O, 3600.f, true);
+		Z(4, TEXT("scene:pillowlava"), 10, 1.4f, 3.0f, O, 4400.f, true);
+		Z(4, TEXT("scene:tubeworms"), 16, 0.8f, 1.6f, O, 3600.f, false);
+		Z(4, TEXT("scene:clam"), 10, 0.4f, 0.9f, O, 3600.f, false);
+		Z(4, TEXT("scene:vent"), 4, 1.6f, 2.8f, O, 3000.f, true);
+		// 5 the abyss: black spires and a great arch, almost nothing else
+		Z(5, TEXT("scene:abyssarch"), 1, 14.f, 14.f, O, 300.f, true);
+		Z(5, TEXT("scene:spire"), 12, 6.f, 14.f, O, 5000.f, true);
+		Z(5, TEXT("scene:cliff"), 6, 12.f, 18.f, O, 5600.f, true);
+		Z(5, TEXT("scene:pillowlava"), 6, 2.f, 4.f, O, 4000.f, true);
+		Z(5, TEXT("scene:seapen"), 10, 0.6f, 1.2f, O, 4000.f, false);
+		Z(5, TEXT("scene:crinoid"), 8, 0.8f, 1.4f, O, 3800.f, false);
+		if (Zones.IsValidIndex(5))
+		{
+			// the only light down here is alive: soft blue and violet points near the floor and drifting above it
+			FRandomStream GR(5150);
+			for (int32 g = 0; g < 16; ++g)
+			{
+				// a cluster round the arch, where you arrive, then a loose scatter further off
+				const double A = GR.FRandRange(0.0, 2.0 * PI), R = g < 6 ? 350.0 + GR.FRandRange(0.0, 1100.0) : 1500.0 + GR.FRandRange(0.0, 3400.0);
+				const FVector P = ZoneAt(5) + FVector(FMath::Cos(A) * R, FMath::Sin(A) * R, GR.FRandRange(60.f, 700.f));
+				const FLinearColor C = (g % 3 == 0) ? FLinearColor(0.55f, 0.30f, 1.0f) : FLinearColor(0.15f, 0.65f, 1.0f);
+				Glow(P, C, 2500.f + GR.FRandRange(0.f, 2000.f), 1000.f);
+				Place(TEXT("creature:jelly"), 0, P - FVector(0.0, 0.0, 40.0), FRotator(0.0, GR.FRandRange(0.f, 360.f), 0.0), 0.3f + GR.FRandRange(0.f, 0.3f), false);
+			}
+		}
+		// research outpost on the way to the smokers: the station's far end
+		Z(4, TEXT("scene:dome"), 1, 5.f, 5.f, FVector2D(-4200.0, 3600.0), 300.f, true);
+		Z(4, TEXT("scene:tanks"), 2, 1.4f, 1.8f, FVector2D(-4200.0, 3600.0), 1200.f, true);
+		Z(4, TEXT("scene:antenna"), 1, 4.f, 4.f, FVector2D(-4200.0, 3600.0), 1300.f, true);
+		Z(4, TEXT("scene:lightpole"), 3, 1.6f, 1.6f, FVector2D(-4200.0, 3600.0), 1300.f, false);
+
+		// trails: beacons on the way out of the first site, and loose rock all along
+		FRandomStream TR(7171);
+		for (int32 i = 0; i < Zones.Num(); ++i)
+		{
+			const FVector To = ZoneAt(i);
+			const FVector Dir = To.GetSafeNormal2D();
+			const FVector Side(-Dir.Y, Dir.X, 0.0);
+			const double Len = To.Size2D();
+			for (double D = 8200.0; D < Len - 3500.0; D += 2400.0)
+			{
+				const FVector At = Dir * D + Side * TR.FRandRange(-500.f, 500.f);
+				if (GM->Art.Contains(TEXT("scene:buoy")) && FMath::RoundToInt(D / 2400.0) % 2 == 0)
+				{
+					Place(TEXT("scene:buoy"), 0, At, FRotator(0.f, TR.FRandRange(0.f, 360.f), 0.f), 1.3f, false);
+					Glow(At + FVector(0.0, 0.0, 260.0), FLinearColor(1.f, 0.6f, 0.15f), 3000.f, 900.f);
+				}
+				Place(TEXT("scene:boulder"), 0, At + Side * TR.FRandRange(900.f, 1600.f) * (TR.FRand() < 0.5f ? -1.0 : 1.0), FRotator(0.f, TR.FRandRange(0.f, 360.f), 0.f), TR.FRandRange(1.5f, 4.f));
+			}
+		}
+		// the edge of the wider sea: a ring of cliffs, so the far water ends in rock and not in nothing
+		for (int32 i = 0; i < 36; ++i)
+		{
+			const float Ang = 2.f * PI * i / 36.f;
+			const float Rad = 26500.f + 700.f * FMath::Sin(i * 2.9f);
+			Place(i % 2 ? TEXT("scene:cliff") : TEXT("scene:boulder"), 0, FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), -200.0),
+				FRotator(0.f, FMath::RadiansToDegrees(Ang) + 90.f, 0.f), i % 2 ? 22.f : 26.f);
+		}
+		// open sand between the zones is not empty: stones, grass and the odd coral
+		Scatter(TEXT("scene:boulder"), 120, 0.2f, 1.2f, Mid, 24000.f, false, false, 990);
+		Scatter(TEXT("scene:seagrass"), 60, 0.5f, 1.1f, Mid, 24000.f, false, false, 991);
+		Scatter(TEXT("scene:sponge"), 30, 0.5f, 1.1f, Mid, 24000.f, false, false, 992);
+		Scatter(TEXT("scene:barnaclerock"), 25, 0.8f, 2.4f, Mid, 24000.f, true, false, 993);
+	}
+
 	// what the vents give off: warm specks that rise, swell and fade, and a still haze over each mouth. No particle system:
 	// a dozen additive balls per mouth, moved by hand in Tick.
 	if (UMaterialInterface* AddMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DeepCut/M_DC_Add.M_DC_Add")))
@@ -619,10 +756,99 @@ void FDC3D::BuildArea()
 	}
 }
 
+void FDC3D::SetupZones()
+{
+	// title, where, radius, extra depth (m), fog colour, fog density, key light, key colour, fill light, flecks
+	Zones = {
+		{ TEXT("THE KELP FOREST"), FVector2D(-13000.0, 7500.0), 4800.f, -95.f, FLinearColor(0.03f, 0.20f, 0.19f), 0.045f, 13.f, FLinearColor(0.60f, 0.95f, 0.80f), 3.2f, FLinearColor(0.30f, 0.42f, 0.34f) },
+		{ TEXT("THE WRECK GRAVEYARD"), FVector2D(14500.0, -3900.0), 4800.f, 60.f, FLinearColor(0.02f, 0.10f, 0.20f), 0.055f, 7.f, FLinearColor(0.35f, 0.70f, 1.f), 2.2f, FLinearColor(0.20f, 0.30f, 0.40f) },
+		{ TEXT("THE DROWNED CITY"), FVector2D(6800.0, 14500.0), 4600.f, 110.f, FLinearColor(0.035f, 0.085f, 0.17f), 0.05f, 6.f, FLinearColor(0.50f, 0.75f, 1.f), 2.0f, FLinearColor(0.26f, 0.30f, 0.40f) },
+		{ TEXT("THE WHALE FALL"), FVector2D(-7500.0, -13000.0), 4600.f, 260.f, FLinearColor(0.030f, 0.045f, 0.060f), 0.07f, 3.f, FLinearColor(0.55f, 0.70f, 0.90f), 1.4f, FLinearColor(0.34f, 0.35f, 0.36f) },
+		{ TEXT("THE BLACK SMOKERS"), FVector2D(6800.0, -14500.0), 4800.f, 380.f, FLinearColor(0.10f, 0.040f, 0.018f), 0.06f, 2.f, FLinearColor(1.f, 0.60f, 0.35f), 1.0f, FLinearColor(0.42f, 0.28f, 0.18f) },
+		{ TEXT("THE ABYSS"), FVector2D(-5500.0, 19500.0), 5200.f, 900.f, FLinearColor(0.010f, 0.020f, 0.045f), 0.035f, 2.0f, FLinearColor(0.30f, 0.50f, 0.90f), 0.9f, FLinearColor(0.12f, 0.14f, 0.18f) } };
+}
+
+void FDC3D::TickZones(float Dt)
+{
+	const FDCLook* Base = GM->Looks.Find(TEXT("3D"));
+	if (!Base || Zones.Num() == 0)
+	{
+		return;
+	}
+	float Sum = 0.f, BestW = 0.f;
+	int32 Best = INDEX_NONE;
+	float W[8] = {};
+	for (int32 i = 0; i < Zones.Num() && i < 8; ++i)
+	{
+		const FZone& Z = Zones[i];
+		const float D = FVector2D::Distance(FVector2D(Pos.X, Pos.Y), Z.At);
+		W[i] = FMath::SmoothStep(0.f, 1.f, FMath::Clamp((1.6f * Z.Radius - D) / (0.6f * Z.Radius), 0.f, 1.f));
+		Sum += W[i];
+		if (W[i] > BestW)
+		{
+			BestW = W[i];
+			Best = i;
+		}
+	}
+	const float Norm = Sum > 1.f ? 1.f / Sum : 1.f;
+	const float WBase = 1.f - FMath::Min(Sum, 1.f);
+	FDCLook& L = GM->Look;
+	L.FogColor = Base->FogColor * WBase;
+	L.FogDensity = Base->FogDensity * WBase;
+	L.KeyIntensity = Base->KeyIntensity * WBase;
+	L.KeyColor = Base->KeyColor * WBase;
+	L.FillIntensity = Base->FillIntensity * WBase;
+	L.SnowColor = Base->SnowColor * WBase;
+	ZoneDepth = 0.f;
+	for (int32 i = 0; i < Zones.Num() && i < 8; ++i)
+	{
+		const float K = W[i] * Norm;
+		const FZone& Z = Zones[i];
+		L.FogColor += Z.Fog * K;
+		L.FogDensity += Z.FogDensity * K;
+		L.KeyIntensity += Z.Key * K;
+		L.KeyColor += Z.KeyColor * K;
+		L.FillIntensity += Z.Fill * K;
+		L.SnowColor += Z.Snow * K;
+		ZoneDepth += Z.Depth * K;
+	}
+	// the light and the water change slowly enough to read as swimming deeper, not as a switch
+	LookTime += Dt;
+	if (GM->Fog && LookTime > 0.1f)
+	{
+		LookTime = 0.f;
+		GM->Fog->GetComponent()->SetFogDensity(L.FogDensity);
+		if (GM->KeyLight)
+		{
+			GM->KeyLight->GetLightComponent()->SetLightColor(L.KeyColor);
+		}
+	}
+	// the title card of a zone, once on the way in; the first site has its own when you come back to it
+	const int32 Now = BestW > 0.6f ? Best : (Sum < 0.05f && FVector2D(Pos.X, Pos.Y).Size() < 7000.0 ? -2 : ZoneNow);
+	if (Now != ZoneNow)
+	{
+		if (ZoneNow != INDEX_NONE || Now != -2)
+		{
+			ZoneTitle = Now >= 0 ? FString(Zones[Now].Title) : FString(TEXT("THE STATION"));
+			ZoneTitleTime = 0.f;
+		}
+		ZoneNow = Now;
+	}
+	if (ZoneTitleTime >= 0.f)
+	{
+		ZoneTitleTime += Dt;
+		if (ZoneTitleTime > 6.f)
+		{
+			ZoneTitleTime = -1.f;
+		}
+	}
+}
+
 void FDC3D::Start()
 {
 	UWorld* World = GM->GetWorld();
 	GM->LoadArt();
+	SetupZones();
 
 	GM->KeyLight = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 5000), FRotator(-62.0, 25.0, 0.0));
 	if (UDirectionalLightComponent* DLC = Cast<UDirectionalLightComponent>(GM->KeyLight->GetLightComponent()))
@@ -1076,6 +1302,7 @@ void FDC3D::Tick(float Dt)
 		Doc->Tick(Dt);
 	}
 	TickCamera(Dt);
+	TickZones(Dt);
 	{
 		// the trench: the roof keeps the sun out, and the lens' eye opens no further. The deeper in, the less of the fill
 		// light and of the water's own glow is left.

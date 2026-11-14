@@ -162,6 +162,7 @@ struct FDCDoc
 		FVector Centre = FVector::ZeroVector;
 		float Ra = 0.f, Rb = 0.f, Phase = 0.f, Omega = 0.f, Bob = 0.f, Wiggle = 0.f;
 		float Surge = 0.f;
+		bool bAway = false; // far off in another zone: hidden and not moved
 	};
 	TArray<FAmbient> Ambient;
 	TWeakObjectPtr<UPointLightComponent> ShoalLight, JellyLight;

@@ -974,5 +974,677 @@
    ],
    "emissive": "none"
   }
+ ],
+ "creature:urchin": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_urchin/creature_urchin/StaticMeshes/creature_urchin.creature_urchin",
+   "yaw": 0,
+   "file": "creature_urchin.glb",
+   "triangles": 9958,
+   "sizeCm": [
+    185,
+    186,
+    85
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:nudibranch": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_nudibranch/creature_nudibranch/StaticMeshes/creature_nudibranch.creature_nudibranch",
+   "yaw": 0,
+   "file": "creature_nudibranch.glb",
+   "triangles": 6958,
+   "sizeCm": [
+    190,
+    185,
+    55
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:krill": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_krill/creature_krill/StaticMeshes/creature_krill.creature_krill",
+   "yaw": 0,
+   "file": "creature_krill.glb",
+   "triangles": 4424,
+   "sizeCm": [
+    82,
+    189,
+    87
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:turtle2": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_turtle2/creature_turtle2/StaticMeshes/creature_turtle2.creature_turtle2",
+   "yaw": 0,
+   "file": "creature_turtle2.glb",
+   "triangles": 4014,
+   "sizeCm": [
+    190,
+    153,
+    35
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:seafan": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_seafan/scene_seafan/StaticMeshes/scene_seafan.scene_seafan",
+   "yaw": 0,
+   "file": "scene_seafan.glb",
+   "triangles": 17106,
+   "sizeCm": [
+    74,
+    189,
+    162
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:coraltable": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_coraltable/scene_coraltable/StaticMeshes/scene_coraltable.scene_coraltable",
+   "yaw": 0,
+   "file": "scene_coraltable.glb",
+   "triangles": 12334,
+   "sizeCm": [
+    186,
+    190,
+    81
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:seagrass": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_seagrass/scene_seagrass/StaticMeshes/scene_seagrass.scene_seagrass",
+   "yaw": 0,
+   "file": "scene_seagrass.glb",
+   "triangles": 5698,
+   "sizeCm": [
+    130,
+    189,
+    141
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:propeller": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_propeller/scene_propeller/StaticMeshes/scene_propeller.scene_propeller",
+   "yaw": 0,
+   "file": "scene_propeller.glb",
+   "triangles": 10896,
+   "sizeCm": [
+    171,
+    189,
+    158
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:mast": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_mast/scene_mast/StaticMeshes/scene_mast.scene_mast",
+   "yaw": 0,
+   "file": "scene_mast.glb",
+   "triangles": 7930,
+   "sizeCm": [
+    53,
+    189,
+    164
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:plane": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_plane/scene_plane/StaticMeshes/scene_plane.scene_plane",
+   "yaw": 0,
+   "file": "scene_plane.glb",
+   "triangles": 6344,
+   "sizeCm": [
+    190,
+    187,
+    69
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:crates": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_crates/scene_crates/StaticMeshes/scene_crates.scene_crates",
+   "yaw": 0,
+   "file": "scene_crates.glb",
+   "triangles": 16326,
+   "sizeCm": [
+    190,
+    172,
+    127
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:rov": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_rov/scene_rov/StaticMeshes/scene_rov.scene_rov",
+   "yaw": 0,
+   "file": "scene_rov.glb",
+   "triangles": 12076,
+   "sizeCm": [
+    186,
+    189,
+    99
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:spool": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_spool/scene_spool/StaticMeshes/scene_spool.scene_spool",
+   "yaw": 0,
+   "file": "scene_spool.glb",
+   "triangles": 4714,
+   "sizeCm": [
+    130,
+    190,
+    85
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:statue": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_statue/scene_statue/StaticMeshes/scene_statue.scene_statue",
+   "yaw": 0,
+   "file": "scene_statue.glb",
+   "triangles": 8512,
+   "sizeCm": [
+    142,
+    172,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:rigleg": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_rigleg/scene_rigleg/StaticMeshes/scene_rigleg.scene_rigleg",
+   "yaw": 0,
+   "file": "scene_rigleg.glb",
+   "triangles": 12332,
+   "sizeCm": [
+    89,
+    94,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:lightpole": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_lightpole/scene_lightpole/StaticMeshes/scene_lightpole.scene_lightpole",
+   "yaw": 0,
+   "file": "scene_lightpole.glb",
+   "triangles": 5972,
+   "sizeCm": [
+    44,
+    44,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:dragonfish": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_dragonfish/creature_dragonfish/StaticMeshes/creature_dragonfish.creature_dragonfish",
+   "yaw": 0,
+   "file": "creature_dragonfish.glb",
+   "triangles": 3366,
+   "sizeCm": [
+    156,
+    189,
+    62
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:atolla": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_atolla/creature_atolla/StaticMeshes/creature_atolla.creature_atolla",
+   "yaw": 0,
+   "file": "creature_atolla.glb",
+   "triangles": 4988,
+   "sizeCm": [
+    175,
+    192,
+    122
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:seatoad": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_seatoad/creature_seatoad/StaticMeshes/creature_seatoad.creature_seatoad",
+   "yaw": 0,
+   "file": "creature_seatoad.glb",
+   "triangles": 6342,
+   "sizeCm": [
+    187,
+    190,
+    94
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:yeticrab": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_yeticrab/creature_yeticrab/StaticMeshes/creature_yeticrab.creature_yeticrab",
+   "yaw": 0,
+   "file": "creature_yeticrab.glb",
+   "triangles": 17350,
+   "sizeCm": [
+    143,
+    190,
+    59
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:ventshrimp": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_ventshrimp/creature_ventshrimp/StaticMeshes/creature_ventshrimp.creature_ventshrimp",
+   "yaw": 0,
+   "file": "creature_ventshrimp.glb",
+   "triangles": 6226,
+   "sizeCm": [
+    165,
+    190,
+    34
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:starfish": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_starfish/creature_starfish/StaticMeshes/creature_starfish.creature_starfish",
+   "yaw": 0,
+   "file": "creature_starfish.glb",
+   "triangles": 9604,
+   "sizeCm": [
+    181,
+    190,
+    30
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:barracuda": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_barracuda/creature_barracuda/StaticMeshes/creature_barracuda.creature_barracuda",
+   "yaw": 0,
+   "file": "creature_barracuda.glb",
+   "triangles": 2084,
+   "sizeCm": [
+    54,
+    190,
+    57
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:hammerhead": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_hammerhead/creature_hammerhead/StaticMeshes/creature_hammerhead.creature_hammerhead",
+   "yaw": 0,
+   "file": "creature_hammerhead.glb",
+   "triangles": 1274,
+   "sizeCm": [
+    92,
+    190,
+    74
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:dolphin": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_dolphin/creature_dolphin/StaticMeshes/creature_dolphin.creature_dolphin",
+   "yaw": 0,
+   "file": "creature_dolphin.glb",
+   "triangles": 1120,
+   "sizeCm": [
+    90,
+    190,
+    90
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:braincoral": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_braincoral/scene_braincoral/StaticMeshes/scene_braincoral.scene_braincoral",
+   "yaw": 0,
+   "file": "scene_braincoral.glb",
+   "triangles": 19120,
+   "sizeCm": [
+    179,
+    190,
+    126
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:staghorn": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_staghorn/scene_staghorn/StaticMeshes/scene_staghorn.scene_staghorn",
+   "yaw": 0,
+   "file": "scene_staghorn.glb",
+   "triangles": 18574,
+   "sizeCm": [
+    190,
+    187,
+    134
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:barnaclerock": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_barnaclerock/scene_barnaclerock/StaticMeshes/scene_barnaclerock.scene_barnaclerock",
+   "yaw": 0,
+   "file": "scene_barnaclerock.glb",
+   "triangles": 9568,
+   "sizeCm": [
+    189,
+    177,
+    119
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:cannon": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_cannon/scene_cannon/StaticMeshes/scene_cannon.scene_cannon",
+   "yaw": 0,
+   "file": "scene_cannon.glb",
+   "triangles": 10298,
+   "sizeCm": [
+    157,
+    190,
+    63
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:dome": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_dome/scene_dome/StaticMeshes/scene_dome.scene_dome",
+   "yaw": 0,
+   "file": "scene_dome.glb",
+   "triangles": 7714,
+   "sizeCm": [
+    139,
+    190,
+    118
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:tanks": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_tanks/scene_tanks/StaticMeshes/scene_tanks.scene_tanks",
+   "yaw": 0,
+   "file": "scene_tanks.glb",
+   "triangles": 8218,
+   "sizeCm": [
+    174,
+    131,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:antenna": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_antenna/scene_antenna/StaticMeshes/scene_antenna.scene_antenna",
+   "yaw": 0,
+   "file": "scene_antenna.glb",
+   "triangles": 7048,
+   "sizeCm": [
+    134,
+    147,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:stairs": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_stairs/scene_stairs/StaticMeshes/scene_stairs.scene_stairs",
+   "yaw": 0,
+   "file": "scene_stairs.glb",
+   "triangles": 10812,
+   "sizeCm": [
+    114,
+    191,
+    136
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:crinoid": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_crinoid/scene_crinoid/StaticMeshes/scene_crinoid.scene_crinoid",
+   "yaw": 0,
+   "file": "scene_crinoid.glb",
+   "triangles": 12816,
+   "sizeCm": [
+    166,
+    190,
+    155
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:seapen": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_seapen/scene_seapen/StaticMeshes/scene_seapen.scene_seapen",
+   "yaw": 0,
+   "file": "scene_seapen.glb",
+   "triangles": 18386,
+   "sizeCm": [
+    106,
+    109,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:bonepile": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_bonepile/scene_bonepile/StaticMeshes/scene_bonepile.scene_bonepile",
+   "yaw": 0,
+   "file": "scene_bonepile.glb",
+   "triangles": 11110,
+   "sizeCm": [
+    152,
+    190,
+    69
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:blacksmoker": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_blacksmoker/scene_blacksmoker/StaticMeshes/scene_blacksmoker.scene_blacksmoker",
+   "yaw": 0,
+   "file": "scene_blacksmoker.glb",
+   "triangles": 11954,
+   "sizeCm": [
+    168,
+    189,
+    172
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:pillowlava": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_pillowlava/scene_pillowlava/StaticMeshes/scene_pillowlava.scene_pillowlava",
+   "yaw": 0,
+   "file": "scene_pillowlava.glb",
+   "triangles": 7978,
+   "sizeCm": [
+    185,
+    189,
+    83
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:grouper": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_grouper/creature_grouper/StaticMeshes/creature_grouper.creature_grouper",
+   "yaw": 0,
+   "file": "creature_grouper.glb",
+   "triangles": 6126,
+   "sizeCm": [
+    144,
+    190,
+    91
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:viperfish": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_viperfish/creature_viperfish/StaticMeshes/creature_viperfish.creature_viperfish",
+   "yaw": 0,
+   "file": "creature_viperfish.glb",
+   "triangles": 3328,
+   "sizeCm": [
+    47,
+    190,
+    58
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:parrotfish": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_parrotfish/creature_parrotfish/StaticMeshes/creature_parrotfish.creature_parrotfish",
+   "yaw": 0,
+   "file": "creature_parrotfish.glb",
+   "triangles": 5966,
+   "sizeCm": [
+    187,
+    190,
+    98
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:giantsquid": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_giantsquid/creature_giantsquid/StaticMeshes/creature_giantsquid.creature_giantsquid",
+   "yaw": 0,
+   "file": "creature_giantsquid.glb",
+   "triangles": 4258,
+   "sizeCm": [
+    183,
+    190,
+    38
+   ],
+   "emissive": "none"
+  }
+ ],
+ "creature:lionsmane": [
+  {
+   "mesh": "/Game/DeepCut/Art/creature_lionsmane/creature_lionsmane/StaticMeshes/creature_lionsmane.creature_lionsmane",
+   "yaw": 0,
+   "file": "creature_lionsmane.glb",
+   "triangles": 11020,
+   "sizeCm": [
+    166,
+    156,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:lifeboat": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_lifeboat/scene_lifeboat/StaticMeshes/scene_lifeboat.scene_lifeboat",
+   "yaw": 0,
+   "file": "scene_lifeboat.glb",
+   "triangles": 13280,
+   "sizeCm": [
+    189,
+    136,
+    64
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:wheel": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_wheel/scene_wheel/StaticMeshes/scene_wheel.scene_wheel",
+   "yaw": 0,
+   "file": "scene_wheel.glb",
+   "triangles": 8906,
+   "sizeCm": [
+    190,
+    171,
+    179
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:obelisk": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_obelisk/scene_obelisk/StaticMeshes/scene_obelisk.scene_obelisk",
+   "yaw": 0,
+   "file": "scene_obelisk.glb",
+   "triangles": 14852,
+   "sizeCm": [
+    41,
+    44,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:pillar": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_pillar/scene_pillar/StaticMeshes/scene_pillar.scene_pillar",
+   "yaw": 0,
+   "file": "scene_pillar.glb",
+   "triangles": 12442,
+   "sizeCm": [
+    190,
+    57,
+    58
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:abyssarch": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_abyssarch/scene_abyssarch/StaticMeshes/scene_abyssarch.scene_abyssarch",
+   "yaw": 0,
+   "file": "scene_abyssarch.glb",
+   "triangles": 18242,
+   "sizeCm": [
+    106,
+    92,
+    190
+   ],
+   "emissive": "none"
+  }
  ]
 }

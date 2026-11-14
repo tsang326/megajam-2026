@@ -186,3 +186,11 @@ All three use rules the game already had (near things come through the cut, a th
 - Ambient swimmers bank into their turn; jet swimmers (squid, octopus, nautilus, jellyfish) move in surges.
 - Facing: `d5_facing.txt` lines every creature model up in side view. Octopus, squid, vampire squid, nautilus and stingray came with the nose at the other end and are turned round (`DCSwim::FrontFix`).
 - `d3_film`, editor, alone: 6 of 6, 18 of 18 stars, median 29 ms, p90 54 ms (25 and 48 before the swim).
+
+### 2026-11-14, ~15:45: the wider sea (playtest: "I need a wider map, and far away the scenery has to be different")
+
+- The swimmable area goes from a 55 m radius to 250 m. The first site stays in the middle; six zones lie around it, each built from its own models and with its own water: The Kelp Forest, The Wreck Graveyard, The Drowned City, The Whale Fall, The Black Smokers (with a research outpost on the way), The Abyss.
+- Fog colour and density, key and fill light and the colour of the flecks blend from the first site's look into each zone's (`FDC3D::SetupZones` / `TickZones`). The depth readout adds the zone's depth; a title card names the zone when you swim in, and "THE STATION" when you come back.
+- Trails of beacons lead out from the first site to each zone; an outer ring of cliffs closes the sea. Small things far from the middle get a cull distance; ambient creatures more than about 110 m away are hidden and not moved.
+- About 40 new ambient creatures per zone, from the batch 3 to 5 models (48 new models this session, logged in `ASSETS.md`). The Abyss is lit only by blue and violet points of life.
+- Tests: `d8_zones.txt` (teleports to each zone, snaps); `d3_film` still 6 of 6, 17 stars; `d6_guide` passes.

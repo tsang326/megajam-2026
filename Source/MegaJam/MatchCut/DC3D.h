@@ -88,6 +88,29 @@ struct FDC3D
 	TArray<FPlumeBit> PlumeBits;
 	TArray<FVector> PlumeAt; // the mouth of each vent and chimney
 
+	// ---- the wider sea: zones round the first site, each with its own water and depth (brief 08)
+	struct FZone
+	{
+		const TCHAR* Title;
+		FVector2D At;
+		float Radius;      // full look inside this, blending out to 1.6x
+		float Depth;       // metres added to the readout
+		FLinearColor Fog;
+		float FogDensity;
+		float Key;
+		FLinearColor KeyColor;
+		float Fill;
+		FLinearColor Snow;
+	};
+	TArray<FZone> Zones;
+	float ZoneDepth = 0.f;      // what the depth readout adds here
+	int32 ZoneNow = INDEX_NONE; // the zone Unit 0 is in, or none (the first site)
+	FString ZoneTitle;
+	float ZoneTitleTime = -1.f; // seconds the title card has been up; < 0 = none
+	float LookTime = 0.f;
+	void SetupZones();
+	void TickZones(float Dt);
+
 	// ---- test script
 	FVector ScriptMove = FVector::ZeroVector;
 	float ScriptMoveLeft = 0.f;

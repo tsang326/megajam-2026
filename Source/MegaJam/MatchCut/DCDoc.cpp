@@ -59,18 +59,18 @@ namespace DCSwim
 		float PulseAmp, PulseWaves, PulseRate;
 	};
 	static const FKind Kinds[] = {
-		{ TEXT(" shark goblin "), 0, 0.055f, 1.8f, 0.7f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" eel oarfish frilled gulper "), 0, 0.065f, 1.1f, 1.6f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" whale "), 1, 0.035f, 1.8f, 0.6f, 1.5f, 0.10f, 0.2f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" shark goblin hammerhead barracuda "), 0, 0.055f, 1.8f, 0.7f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" eel oarfish frilled gulper dragonfish viperfish "), 0, 0.065f, 1.1f, 1.6f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" whale dolphin "), 1, 0.035f, 1.8f, 0.6f, 1.5f, 0.10f, 0.2f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" manta stingray "), 1, 0.02f, 2.0f, 0.5f, 2.4f, 0.30f, 0.30f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" cuttle "), 0, 0.01f, 2.0f, 0.5f, 6.0f, 0.10f, 1.4f, 1.f, 0.02f, 0.6f, 0.5f },
 		{ TEXT(" seaangel "), 0, 0.02f, 1.5f, 0.6f, 5.0f, 0.30f, 0.2f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" jelly lionsmane siphon "), 2, 0.06f, 2.0f, 1.2f, 2.2f, 0.f, 0.f, 1.f, 0.07f, 0.5f, 1.f },
-		{ TEXT(" squid vampsquid octopus nautilus "), 0, 0.03f, 2.0f, 1.0f, 3.0f, 0.f, 0.f, 1.f, 0.05f, 0.7f, 1.f },
-		{ TEXT(" crab isopod lobster brittlestar "), 0, 0.f, 1.f, 1.f, 11.f, 0.10f, 0.5f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" jelly lionsmane siphon atolla "), 2, 0.06f, 2.0f, 1.2f, 2.2f, 0.f, 0.f, 1.f, 0.07f, 0.5f, 1.f },
+		{ TEXT(" squid vampsquid octopus nautilus giantsquid "), 0, 0.03f, 2.0f, 1.0f, 3.0f, 0.f, 0.f, 1.f, 0.05f, 0.7f, 1.f },
+		{ TEXT(" crab isopod lobster brittlestar yeticrab "), 0, 0.f, 1.f, 1.f, 11.f, 0.10f, 0.5f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" seapig nudibranch "), 1, 0.025f, 1.0f, 1.5f, 2.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" urchin "), 0, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" angler sunfish seahorse seadragon "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" urchin starfish "), 0, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" angler sunfish seahorse seadragon seatoad "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" turtle turtle2 giant "), 0, 0.f, 1.f, 1.f, 2.6f, 0.28f, 0.15f, 1.f, 0.f, 0.f, 1.f } };
 	static const FKind Fish = { TEXT(""), 0, 0.07f, 1.6f, 0.9f, 7.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 
@@ -172,7 +172,7 @@ AActor* FDCDoc::SpawnCreature(const TCHAR* Id, float Length, float FrontYaw, boo
 	{
 		*OutHalfHeight = B.GetSize().Z * S * 0.5;
 	}
-	if (FString(Id) == TEXT("creature:jelly") || FString(Id) == TEXT("creature:lionsmane") || FString(Id) == TEXT("creature:siphon"))
+	if (FString(Id) == TEXT("creature:jelly") || FString(Id) == TEXT("creature:lionsmane") || FString(Id) == TEXT("creature:siphon") || FString(Id) == TEXT("creature:atolla"))
 	{
 		// the bells came out like polished metal: jelly is matte. The roughness map is multiplied up until nothing glints.
 		for (int32 m = 0; m < C->GetNumMaterials(); ++m)
@@ -326,7 +326,54 @@ void FDCDoc::SpawnAmbient()
 		{ TEXT("creature:lionsmane"), 0, 2, 150.f, FVector(-900.0, -3500.0, 0.0), 1100.f, 150.f, 400.f, 700.f, 1300.f, 12.f },
 		{ TEXT("creature:nudibranch"), 1, 5, 22.f, FVector(-3200.0, 2000.0, 0.0), 1200.f, 15.f, 50.f, 0.f, 0.f, 2.f },
 		{ TEXT("creature:krill"), 0, 10, 12.f, FVector(-200.0, 1100.0, 0.0), 700.f, 60.f, 180.f, 500.f, 900.f, 30.f },
-		{ TEXT("creature:turtle2"), 0, 1, 170.f, FVector(-1700.0, -1500.0, 0.0), 400.f, 900.f, 1300.f, 800.f, 1100.f, 55.f } };
+		{ TEXT("creature:turtle2"), 0, 1, 170.f, FVector(-1700.0, -1500.0, 0.0), 400.f, 900.f, 1300.f, 800.f, 1100.f, 55.f },
+		// ---- the wider sea (brief 08): each zone its own life (centres as in FDC3D::SetupZones)
+		// the kelp forest
+		{ TEXT("creature:turtle2"), 0, 2, 170.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 900.f, 1600.f, 600.f, 1200.f, 55.f },
+		{ TEXT("creature:dolphin"), 0, 3, 260.f, FVector(-13000.0, 7500.0, 0.0), 1500.f, 1400.f, 2400.f, 900.f, 1600.f, 260.f },
+		{ TEXT("creature:parrotfish"), 0, 5, 70.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 200.f, 600.f, 150.f, 500.f, 45.f },
+		{ TEXT("creature:barracuda"), 0, 4, 150.f, FVector(-12000.0, 8500.0, 0.0), 2500.f, 600.f, 1200.f, 400.f, 900.f, 110.f },
+		{ TEXT("creature:seahorse"), 0, 6, 24.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 30.f, 90.f, 200.f, 600.f, 5.f },
+		{ TEXT("creature:seadragon"), 0, 4, 45.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 80.f, 220.f, 250.f, 600.f, 10.f },
+		{ TEXT("creature:grouper"), 0, 2, 190.f, FVector(-13500.0, 6500.0, 0.0), 2500.f, 400.f, 900.f, 200.f, 400.f, 30.f },
+		{ TEXT("creature:krill"), 0, 8, 12.f, FVector(-13000.0, 7500.0, 0.0), 3000.f, 60.f, 180.f, 400.f, 1000.f, 30.f },
+		// the wreck graveyard
+		{ TEXT("creature:hammerhead"), 0, 2, 380.f, FVector(14500.0, -3900.0, 0.0), 1500.f, 1500.f, 2400.f, 800.f, 1300.f, 120.f },
+		{ TEXT("creature:shark"), 0, 1, 400.f, FVector(14500.0, -3900.0, 0.0), 1000.f, 1800.f, 2400.f, 600.f, 900.f, 110.f },
+		{ TEXT("creature:barracuda"), 0, 4, 150.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 500.f, 1100.f, 300.f, 800.f, 110.f },
+		{ TEXT("creature:grouper"), 0, 2, 200.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 400.f, 800.f, 200.f, 400.f, 30.f },
+		{ TEXT("creature:lobster"), 1, 5, 50.f, FVector(14500.0, -3900.0, 0.0), 3500.f, 60.f, 200.f, 0.f, 0.f, 8.f },
+		{ TEXT("creature:octopus"), 0, 2, 60.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 120.f, 320.f, 300.f, 700.f, 16.f },
+		// the drowned city
+		{ TEXT("creature:sunfish"), 0, 2, 380.f, FVector(6800.0, 14500.0, 0.0), 1500.f, 1200.f, 2000.f, 900.f, 1500.f, 50.f },
+		{ TEXT("creature:stingray"), 0, 4, 190.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 400.f, 1000.f, 120.f, 220.f, 60.f },
+		{ TEXT("creature:cuttle"), 0, 3, 70.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 150.f, 350.f, 300.f, 700.f, 30.f },
+		{ TEXT("creature:coelacanth"), 0, 2, 190.f, FVector(6800.0, 14500.0, 0.0), 2500.f, 600.f, 1000.f, 300.f, 500.f, 40.f },
+		{ TEXT("creature:nautilus"), 0, 4, 60.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 150.f, 400.f, 300.f, 900.f, 25.f },
+		{ TEXT("creature:oarfish"), 0, 1, 700.f, FVector(6800.0, 14500.0, 0.0), 500.f, 2200.f, 2800.f, 1300.f, 1600.f, 90.f },
+		// the whale fall
+		{ TEXT("creature:isopod"), 1, 8, 55.f, FVector(-7500.0, -13000.0, 0.0), 3000.f, 80.f, 260.f, 0.f, 0.f, 9.f },
+		{ TEXT("creature:crab"), 1, 4, 230.f, FVector(-7500.0, -13000.0, 0.0), 3500.f, 150.f, 400.f, 0.f, 0.f, 14.f },
+		{ TEXT("creature:seapig"), 1, 8, 40.f, FVector(-7500.0, -13000.0, 0.0), 3500.f, 60.f, 200.f, 0.f, 0.f, 5.f },
+		{ TEXT("creature:hatchet"), 0, 10, 22.f, FVector(-7500.0, -13000.0, 0.0), 3000.f, 80.f, 240.f, 400.f, 1000.f, 50.f },
+		{ TEXT("creature:frilled"), 0, 1, 330.f, FVector(-7500.0, -13000.0, 0.0), 1000.f, 1200.f, 1800.f, 300.f, 500.f, 70.f },
+		// the black smokers
+		{ TEXT("creature:yeticrab"), 1, 10, 45.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 30.f, 120.f, 0.f, 0.f, 4.f },
+		{ TEXT("creature:ventshrimp"), 0, 6, 40.f, FVector(6800.0, -14500.0, 0.0), 2500.f, 60.f, 200.f, 150.f, 500.f, 12.f },
+		{ TEXT("creature:lobster"), 1, 4, 50.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 60.f, 200.f, 0.f, 0.f, 8.f },
+		{ TEXT("creature:nudibranch"), 1, 6, 22.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 15.f, 50.f, 0.f, 0.f, 2.f },
+		{ TEXT("creature:octopus"), 0, 2, 60.f, FVector(6800.0, -14500.0, 0.0), 2500.f, 120.f, 320.f, 300.f, 700.f, 16.f },
+		// the abyss
+		{ TEXT("creature:giantsquid"), 0, 1, 900.f, FVector(-5500.0, 19500.0, 0.0), 800.f, 2000.f, 2800.f, 900.f, 1400.f, 80.f },
+		{ TEXT("creature:dragonfish"), 0, 5, 50.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 30.f },
+		{ TEXT("creature:viperfish"), 0, 5, 45.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 35.f },
+		{ TEXT("creature:atolla"), 0, 6, 70.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 500.f, 1500.f, 12.f },
+		{ TEXT("creature:seatoad"), 1, 5, 40.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 40.f, 140.f, 0.f, 0.f, 3.f },
+		{ TEXT("creature:vampsquid"), 0, 3, 90.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 200.f, 500.f, 300.f, 900.f, 35.f },
+		{ TEXT("creature:gulper"), 0, 2, 170.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 400.f, 800.f, 400.f, 1000.f, 35.f },
+		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(-5500.0, 19500.0, 0.0), 1000.f, 1500.f, 2200.f, 500.f, 900.f, 75.f },
+		{ TEXT("creature:barreleye"), 0, 4, 45.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 150.f, 400.f, 400.f, 1000.f, 30.f },
+		{ TEXT("creature:siphon"), 0, 5, 60.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 100.f, 300.f, 600.f, 1500.f, 15.f } };
 	float Front = -90.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCFront="), Front);
 	float Much = 1.f; // -MCLife=0.5 halves the ambient life, 0 leaves only the shot list
@@ -641,10 +688,21 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 	}
 
 	// ---- the rest of the sea: every one a loop in time
-	for (const FAmbient& One : Ambient)
+	for (FAmbient& One : Ambient)
 	{
 		if (AActor* A = One.Actor.Get())
 		{
+			// the wider sea: what lives in a zone far off is not moved or drawn (brief 08)
+			const bool bAway = FVector::Dist2D(One.Centre, HeroPos) > FMath::Max(One.Ra, One.Rb) + 11000.0;
+			if (bAway != One.bAway)
+			{
+				One.bAway = bAway;
+				A->SetActorHiddenInGame(bAway);
+			}
+			if (bAway)
+			{
+				continue;
+			}
 			// a jet swimmer's speed swells and dies with its pulse (never backwards: the surge is less than the pace)
 			const double Th = One.Phase + One.Omega * (T + One.Surge * 0.9 * FMath::Sin(T * 1.1 + One.Phase * 5.0));
 			FVector P = One.Centre + FVector(One.Ra * FMath::Cos(Th), One.Rb * FMath::Sin(Th), One.Bob * FMath::Sin(T * 0.6 + One.Phase * 3.0));

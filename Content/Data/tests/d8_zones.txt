@@ -1,0 +1,43 @@
+# brief 08: the wider sea, one look per zone (from the side of the first site, looking in)
+wait 1.0
+tp -10228 5901 600 150 -8
+wait 2.0
+snap z1_kelp
+tp -13520 7800 350 300 -5
+wait 1.5
+snap z1_kelp_in
+tp 11410 -3069 600 -15 -8
+wait 2.0
+snap z2_wreck
+tp 15079 -4056 350 135 -5
+wait 1.5
+snap z2_wreck_in
+tp 5441 11603 600 65 -8
+wait 2.0
+snap z3_city
+tp 7055 15043 350 215 -5
+wait 1.5
+snap z3_city_in
+tp -5901 -10228 600 -120 -8
+wait 2.0
+snap z4_whalefall
+tp -7800 -13520 350 30 -5
+wait 1.5
+snap z4_whalefall_in
+tp 5441 -11603 600 -65 -8
+wait 2.0
+snap z5_smokers
+tp 7055 -15043 350 85 -5
+wait 1.5
+snap z5_smokers_in
+tp -4631 16420 600 106 -8
+wait 2.0
+snap z6_abyss
+tp -5663 20077 350 256 -5
+wait 1.5
+snap z6_abyss_in
+tp 0 0 300 0 -8
+wait 1.5
+snap z0_home
+stat
+quit
