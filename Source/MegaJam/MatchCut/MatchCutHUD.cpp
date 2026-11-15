@@ -1514,6 +1514,12 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		}
 	}
 
+	// under the moon pool: how to get in
+	if (W.bHatchAssist && D.Spot == INDEX_NONE)
+	{
+		Rect(660.f, 690.f, 600.f, 52.f, FLinearColor(0.f, 0.f, 0.f, 0.55f));
+		Text(TEXT("SPACE   MOON POOL: swim up into the base"), 960.f, 700.f, 1.4f, Amber, 1);
+	}
 	// in the base: what the control in front of the diver does
 	if (D.Spot != INDEX_NONE)
 	{

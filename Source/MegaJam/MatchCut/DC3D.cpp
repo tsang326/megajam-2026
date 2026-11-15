@@ -1483,6 +1483,27 @@ void FDC3D::Tick(float Dt)
 	const double Floor = BaseFloor();
 	const bool bInBox = FMath::Abs(Pos.X - BaseC.X) < BaseHalf.X && FMath::Abs(Pos.Y - BaseC.Y) < BaseHalf.Y && Pos.Z < BaseC.Z + BaseHalf.Z + 40.0;
 	const bool bWasDry = bDry;
+	// under the moon pool: as in a habitat's wet porch (or a game's moon pool), coming home is easy. Near the shaft and
+	// below it, swimming up (SPACE) lines the diver up with the opening and lifts them in; no hunting for a narrow hole
+	bHatchAssist = false;
+	if (!bDry)
+	{
+		const FVector2D ToHatch(HatchAt.X - Pos.X, HatchAt.Y - Pos.Y);
+		const double Below = HatchAt.Z - Pos.Z;
+		if (ToHatch.Size() < 450.0 && Below > -20.0 && Below < 900.0)
+		{
+			bHatchAssist = true;
+			if (In.Z > 0.f)
+			{
+				const double K = FMath::Min(1.0, 4.0 * Dt);
+				Pos.X += ToHatch.X * K;
+				Pos.Y += ToHatch.Y * K;
+				Vel.X *= 1.0 - K;
+				Vel.Y *= 1.0 - K;
+				Vel.Z = FMath::Max(Vel.Z, 320.0);
+			}
+		}
+	}
 	if (!bDry && bInBox && OverHatch(Pos) && Pos.Z > HatchAt.Z - 70.0 && (Vel.Z > 0.0 || In.Z > 0.f))
 	{
 		// up through the surface: the hands on the rim, out onto the deck

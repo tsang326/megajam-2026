@@ -276,3 +276,4 @@ The Lamp Widow	Góa Phụ Đèn
 The Warden	Kẻ Canh Ngục
 THE LEVIATHAN	THỦY QUÁI LEVIATHAN
 Restore defaults	Khôi phục mặc định
+SPACE   MOON POOL: swim up into the base	SPACE   GIẾNG LẶN: bơi lên để vào căn cứ

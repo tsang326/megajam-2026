@@ -99,6 +99,7 @@ struct FDC3D
 	FVector HatchAt = FVector::ZeroVector; // the middle of the hatch, at the water's surface
 	double HatchHalf = 150.0;
 	bool bDry = false;   // the diver stands in the air of the base
+	bool bHatchAssist = false; // under the moon pool, close enough that SPACE lifts the diver in
 	float DryAmt = 0.f;  // 0 water .. 1 air, eased: the look
 	double BaseFloor() const { return BaseC.Z - BaseHalf.Z; }
 	bool OverHatch(const FVector& P, double Margin = 0.0) const { return FMath::Abs(P.X - HatchAt.X) < HatchHalf - Margin && FMath::Abs(P.Y - HatchAt.Y) < HatchHalf - Margin; }
