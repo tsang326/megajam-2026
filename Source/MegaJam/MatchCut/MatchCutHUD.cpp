@@ -1434,7 +1434,7 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		Text(TEXT("AIR"), 1476.f, 118.f, 1.2f, Fade(bLow ? Red : Dim, Blink));
 		Rect(1530.f, 126.f, 306.f, 10.f, FLinearColor(1.f, 1.f, 1.f, 0.15f));
 		Rect(1530.f, 126.f, 306.f * P, 10.f, Fade(bLow ? Red : P < 0.5f ? Amber : Green, Blink));
-		Text(FString::Printf(TEXT("%d s"), FMath::CeilToInt(D.O2 / ((W.bBoost ? 2.f : 1.f) * (D.bOverDepth ? 5.f : 1.f)))), 1836.f, 146.f, 1.1f, Dim, 2);
+		Text(FString::Printf(TEXT("%d s"), FMath::CeilToInt(D.O2 / ((W.bBoost ? 1.25f : 1.f) * (D.bOverDepth ? 5.f : 1.f)))), 1836.f, 146.f, 1.1f, Dim, 2);
 	}
 	if (W.ZoneTitleTime >= 0.f && !W.ZoneTitle.IsEmpty())
 	{

@@ -64,7 +64,8 @@ struct FDCTutorial
 {
 	static constexpr int32 NumSteps = 10;
 	bool Done[NumSteps] = {};
-	int32 Step = 0;          // the first step not done; NumSteps when all are
+	int32 Step = 0;          // the first step not done that can be done right now; NumSteps when all are
+	bool bWaiting = false;   // steps are left but none can be done where the player is: no card
 	float Flash = 0.f;       // a step was just done: the tick shows
 	int32 FlashStep = -1;
 	float Looked = 0.f;      // degrees turned

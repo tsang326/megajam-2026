@@ -72,7 +72,7 @@ namespace DCCar
 	static const TCHAR* GearNames[DCGear::Num] = { TEXT("AIR TANK"), TEXT("HULL RATING"), TEXT("HEADLAMP"), TEXT("LONG LENS"), TEXT("THRUSTER"), TEXT("TAPE") };
 	static const int32 Levels[DCGear::Num] = { 3, 4, 2, 2, 3, 3 };
 	static const int32 Costs[DCGear::Num][4] = { { 0, 300, 800, 0 }, { 0, 500, 1200, 2500 }, { 0, 250, 0, 0 }, { 0, 350, 0, 0 }, { 0, 400, 900, 0 }, { 0, 200, 600, 0 } };
-	static const float TankAir[3] = { 150.f, 240.f, 360.f };
+	static const float TankAir[3] = { 210.f, 330.f, 480.f };
 	static const float HullDepth[4] = { 150.f, 250.f, 350.f, 520.f };
 	static const int32 TapeClips[3] = { 6, 10, 16 };
 	static const float Speed[3] = { 1.f, 1.2f, 1.4f };
@@ -376,7 +376,7 @@ void FDCDoc::TickDive(float Dt)
 	}
 	else
 	{
-		const float Rate = (W->bBoost ? 2.f : 1.f) * (bOverDepth ? 5.f : 1.f);
+		const float Rate = (W->bBoost ? 1.25f : 1.f) * (bOverDepth ? 5.f : 1.f);
 		const float Before = O2;
 		O2 -= Rate * Dt;
 		if (bOverDepth && AlertTime <= 0.f)
@@ -722,6 +722,13 @@ void FDC3D::BuildBase()
 	Shell.Add(Block(C + FVector(0.0, 0.0, H.Z + T * 0.5), FRotator::ZeroRotator, FVector(2.0 * H.X, 2.0 * H.Y, T), CeilC));
 	if (bKit)
 	{
+		// a dark deck under the tiles (the collision slabs are hidden): a seam between tiles shows steel, never the sea
+		for (int32 i = 0; i < 4; ++i)
+		{
+			const FBox SB = Shell[i]->GetComponentsBoundingBox();
+			AActor* Under = GM->SpawnGroup(FVector(SB.GetCenter().X, SB.GetCenter().Y, FloorTop - 12.0));
+			GM->AddPart(Under, GM->CubeMesh, FVector::ZeroVector, FRotator::ZeroRotator, FVector(SB.GetSize().X, SB.GetSize().Y, 4.0) / 100.0, FLinearColor(0.05f, 0.05f, 0.055f), FLinearColor::Black);
+		}
 		for (int32 ix = 0; ix < 12; ++ix)
 		{
 			for (int32 iy = 0; iy < 8; ++iy)
@@ -732,7 +739,7 @@ void FDC3D::BuildBase()
 					continue; // the hatch
 				}
 				const uint32 Hash = (uint32)(ix * 7 + iy * 13);
-				Kit(Pick(TEXT("scene:afloor"), TEXT("scene:floortile")), FVector(X, Y, FloorTop - 7.0), FRotator(0.f, (Hash % 2) * 180.f, 0.f), FVector(TileX + 1.0, TileY + 1.0, 14.0));
+				Kit(Pick(TEXT("scene:afloor"), TEXT("scene:floortile")), FVector(X, Y, FloorTop - 7.0), FRotator(0.f, (Hash % 2) * 180.f, 0.f), FVector(TileX * (bA ? 1.04 : 1.0) + 1.0, TileY * (bA ? 1.04 : 1.0) + 1.0, 14.0)); // set A's tile: a cable off one corner makes its plate ~3% under its box
 				if (bA && KitMesh(TEXT("scene:aceiling")))
 				{
 					// set A's panel lies flat with its lit face up: turned over to face down
@@ -790,8 +797,19 @@ void FDC3D::BuildBase()
 				const FVector At = bAlongX ? FVector(Mid, Fixed, C.Z) : FVector(Fixed, Mid, C.Z);
 				const TCHAR* DoorId = Pick(TEXT("scene:adoor"), TEXT("scene:bulkhead"));
 				const TCHAR* WinId = Pick(TEXT("scene:awindow"), TEXT("scene:wallwindow"));
-				const TCHAR* Id = bDoor && i == N / 2 && KitMesh(DoorId) ? DoorId : bPort && KitMesh(WinId) ? WinId : Pick(TEXT("scene:awall"), TEXT("scene:wallpanel"));
+				// set A's window model is only the round porthole (no panel round it): a whole wall panel goes there, the
+				// porthole at its real size on its face, so nothing is open to the sea round the ring
+				const bool bRingWin = bA && bPort && !(bDoor && i == N / 2) && KitMesh(TEXT("scene:awindow"));
+				const TCHAR* Id = bDoor && i == N / 2 && KitMesh(DoorId) ? DoorId : bPort && KitMesh(WinId) && !bRingWin ? WinId : Pick(TEXT("scene:awall"), TEXT("scene:wallpanel"));
 				Kit(Id, At, FRotator(0.f, Yaw, 0.f), FVector(W + 1.0, T + 6.0, 2.0 * H.Z + 2.0));
+				if (bRingWin)
+				{
+					float PortD = 120.f;
+					FParse::Value(FCommandLine::Get(), TEXT("-MCPortD="), PortD);
+					const double Out = InSide * ((T + 6.0) * 0.5 + 6.0);
+					const FVector RingAt = (bAlongX ? FVector(Mid, Fixed + Out, 0.0) : FVector(Fixed + Out, Mid, 0.0)) + FVector(0.0, 0.0, FloorTop + 160.0);
+					Kit(TEXT("scene:awindow"), RingAt, FRotator(0.f, Yaw, 0.f), FVector(PortD, 12.0, PortD));
+				}
 			}
 			const FVector Strip = bAlongX ? FVector((A0 + A1) * 0.5, Fixed + InSide * (T * 0.5 + 8.0), CeilZ - 14.0) : FVector(Fixed + InSide * (T * 0.5 + 8.0), (A0 + A1) * 0.5, CeilZ - 14.0);
 			LightPanel(Strip, bAlongX ? FVector(A1 - A0 - 40.0, 5.0, 4.0) : FVector(5.0, A1 - A0 - 40.0, 4.0), StripC);

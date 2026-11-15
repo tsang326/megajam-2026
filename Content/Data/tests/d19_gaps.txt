@@ -1,0 +1,16 @@
+# set A: the windows sit on whole panels, no open corners; floor seams show the dark deck
+wait 1.5
+snap h0_start
+tp 1342 -1250 1130 -90 -15
+wait 0.8
+snap h1_window
+tp 1342 -1300 1130 -90 -55
+wait 0.5
+snap h2_window_low
+tp 1600 -1350 1130 -60 -60
+wait 0.5
+snap h3_floor_seams
+tp 1500 -1150 1130 90 -10
+wait 0.5
+snap h4_other_side
+quit

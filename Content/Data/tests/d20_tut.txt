@@ -1,0 +1,21 @@
+# the tutorial shows a card only when it can be done right there: back home with an empty tape, no UPLOAD card
+tut on
+wait 1.0
+look3 120 -5
+wait 0.5
+key3 1 0 0 1.5
+wait 0.5
+use 3
+back
+wait 0.3
+snap t1_home
+tp 1760 -1150 1105 0 -40
+key3 1 0 0 1.2
+wait 1.5
+snap t2_in_water
+tp 2000 -1150 780 0 30
+wait 0.3
+key3 0 0 1 1.5
+wait 1.0
+snap t3_back_empty
+quit

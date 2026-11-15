@@ -35,7 +35,7 @@ FDCTutorial& DCTutorial()
 
 bool FDCTutorial::IsActive() const
 {
-	return bRunning && DCSettings().bTutorial && Step < NumSteps && !DCMenu().IsOpen();
+	return bRunning && DCSettings().bTutorial && Step < NumSteps && !bWaiting && !DCMenu().IsOpen();
 }
 
 void FDCTutorial::Card(int32 S, FString& Head, FString& Body)
@@ -46,7 +46,7 @@ void FDCTutorial::Card(int32 S, FString& Head, FString& Body)
 		TEXT("Move the mouse to look. No mouse: the arrow keys."),
 		TEXT("W A S D to walk. SHIFT to run."),
 		TEXT("The board by the table lists what to film. Look at it and press E."),
-		TEXT("Walk into the moon pool, the yellow ring in the floor, to dive."),
+		TEXT("Walk into the moon pool, the railed opening in the floor, to dive."),
 		TEXT("SPACE up, Q down, SHIFT fast. Watch the AIR bar at the top."),
 		TEXT("Hold RIGHT MOUSE to raise the camera (or press C)."),
 		TEXT("LEFT MOUSE or E to record. Keep the subject in the frame."),
@@ -96,14 +96,16 @@ void FDCTutorial::Tick(FDC3D& W, float Dt)
 	Now[7] = bOut && W.bDry && D.bInBase;
 	Now[8] = D.bUploadedToday || D.Day > 1;
 	Now[9] = D.Day > 1;
-	// a step done marks the ones before it done too: the player may skip ahead
+	// a step done marks the ones before it in its group done too (moving 0-4, filming 5-6, the day's end 7-9): swimming
+	// means the player walked, but coming home does not mean they filmed anything
+	const int32 GroupStart[NumSteps] = { 0, 0, 0, 0, 0, 5, 5, 7, 7, 7 };
 	for (int32 s = NumSteps - 1; s >= 0; --s)
 	{
 		if (Now[s] && !Done[s])
 		{
-			for (int32 e = 0; e <= s; ++e)
+			for (int32 e = GroupStart[s]; e <= s; ++e)
 			{
-				if (!Done[e] && e == Step)
+				if (!Done[e] && e == Step && !bWaiting)
 				{
 					Flash = 1.2f;
 					FlashStep = e;
@@ -113,20 +115,50 @@ void FDCTutorial::Tick(FDC3D& W, float Dt)
 			break;
 		}
 	}
+	// a card shows only when the player can do it where they are now (the user's rule): the first step not done that
+	// can be done here; none, and no card
+	const bool bHome = W.bDry && D.bInBase;
+	const bool bTape = D.Takes.Num() > 0;
+	bool Can[NumSteps];
+	Can[0] = true;
+	Can[1] = W.bDry;
+	Can[2] = bHome;
+	Can[3] = bHome;
+	Can[4] = !W.bDry;
+	Can[5] = !W.bDry;
+	Can[6] = !W.bDry;
+	Can[7] = !W.bDry && bTape;
+	Can[8] = bHome && bTape && !D.bUploadedToday;
+	Can[9] = bHome && D.bUploadedToday;
 	const int32 Was = Step;
-	Step = 0;
-	while (Step < NumSteps && Done[Step])
+	const bool bWasWaiting = bWaiting;
+	Step = NumSteps;
+	for (int32 s = 0; s < NumSteps; ++s)
 	{
-		++Step;
+		if (!Done[s] && Can[s])
+		{
+			Step = s;
+			break;
+		}
 	}
-	if (Step != Was)
+	bool bLeft = false;
+	for (int32 s = 0; s < NumSteps; ++s)
+	{
+		bLeft |= !Done[s];
+	}
+	bWaiting = bLeft && Step == NumSteps;
+	if (bWaiting)
+	{
+		Step = Was; // keep the last card's number for the count; nothing is drawn
+	}
+	if (Step != Was || bWaiting != bWasWaiting)
 	{
 		Shown = 0.f;
 		if (W.GM && W.GM->GetAudio())
 		{
 			W.GM->GetAudio()->Play(TEXT("ui_select"), 0.6f, 1.2f);
 		}
-		UE_LOG(LogMatchCut, Display, TEXT("TUTORIAL step %d -> %d"), Was, Step);
+		UE_LOG(LogMatchCut, Display, TEXT("TUTORIAL step %d -> %d%s"), Was, Step, bWaiting ? TEXT(" (waiting: nothing to do here)") : TEXT(""));
 	}
 	Shown += Dt;
 }

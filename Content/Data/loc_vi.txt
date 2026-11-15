@@ -70,7 +70,7 @@ GEAR AND SLEEP	MUA ĐỒ VÀ NGỦ
 Move the mouse to look. No mouse: the arrow keys.	Di chuột để nhìn. Không có chuột: dùng phím mũi tên.
 W A S D to walk. SHIFT to run.	W A S D để đi. SHIFT để chạy.
 The board by the table lists what to film. Look at it and press E.	Tấm bảng cạnh bàn ghi những thứ cần quay. Nhìn vào nó và bấm E.
-Walk into the moon pool, the yellow ring in the floor, to dive.	Bước vào giếng lặn, vòng vàng dưới sàn, để lặn xuống.
+Walk into the moon pool, the railed opening in the floor, to dive.	Bước vào giếng lặn, ô có lan can dưới sàn, để lặn xuống.
 SPACE up, Q down, SHIFT fast. Watch the AIR bar at the top.	SPACE lên, Q xuống, SHIFT bơi nhanh. Để ý thanh KHÍ ở trên.
 Hold RIGHT MOUSE to raise the camera (or press C).	Giữ CHUỘT PHẢI để giơ máy quay (hoặc bấm C).
 LEFT MOUSE or E to record. Keep the subject in the frame.	CHUỘT TRÁI hoặc E để quay. Giữ đối tượng trong khung hình.
