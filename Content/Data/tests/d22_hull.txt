@@ -1,0 +1,15 @@
+# the base seen from the sea: four sides and from below
+wait 1.5
+tp 1150 -3300 1150 90 0
+wait 0.8
+snap x1_side_south
+tp 3900 -1150 1300 180 -5
+wait 0.6
+snap x2_end_east
+tp -1700 -2600 1500 35 -10
+wait 0.6
+snap x3_corner_high
+tp 2300 -1750 450 125 22
+wait 0.6
+snap x4_below
+quit

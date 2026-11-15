@@ -912,7 +912,7 @@ void FDC3D::BuildBase()
 		{
 			const FVector Off = i < 2 ? FVector(0.0, (i ? 1.0 : -1.0) * (HoleY + 10.0), 0.0) : FVector((i == 3 ? 1.0 : -1.0) * (HoleX + 10.0), 0.0, 0.0);
 			const FVector Side = i < 2 ? FVector(2.0 * HoleX + 40.0, 20.0, 230.0) : FVector(20.0, 2.0 * HoleY + 40.0, 230.0);
-			Block(Hatch + Off - FVector(0.0, 0.0, 130.0), FRotator::ZeroRotator, Side, FrameC);
+			Block(Hatch + Off - FVector(0.0, 0.0, 130.0), FRotator::ZeroRotator, Side, bA ? FLinearColor(0.42f, 0.43f, 0.44f) : FrameC); // set A: the trunk in the hull's grey
 		}
 	}
 	if (bKit && !bA && KitMesh(TEXT("scene:moonring")))
@@ -941,17 +941,31 @@ void FDC3D::BuildBase()
 		Block(FVector(Hatch.X, Hatch.Y + HW + 30.0, FloorTop + 104.0), FRotator::ZeroRotator, FVector(2.0 * HW + 68.0, 8.0, 6.0), Paint);
 	}
 	Glow(Hatch - FVector(0.0, 0.0, 160.0), FLinearColor(0.35f, 0.8f, 1.f), 5000.f, 1400.f);
+	// set A outside: a habitat module (scene:ahull, a long rounded hull with portholes) wraps the room (scene:ahull, a long rounded hull with portholes),
+	// standing on steel legs (scene:aleg). Only seen from the sea; the room's walls hide them from inside
+	const bool bHull = bA && KitMesh(TEXT("scene:ahull")) && !FParse::Param(FCommandLine::Get(), TEXT("MCNoHull"));
+	const double HullBot = FloorTop - 80.0, HullTop = CeilZ + T + 90.0, HullHalfX = H.X + T + 130.0, HullW = H.Y + T + 130.0;
+	if (bHull)
+	{
+		// one module round the whole room (two side by side would each put an inner wall down the middle of the room)
+		Kit(TEXT("scene:ahull"), FVector(C.X, C.Y, (HullBot + HullTop) * 0.5), FRotator::ZeroRotator, FVector(2.0 * HullHalfX, 2.0 * HullW, HullTop - HullBot));
+	}
 	// the legs down to the sand
 	for (int32 i = 0; i < 6; ++i)
 	{
 		const FVector Leg(C.X + (i % 3 - 1) * (H.X - 80.0), C.Y + (i / 3 ? 1.0 : -1.0) * (H.Y - 80.0), 0.0);
-		const double Top = FloorZ - T * 0.5, Bot = Terrain(Leg.X, Leg.Y) - 40.0;
-		Block(FVector(Leg.X, Leg.Y, (Top + Bot) * 0.5), FRotator::ZeroRotator, FVector(60.0, 60.0, Top - Bot), FrameC);
+		const double Top = bHull ? HullBot + 20.0 : FloorZ - T * 0.5, Bot = Terrain(Leg.X, Leg.Y) - 40.0;
+		AActor* LegBox = Block(FVector(Leg.X, Leg.Y, (Top + Bot) * 0.5), FRotator::ZeroRotator, FVector(60.0, 60.0, Top - Bot), FrameC);
+		if (bHull && KitMesh(TEXT("scene:aleg")) && Kit(TEXT("scene:aleg"), FVector(Leg.X, Leg.Y, (Top + Bot) * 0.5), FRotator::ZeroRotator, FVector(110.0, 110.0, Top - Bot)))
+		{
+			Shell.Add(LegBox);
+		}
 	}
 	// running lights on the hull so home can be found from out in the dark
 	for (int32 i = 0; i < 4; ++i)
 	{
-		const FVector At(C.X + (i % 2 ? 1.0 : -1.0) * (H.X + T + 8.0), C.Y + (i / 2 ? 1.0 : -1.0) * (H.Y * 0.6), CeilZ - 20.0);
+		const FVector At = bHull ? FVector(C.X + (i % 2 ? 1.0 : -1.0) * (HullHalfX + 10.0), C.Y + (i / 2 ? 1.0 : -1.0) * (HullW * 0.6), HullTop - 60.0)
+			: FVector(C.X + (i % 2 ? 1.0 : -1.0) * (H.X + T + 8.0), C.Y + (i / 2 ? 1.0 : -1.0) * (H.Y * 0.6), CeilZ - 20.0);
 		LightPanel(At, FVector(14.0, 14.0, 14.0), FLinearColor(6.f, 3.5f, 0.6f));
 	}
 

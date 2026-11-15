@@ -2164,5 +2164,33 @@
    ],
    "emissive": "none"
   }
+ ],
+ "scene:ahull": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_ahull/scene_ahull/StaticMeshes/scene_ahull.scene_ahull",
+   "yaw": 0,
+   "file": "scene_ahull.glb",
+   "triangles": 7138,
+   "sizeCm": [
+    190,
+    69,
+    54
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:aleg": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_aleg/scene_aleg/StaticMeshes/scene_aleg.scene_aleg",
+   "yaw": 0,
+   "file": "scene_aleg.glb",
+   "triangles": 4430,
+   "sizeCm": [
+    57,
+    57,
+    190
+   ],
+   "emissive": "none"
+  }
  ]
 }
