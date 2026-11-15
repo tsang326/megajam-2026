@@ -690,7 +690,13 @@ void FDC3D::BuildBase()
 		Part->SetRelativeLocation(-B.GetCenter() * S);
 		return true;
 	};
-	const bool bKit = KitMesh(TEXT("scene:wallpanel")) && KitMesh(TEXT("scene:floortile")) && !FParse::Param(FCommandLine::Get(), TEXT("MCNoKit"));
+	// set A (scene:awall ...: the bright research-station look the user picked) wins over the first kit when it is there
+	const bool bA = KitMesh(TEXT("scene:awall")) && KitMesh(TEXT("scene:afloor")) && !FParse::Param(FCommandLine::Get(), TEXT("MCOldKit"));
+	const bool bKit = (bA || (KitMesh(TEXT("scene:wallpanel")) && KitMesh(TEXT("scene:floortile")))) && !FParse::Param(FCommandLine::Get(), TEXT("MCNoKit"));
+	auto Pick = [&](const TCHAR* IdA, const TCHAR* IdOld) -> const TCHAR* { return bA && KitMesh(IdA) ? IdA : IdOld; };
+	// warm white in set A, the old cold blue otherwise
+	const FLinearColor StripC = bA ? FLinearColor(3.2f, 2.9f, 2.4f) : FLinearColor(1.6f, 2.6f, 3.2f);
+	const FLinearColor CeilLightC = bA ? FLinearColor(3.6f, 3.3f, 2.8f) : FLinearColor(3.f, 3.2f, 3.4f);
 	// which way the kit's panels face (their decorated side), checked on snapshots; flags to flip them for a test
 	float KitFront = 1.f, CeilFront = 1.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCKitFront="), KitFront);
@@ -726,9 +732,22 @@ void FDC3D::BuildBase()
 					continue; // the hatch
 				}
 				const uint32 Hash = (uint32)(ix * 7 + iy * 13);
-				Kit(TEXT("scene:floortile"), FVector(X, Y, FloorTop - 7.0), FRotator(0.f, (Hash % 2) * 180.f, 0.f), FVector(TileX + 1.0, TileY + 1.0, 14.0));
-				// the ceiling: the panel stands up in its file, its fitted side toward its +y; laid flat facing down
-				Kit(TEXT("scene:ceilingpanel"), FVector(X, Y, CeilZ + 7.0), FRotator(0.f, 0.f, -90.f * CeilFront), FVector(TileX + 1.0, 14.0, TileY + 1.0));
+				Kit(Pick(TEXT("scene:afloor"), TEXT("scene:floortile")), FVector(X, Y, FloorTop - 7.0), FRotator(0.f, (Hash % 2) * 180.f, 0.f), FVector(TileX + 1.0, TileY + 1.0, 14.0));
+				if (bA && KitMesh(TEXT("scene:aceiling")))
+				{
+					// set A's panel lies flat with its lit face up: turned over to face down
+					Kit(TEXT("scene:aceiling"), FVector(X, Y, CeilZ + 7.0), FRotator(0.f, 0.f, CeilFront > 0.f ? 180.f : 0.f), FVector(TileX + 1.0, TileY + 1.0, 14.0));
+					// each panel's diffuser glows (the model's own light is only painted on)
+					if ((ix + iy) % 2 == 0)
+					{
+						LightPanel(FVector(X, Y, CeilZ - 1.5), FVector(TileX * 0.55, TileY * 0.55, 2.0), FLinearColor(2.4f, 2.2f, 1.85f));
+					}
+				}
+				else
+				{
+					// the ceiling: the panel stands up in its file, its fitted side toward its +y; laid flat facing down
+					Kit(TEXT("scene:ceilingpanel"), FVector(X, Y, CeilZ + 7.0), FRotator(0.f, 0.f, -90.f * CeilFront), FVector(TileX + 1.0, 14.0, TileY + 1.0));
+				}
 			}
 		}
 	}
@@ -769,11 +788,13 @@ void FDC3D::BuildBase()
 					bPort |= FMath::Abs(Port.X - Mid) < W * 0.5;
 				}
 				const FVector At = bAlongX ? FVector(Mid, Fixed, C.Z) : FVector(Fixed, Mid, C.Z);
-				const TCHAR* Id = bDoor && i == N / 2 && KitMesh(TEXT("scene:bulkhead")) ? TEXT("scene:bulkhead") : bPort && KitMesh(TEXT("scene:wallwindow")) ? TEXT("scene:wallwindow") : TEXT("scene:wallpanel");
+				const TCHAR* DoorId = Pick(TEXT("scene:adoor"), TEXT("scene:bulkhead"));
+				const TCHAR* WinId = Pick(TEXT("scene:awindow"), TEXT("scene:wallwindow"));
+				const TCHAR* Id = bDoor && i == N / 2 && KitMesh(DoorId) ? DoorId : bPort && KitMesh(WinId) ? WinId : Pick(TEXT("scene:awall"), TEXT("scene:wallpanel"));
 				Kit(Id, At, FRotator(0.f, Yaw, 0.f), FVector(W + 1.0, T + 6.0, 2.0 * H.Z + 2.0));
 			}
 			const FVector Strip = bAlongX ? FVector((A0 + A1) * 0.5, Fixed + InSide * (T * 0.5 + 8.0), CeilZ - 14.0) : FVector(Fixed + InSide * (T * 0.5 + 8.0), (A0 + A1) * 0.5, CeilZ - 14.0);
-			LightPanel(Strip, bAlongX ? FVector(A1 - A0 - 40.0, 5.0, 4.0) : FVector(5.0, A1 - A0 - 40.0, 4.0), FLinearColor(1.6f, 2.6f, 3.2f));
+			LightPanel(Strip, bAlongX ? FVector(A1 - A0 - 40.0, 5.0, 4.0) : FVector(5.0, A1 - A0 - 40.0, 4.0), StripC);
 			return;
 		}
 		double From = A0;
@@ -801,7 +822,7 @@ void FDC3D::BuildBase()
 		const double In = Fixed + InSide * (T * 0.5 + 3.0);
 		WallPiece(bAlongX, In, A0, A1, FloorTop, FloorTop + 22.0, FrameC, 6.0);
 		const FVector Strip = bAlongX ? FVector((A0 + A1) * 0.5, Fixed + InSide * (T * 0.5 + 6.0), CeilZ - 14.0) : FVector(Fixed + InSide * (T * 0.5 + 6.0), (A0 + A1) * 0.5, CeilZ - 14.0);
-		LightPanel(Strip, bAlongX ? FVector(A1 - A0 - 40.0, 6.0, 5.0) : FVector(6.0, A1 - A0 - 40.0, 5.0), FLinearColor(1.6f, 2.6f, 3.2f));
+		LightPanel(Strip, bAlongX ? FVector(A1 - A0 - 40.0, 6.0, 5.0) : FVector(6.0, A1 - A0 - 40.0, 5.0), StripC);
 	};
 	const double Bay = 2.0 * H.X / 6.0; // six bays between the frame ribs
 	const TArray<FVector2D> SidePorts = { FVector2D(C.X + Bay * 0.5, 130.0), FVector2D(C.X + Bay * 1.5, 130.0) };
@@ -814,6 +835,10 @@ void FDC3D::BuildBase()
 	for (int32 i = 1; i < 6; ++i)
 	{
 		const double X = C.X - H.X + Bay * i;
+		if (bKit && bA)
+		{
+			continue; // set A's panels carry their own frames
+		}
 		if (bKit)
 		{
 			// pipe runs up the long walls between the panels
@@ -832,9 +857,12 @@ void FDC3D::BuildBase()
 	for (int32 i = 0; i < 6; ++i)
 	{
 		const double X = C.X - H.X + Bay * (i + 0.5);
-		LightPanel(FVector(X, C.Y - 160.0, CeilZ - 3.0), FVector(150.0, 50.0, 4.0), FLinearColor(3.f, 3.2f, 3.4f));
-		LightPanel(FVector(X, C.Y + 160.0, CeilZ - 3.0), FVector(150.0, 50.0, 4.0), FLinearColor(3.f, 3.2f, 3.4f));
-		if (UPointLightComponent* Room = Glow(FVector(X, C.Y, CeilZ - 50.0), FLinearColor(0.86f, 0.93f, 1.f), 7.f, 1150.f))
+		if (!bA)
+		{
+			LightPanel(FVector(X, C.Y - 160.0, CeilZ - 3.0), FVector(150.0, 50.0, 4.0), CeilLightC);
+			LightPanel(FVector(X, C.Y + 160.0, CeilZ - 3.0), FVector(150.0, 50.0, 4.0), CeilLightC);
+		}
+		if (UPointLightComponent* Room = Glow(FVector(X, C.Y, CeilZ - 50.0), bA ? FLinearColor(1.f, 0.93f, 0.82f) : FLinearColor(0.86f, 0.93f, 1.f), bA ? 8.5f : 7.f, 1150.f))
 		{
 			// a soft room light that reaches the walls (the engine's true falloff leaves the corners black)
 			Room->bUseInverseSquaredFalloff = false;
@@ -845,33 +873,50 @@ void FDC3D::BuildBase()
 	}
 
 	// the moon pool: a lit shaft down through the floor, a yellow rim, a rail on three sides (the -x side is the way in)
-	if (bKit && KitMesh(TEXT("scene:moonring")))
+	const bool bRing = bKit && (KitMesh(TEXT("scene:moonring")) || (bA && KitMesh(TEXT("scene:apoolrail"))));
+	if (bKit && bA && KitMesh(TEXT("scene:apoolrail")))
 	{
-		// the ring's deck sits at about 0.74 of its height (its ladder hangs below): that height goes at the floor
-		const double RingH = 340.0;
-		Kit(TEXT("scene:moonring"), FVector(Hatch.X, Hatch.Y, FloorTop - 0.74 * RingH + RingH * 0.5), FRotator(0.f, 90.f, 0.f), FVector(2.0 * HoleY + 30.0, 2.0 * HoleX + 30.0, RingH));
+		// set A: a rim slab with a rail on three sides, sitting on the floor; its opening is about PoolHole of its width
+		float PoolHole = 0.5f;
+		FParse::Value(FCommandLine::Get(), TEXT("-MCPoolHole="), PoolHole);
+		float PoolYaw = 0.f;
+		FParse::Value(FCommandLine::Get(), TEXT("-MCPoolYaw="), PoolYaw);
+		// the model: a shaft below, the rim slab's top at 0.75 of its height, a low rail above; scaled by its width
+		const UStaticMesh* PoolM = KitMesh(TEXT("scene:apoolrail"));
+		const FVector Raw = PoolM->GetBoundingBox().GetSize();
+		const double Wide = 2.0 * FMath::Max(HoleX, HoleY) / PoolHole;
+		const double PoolH = Raw.Z * Wide / FMath::Max(1.0, FMath::Max(Raw.X, Raw.Y));
+		Kit(TEXT("scene:apoolrail"), FVector(Hatch.X, Hatch.Y, FloorTop + 1.0 - 0.75 * PoolH + PoolH * 0.5), FRotator(0.f, PoolYaw, 0.f), FVector(2.0 * HoleX / PoolHole, 2.0 * HoleY / PoolHole, PoolH));
+	}
+	if (bRing)
+	{
 		for (int32 i = 0; i < 4; ++i)
 		{
-			// the shaft walls under the floor
 			const FVector Off = i < 2 ? FVector(0.0, (i ? 1.0 : -1.0) * (HoleY + 10.0), 0.0) : FVector((i == 3 ? 1.0 : -1.0) * (HoleX + 10.0), 0.0, 0.0);
 			const FVector Side = i < 2 ? FVector(2.0 * HoleX + 40.0, 20.0, 230.0) : FVector(20.0, 2.0 * HoleY + 40.0, 230.0);
 			Block(Hatch + Off - FVector(0.0, 0.0, 130.0), FRotator::ZeroRotator, Side, FrameC);
 		}
 	}
-	for (int32 i = 0; i < 4 && !(bKit && KitMesh(TEXT("scene:moonring"))); ++i)
+	if (bKit && !bA && KitMesh(TEXT("scene:moonring")))
+	{
+		// the ring's deck sits at about 0.74 of its height (its ladder hangs below): that height goes at the floor
+		const double RingH = 340.0;
+		Kit(TEXT("scene:moonring"), FVector(Hatch.X, Hatch.Y, FloorTop - 0.74 * RingH + RingH * 0.5), FRotator(0.f, 90.f, 0.f), FVector(2.0 * HoleY + 30.0, 2.0 * HoleX + 30.0, RingH));
+	}
+	for (int32 i = 0; i < 4 && !bRing; ++i)
 	{
 		const FVector Off = i < 2 ? FVector(0.0, (i ? 1.0 : -1.0) * (HW + 10.0), 0.0) : FVector((i == 3 ? 1.0 : -1.0) * (HW + 10.0), 0.0, 0.0);
 		const FVector Side = i < 2 ? FVector(2.0 * HW + 40.0, 20.0, 0.0) : FVector(20.0, 2.0 * HW + 40.0, 0.0);
 		Block(Hatch + Off + FVector(0.0, 0.0, 5.0), FRotator::ZeroRotator, Side + FVector(0.0, 0.0, 10.0), Paint);
 		Block(Hatch + Off - FVector(0.0, 0.0, 130.0), FRotator::ZeroRotator, Side + FVector(0.0, 0.0, 230.0), FrameC);
 	}
-	for (int32 i = 0; i < 6 && !(bKit && KitMesh(TEXT("scene:moonring"))); ++i)
+	for (int32 i = 0; i < 6 && !bRing; ++i)
 	{
 		const double PX = i < 2 ? Hatch.X + HW + 30.0 : Hatch.X + (i % 2 ? HW + 30.0 : -HW - 30.0);
 		const double PY = i < 2 ? Hatch.Y + (i ? 1.0 : -1.0) * (HW + 30.0) : Hatch.Y + (i < 4 ? -1.0 : 1.0) * (HW + 30.0);
 		Block(FVector(PX, PY, FloorTop + 52.0), FRotator::ZeroRotator, FVector(8.0, 8.0, 104.0), Paint);
 	}
-	if (!(bKit && KitMesh(TEXT("scene:moonring"))))
+	if (!bRing)
 	{
 		Block(FVector(Hatch.X + HW + 30.0, Hatch.Y, FloorTop + 104.0), FRotator::ZeroRotator, FVector(8.0, 2.0 * HW + 68.0, 6.0), Paint);
 		Block(FVector(Hatch.X, Hatch.Y - HW - 30.0, FloorTop + 104.0), FRotator::ZeroRotator, FVector(2.0 * HW + 68.0, 8.0, 6.0), Paint);
@@ -893,7 +938,15 @@ void FDC3D::BuildBase()
 	}
 
 	// a plotting table in the middle: the sea floor drawn in light
-	if (bKit && Kit(TEXT("scene:console"), FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator(0.f, 0.f, 0.f), FVector(210.0, 150.0, 100.0)))
+	float MapYaw = 0.f;
+	FParse::Value(FCommandLine::Get(), TEXT("-MCMapYaw="), MapYaw);
+	const UStaticMesh* MapM = bA ? KitMesh(TEXT("scene:amaptable")) : nullptr;
+	if (MapM && Place(TEXT("scene:amaptable"), 0, FVector(C.X + 120.0, C.Y, FloorTop), FRotator(0.f, MapYaw, 0.f), (float)(105.0 / FMath::Max(1.0, MapM->GetBoundingBox().GetSize().Z)), false))
+	{
+		const FVector MS = MapM->GetBoundingBox().GetSize() * (105.0 / FMath::Max(1.0, MapM->GetBoundingBox().GetSize().Z));
+		Shell.Add(Block(FVector(C.X + 120.0, C.Y, FloorTop + 52.0), FRotator(0.f, MapYaw, 0.f), FVector(MS.X, MS.Y, 104.0), FrameC));
+	}
+	else if (bKit && Kit(TEXT("scene:console"), FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator(0.f, 0.f, 0.f), FVector(210.0, 150.0, 100.0)))
 	{
 		Shell.Add(Block(FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator::ZeroRotator, FVector(200.0, 140.0, 100.0), FrameC)); // the kit's table is in the way too
 	}
@@ -909,9 +962,9 @@ void FDC3D::BuildBase()
 	FParse::Value(FCommandLine::Get(), TEXT("-MCWorkYaw="), WorkYaw);
 	struct FSpotDef { const TCHAR* Id; FVector At; float Yaw; double Len; double High; FVector Box; FLinearColor Color; };
 	const FSpotDef Defs[] = {
-		{ bKit && KitMesh(TEXT("scene:workstation")) ? TEXT("scene:workstation") : TEXT("scene:editdesk"), FVector(C.X - H.X + 95.0, C.Y - 260.0, FloorTop), WorkYaw, 200.0, 140.0, FVector(90.0, 180.0, 78.0), FLinearColor(0.16f, 0.15f, 0.13f) },
-		{ TEXT("scene:locker"), FVector(C.X - 360.0, C.Y - H.Y + 45.0, FloorTop), 0.f, 120.0, 195.0, FVector(120.0, 60.0, 190.0), FLinearColor(0.20f, 0.24f, 0.22f) },
-		{ TEXT("scene:bunk"), FVector(C.X - 600.0, C.Y + H.Y - 55.0, FloorTop), 180.f, 205.0, 175.0, FVector(205.0, 90.0, 60.0), FLinearColor(0.18f, 0.17f, 0.16f) },
+		{ bA && KitMesh(TEXT("scene:adesk")) ? TEXT("scene:adesk") : bKit && KitMesh(TEXT("scene:workstation")) ? TEXT("scene:workstation") : TEXT("scene:editdesk"), FVector(C.X - H.X + 95.0, C.Y - 260.0, FloorTop), WorkYaw, 200.0, 140.0, FVector(90.0, 180.0, 78.0), FLinearColor(0.16f, 0.15f, 0.13f) },
+		{ Pick(TEXT("scene:alocker"), TEXT("scene:locker")), FVector(C.X - 430.0, C.Y - H.Y + 55.0, FloorTop), 0.f, bA ? 170.0 : 120.0, bA ? 205.0 : 195.0, FVector(120.0, 60.0, 190.0), FLinearColor(0.20f, 0.24f, 0.22f) },
+		{ Pick(TEXT("scene:abunk"), TEXT("scene:bunk")), FVector(C.X - 600.0, C.Y + H.Y - 55.0, FloorTop), 180.f, 205.0, bA ? 195.0 : 175.0, FVector(205.0, 90.0, 60.0), FLinearColor(0.18f, 0.17f, 0.16f) },
 		{ TEXT("scene:corkboard"), FVector(C.X - H.X + 12.0, C.Y + 220.0, FloorTop + 95.0), 90.f, 150.0, 115.0, FVector(10.0, 150.0, 110.0), FLinearColor(0.40f, 0.30f, 0.18f) } };
 	for (const FSpotDef& D : Defs)
 	{
@@ -934,7 +987,7 @@ void FDC3D::BuildBase()
 		BaseSpots.Add(D.At + FVector(0.0, 0.0, FMath::Clamp(Tall * 0.6, 50.0, 120.0)));
 	}
 	// a second locker beside the first, a screen over the desk
-	if (const TArray<FDCArtRef>* Set = GM->Art.Find(TEXT("scene:locker")))
+	if (const TArray<FDCArtRef>* Set = bA && KitMesh(TEXT("scene:alocker")) ? nullptr : GM->Art.Find(TEXT("scene:locker")))
 	{
 		if (Set->Num() > 0 && GM->ArtMeshes.IsValidIndex((*Set)[0].Mesh))
 		{
@@ -945,7 +998,11 @@ void FDC3D::BuildBase()
 	LightPanel(FVector(C.X - H.X + 8.0, C.Y - 260.0, FloorTop + 215.0), FVector(4.0, 170.0, 70.0), FLinearColor(0.25f, 0.9f, 1.2f));
 	if (bKit)
 	{
-		if (const TArray<FDCArtRef>* Set = GM->Art.Find(TEXT("scene:gearcases")))
+		if (const UStaticMesh* TanksM = bA ? KitMesh(TEXT("scene:atanks")) : nullptr)
+		{
+			Place(TEXT("scene:atanks"), 0, FVector(C.X - 160.0, C.Y - H.Y + 50.0, FloorTop), FRotator(0.f, 0.f, 0.f), (float)(175.0 / FMath::Max(1.0, TanksM->GetBoundingBox().GetSize().Z)));
+		}
+		else if (const TArray<FDCArtRef>* Set = GM->Art.Find(TEXT("scene:gearcases")))
 		{
 			if (Set->Num() > 0)
 			{

@@ -2010,5 +2010,159 @@
    ],
    "emissive": "none"
   }
+ ],
+ "scene:awall": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_awall/scene_awall/StaticMeshes/scene_awall.scene_awall",
+   "yaw": 0,
+   "file": "scene_awall.glb",
+   "triangles": 2814,
+   "sizeCm": [
+    147,
+    13,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:awindow": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_awindow/scene_awindow/StaticMeshes/scene_awindow.scene_awindow",
+   "yaw": 0,
+   "file": "scene_awindow.glb",
+   "triangles": 4374,
+   "sizeCm": [
+    190,
+    18,
+    189
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:afloor": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_afloor/scene_afloor/StaticMeshes/scene_afloor.scene_afloor",
+   "yaw": 0,
+   "file": "scene_afloor.glb",
+   "triangles": 2118,
+   "sizeCm": [
+    183,
+    190,
+    22
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:aceiling": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_aceiling/scene_aceiling/StaticMeshes/scene_aceiling.scene_aceiling",
+   "yaw": 0,
+   "file": "scene_aceiling.glb",
+   "triangles": 2000,
+   "sizeCm": [
+    189,
+    189,
+    20
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:adoor": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_adoor/scene_adoor/StaticMeshes/scene_adoor.scene_adoor",
+   "yaw": 0,
+   "file": "scene_adoor.glb",
+   "triangles": 4814,
+   "sizeCm": [
+    113,
+    24,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:adesk": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_adesk/scene_adesk/StaticMeshes/scene_adesk.scene_adesk",
+   "yaw": 0,
+   "file": "scene_adesk.glb",
+   "triangles": 3728,
+   "sizeCm": [
+    190,
+    108,
+    130
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:amaptable": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_amaptable/scene_amaptable/StaticMeshes/scene_amaptable.scene_amaptable",
+   "yaw": 0,
+   "file": "scene_amaptable.glb",
+   "triangles": 3534,
+   "sizeCm": [
+    169,
+    151,
+    189
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:abunk": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_abunk/scene_abunk/StaticMeshes/scene_abunk.scene_abunk",
+   "yaw": 0,
+   "file": "scene_abunk.glb",
+   "triangles": 11552,
+   "sizeCm": [
+    190,
+    94,
+    177
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:alocker": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_alocker/scene_alocker/StaticMeshes/scene_alocker.scene_alocker",
+   "yaw": 0,
+   "file": "scene_alocker.glb",
+   "triangles": 6934,
+   "sizeCm": [
+    157,
+    111,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:atanks": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_atanks/scene_atanks/StaticMeshes/scene_atanks.scene_atanks",
+   "yaw": 0,
+   "file": "scene_atanks.glb",
+   "triangles": 9062,
+   "sizeCm": [
+    139,
+    73,
+    190
+   ],
+   "emissive": "none"
+  }
+ ],
+ "scene:apoolrail": [
+  {
+   "mesh": "/Game/DeepCut/Art/scene_apoolrail/scene_apoolrail/StaticMeshes/scene_apoolrail.scene_apoolrail",
+   "yaw": 0,
+   "file": "scene_apoolrail.glb",
+   "triangles": 3234,
+   "sizeCm": [
+    190,
+    189,
+    133
+   ],
+   "emissive": "none"
+  }
  ]
 }
