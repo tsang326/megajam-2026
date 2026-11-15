@@ -210,3 +210,12 @@ All three use rules the game already had (near things come through the cut, a th
 - Worms (maw worm, bobbit, polychaete) get their own swim kind (an S-wave through the whole body) and a new habit flag `Burrow`: they lie buried at rest, come out and slither in S-curves to the next spot, and lunge, rearing up, at a diver who comes within about two body lengths.
 - The beat never stops (crawlers and worms keep moving at rest, slower). The career subjects have their own motion: the Ribcage Ray flaps like a manta, the Hollow Diver drifts upright and kicks, the Drowner perches and jets like an octopus, the Lamp Widow hangs by its lure and darts, the Warden cruises as a hunter.
 - Tests: `d32_base.txt` (outside and deck views), `d33_worm.txt` / `d35_wormfar.txt` (worm near and far), `d36_uniques.txt` (the six subjects).
+
+### 2026-11-16, ~02:30: fixes from the night's playtest ("the hatch gets stuck", "sometimes ESC does nothing", "the brown rim is in the way")
+
+- Moon pool: going down drops the diver through the middle of the hatch; swimming up near it pulls gently to the centre and climbs out as soon as the head is over the opening; a short cooldown stops the drop and climb from fighting each other (`d27_hatch.txt`).
+- The hatch opens straight onto the real sea: the brown ring, trunk and fake water plane are gone, the hull material is one-sided so the opening shows the sea floor, and a steel lip with a yellow rail marks the edge (`d31_pool.txt`).
+- ESC: the pause menu no longer depends on not standing at a shot spot, so it always opens.
+- The water moves: marine snow drifts with a slow side current, the diver breathes out small bubbles, kelp, grass, fans and anemones sway from the root in a swell that rolls across the site (`d29_look.txt`, `d37_sway.txt`).
+- Three creature loops in The Abyss cut through the cliff wall; the loop search now also tries shifted centres before giving up, and every loop in the log is clear.
+- The take result says only "Saved."; the line about getting more views is gone.
