@@ -1,0 +1,20 @@
+# the maw worm: buried, out, slithering in S-curves; then close enough that it lunges
+wait 1.5
+lamp 1
+subject mawworm 1500 3
+wait 0.3
+snap w1
+wait 1.5
+snap w2
+wait 1.5
+snap w3
+wait 3.0
+snap w4
+wait 3.0
+snap w5
+subject mawworm 260 4
+wait 0.8
+snap w6_lunge
+wait 0.4
+snap w7_lunge
+quit

@@ -1,0 +1,29 @@
+# the six career subjects, side by side, to fit each its motion
+wait 1.5
+lamp 1
+subject ribray 1400 3
+wait 1.0
+snap r1
+wait 1.2
+snap r2
+subject hollowdiver 700 3
+wait 1.0
+snap h1
+wait 1.2
+snap h2
+subject drowner 700 3
+wait 1.0
+snap d1
+wait 1.2
+snap d2
+subject widow 900 3
+wait 1.0
+snap i1
+wait 1.2
+snap i2
+subject warden 2600 3
+wait 1.0
+snap a1
+wait 1.2
+snap a2
+quit

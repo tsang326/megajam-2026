@@ -854,7 +854,7 @@ void FDC3D::BuildBase()
 	// never into the sea floor: the whole box (and a little room under it) sits above the highest ground in its footprint
 	// (the hull outside is about twice as long as it is wide, longer than the room: its footprint counts)
 	double GroundTop = -1e9;
-	const double FootX = FMath::Max(BaseHalf.X, 2.0 * (BaseHalf.Y + 160.0)) + 50.0, FootY = BaseHalf.Y + 160.0;
+	const double FootX = BaseHalf.X + 140.0, FootY = BaseHalf.Y + 140.0;
 	for (int32 ix = 0; ix <= 10; ++ix)
 	{
 		for (int32 iy = 0; iy <= 6; ++iy)
@@ -1130,11 +1130,32 @@ void FDC3D::BuildBase()
 	// set A outside: a habitat module (scene:ahull, a long rounded hull with portholes) wraps the room (scene:ahull, a long rounded hull with portholes),
 	// standing on steel legs (scene:aleg). Only seen from the sea; the room's walls hide them from inside
 	const bool bHull = bA && KitMesh(TEXT("scene:ahull")) && !FParse::Param(FCommandLine::Get(), TEXT("MCNoHull"));
-	const double HullBot = FloorTop - 80.0, HullTop = CeilZ + T + 90.0, HullW = H.Y + T + 130.0, HullHalfX = FMath::Max(H.X + T + 130.0, 2.0 * HullW); // the module's own shape: long, not a box
+	// the hull is the room's own size plus its skin (the user, 2026-11-16: outside and inside must match)
+	const double HullBot = FloorTop - 70.0, HullTop = CeilZ + T + 70.0, HullW = H.Y + T + 60.0, HullHalfX = H.X + T + 60.0;
 	if (bHull)
 	{
 		// one module round the whole room (two side by side would each put an inner wall down the middle of the room)
 		Kit(TEXT("scene:ahull"), FVector(C.X, C.Y, (HullBot + HullTop) * 0.5), FRotator::ZeroRotator, FVector(2.0 * HullHalfX, 2.0 * HullW, HullTop - HullBot));
+	}
+	// the way in, seen from the sea: a short trunk under the hull round the moon pool, a lit yellow rim at its mouth and
+	// warm light inside, so a diver outside can see where to go up (no collision: the swim-up stays as it is)
+	{
+		const double TBot = HullBot - 120.0, TTop = HullBot + 10.0, TW = 14.0;
+		const FLinearColor TrunkC(0.42f, 0.43f, 0.44f), RimC(0.9f, 0.62f, 0.08f), RimE(4.0f, 2.6f, 0.4f);
+		for (int32 i = 0; i < 4; ++i)
+		{
+			const bool bYSide = i < 2;
+			const double Sg = (i % 2) ? 1.0 : -1.0;
+			const FVector Off = bYSide ? FVector(0.0, Sg * (HoleY + TW * 0.5), 0.0) : FVector(Sg * (HoleX + TW * 0.5), 0.0, 0.0);
+			const FVector Side = bYSide ? FVector(2.0 * HoleX + 2.0 * TW, TW, TTop - TBot) : FVector(TW, 2.0 * HoleY, TTop - TBot);
+			if (AActor* S = Block(FVector(Hatch.X + Off.X, Hatch.Y + Off.Y, (TBot + TTop) * 0.5), FRotator::ZeroRotator, Side, TrunkC))
+			{
+				S->SetActorEnableCollision(false);
+			}
+			const FVector RimSize = bYSide ? FVector(2.0 * HoleX + 2.0 * TW + 8.0, TW + 8.0, 16.0) : FVector(TW + 8.0, 2.0 * HoleY + 8.0, 16.0);
+			LightPanel(FVector(Hatch.X + Off.X, Hatch.Y + Off.Y, TBot + 8.0), RimSize, RimE);
+		}
+		Glow(FVector(Hatch.X, Hatch.Y, HullBot - 40.0), FLinearColor(1.f, 0.85f, 0.6f), 1200.f, 600.f);
 	}
 	// the legs down to the sand
 	for (int32 i = 0; i < 6; ++i)

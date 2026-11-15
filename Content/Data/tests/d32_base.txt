@@ -1,0 +1,21 @@
+# the base from outside (four sides and under) and the deck by the moon pool
+wait 1.5
+tp 1150 1500 1000 -90 -5
+wait 1.0
+snap b1_side_north
+tp 3900 -1150 1000 180 -5
+wait 0.8
+snap b2_end_east
+tp -1700 -1150 1000 0 -5
+wait 0.8
+snap b3_end_west
+tp 2600 900 300 -125 15
+wait 0.8
+snap b4_under_corner
+tp 1437 -1150 1105 180 -10
+wait 0.8
+snap b5_deck_from_pool
+tp 1250 -1550 1105 145 -15
+wait 0.8
+snap b6_deck_corner
+quit

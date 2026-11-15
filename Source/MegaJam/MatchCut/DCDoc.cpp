@@ -65,19 +65,21 @@ namespace DCSwim
 		// the oarfish holds its body nearly straight: a slow shallow wave in the trunk, the swimming is the fin along its back (Fin below)
 		{ TEXT(" oarfish "), 0, 0.008f, 1.0f, 1.3f, 2.2f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" whale dolphin "), 1, 0.035f, 1.8f, 0.6f, 1.5f, 0.10f, 0.2f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" manta stingray "), 1, 0.02f, 2.0f, 0.5f, 2.4f, 0.30f, 0.30f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" manta stingray ribray "), 1, 0.02f, 2.0f, 0.5f, 2.4f, 0.30f, 0.30f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" cuttle "), 0, 0.01f, 2.0f, 0.5f, 6.0f, 0.10f, 1.4f, 1.f, 0.02f, 0.6f, 0.5f },
 		{ TEXT(" seaangel "), 0, 0.02f, 1.5f, 0.6f, 5.0f, 0.30f, 0.2f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" jelly lionsmane siphon atolla "), 2, 0.06f, 2.0f, 1.2f, 2.2f, 0.f, 0.f, 1.f, 0.07f, 0.5f, 1.f },
-		{ TEXT(" squid vampsquid octopus nautilus giantsquid "), 0, 0.03f, 2.0f, 1.0f, 3.0f, 0.f, 0.f, 1.f, 0.05f, 0.7f, 1.f },
+		{ TEXT(" squid vampsquid octopus nautilus giantsquid drowner "), 0, 0.03f, 2.0f, 1.0f, 3.0f, 0.f, 0.f, 1.f, 0.05f, 0.7f, 1.f },
 		{ TEXT(" crab isopod lobster brittlestar yeticrab "), 0, 0.f, 1.f, 1.f, 11.f, 0.10f, 0.5f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" seapig nudibranch "), 1, 0.025f, 1.0f, 1.5f, 2.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// worms: the whole body throws S-waves from head to tail (power < 1 so the front moves too), the legs row along it
+		{ TEXT(" mawworm bobbit polychaete "), 0, 0.075f, 0.8f, 1.3f, 1.6f, 0.04f, 0.6f, 3.f, 0.015f, 1.5f, 1.4f },
 		{ TEXT(" urchin starfish "), 0, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" angler sunfish seahorse seadragon seatoad "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" turtle turtle2 giant "), 0, 0.f, 1.f, 1.f, 2.6f, 0.28f, 0.15f, 1.f, 0.f, 0.f, 1.f },
 		// Unit 0: the axis runs from the head down to the feet, the swing is forward and back: a fin kick in the legs,
 		// the arms paddle a little. The game turns the amounts up and down with the speed (FDC3D::Tick).
-		{ TEXT(" hero "), 2, 0.10f, 2.6f, 0.55f, 2.0f, 0.12f, 0.f, 1.f, 0.f, 0.f, 1.f } };
+		{ TEXT(" hero hollowdiver "), 2, 0.10f, 2.6f, 0.55f, 2.0f, 0.12f, 0.f, 1.f, 0.f, 0.f, 1.f } };
 	static const FKind Fish = { TEXT(""), 0, 0.06f, 1.6f, 0.9f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 
 	static const FKind& KindOf(const FString& Id)
@@ -172,7 +174,7 @@ namespace DCLife
 	// Glide: lies on the sand, lifts off, glides low, settles.  Crawl: walks the floor, stops, walks.
 	// Drift: carried slowly, rising a little with each pulse.  Hang: head up in open water, sinking and rising.  Far: passes in the haze.
 	enum { Cruise = 0, School, Hover, Perch, Glide, Crawl, Drift, Hang, Far };
-	enum { Hunter = 1, Jet = 2, HeadDown = 4, Upright = 8, Prey = 16 };
+	enum { Hunter = 1, Jet = 2, HeadDown = 4, Upright = 8, Prey = 16, Burrow = 32 };
 	struct FHabit { const TCHAR* Ids; int32 Beh; float Cycle, Rest, Lift, Flee; int32 Flags; };
 	static const FHabit Habits[] = {
 		{ TEXT(" shark hammerhead "), Cruise, 0.f, 0.f, 0.f, 0.f, Hunter },
@@ -188,11 +190,17 @@ namespace DCLife
 		{ TEXT(" barreleye gulper "), Hover, 20.f, 0.8f, 0.f, 0.f, 0 },
 		{ TEXT(" dragonfish viperfish "), Hover, 12.f, 0.8f, 0.f, 0.f, 0 },
 		{ TEXT(" seahorse seadragon "), Hover, 15.f, 0.8f, 0.f, 0.f, Upright },
-		{ TEXT(" octopus "), Perch, 18.f, 0.7f, 70.f, 0.f, Jet },
+		{ TEXT(" octopus drowner "), Perch, 18.f, 0.7f, 70.f, 0.f, Jet },
+		// the hollow diver: a drowned man carried upright on the current, legs still kicking; the widow and the angler hang still by their lure, then dart
+		{ TEXT(" hollowdiver "), Drift, 0.f, 0.f, 6.f, 0.f, Upright },
+		{ TEXT(" widow angler "), Hover, 16.f, 0.75f, 0.f, 0.f, Hunter },
+		{ TEXT(" warden "), Cruise, 0.f, 0.f, 0.f, 0.f, Hunter },
 		{ TEXT(" eel "), Perch, 22.f, 0.8f, 25.f, 0.f, 0 },
 		{ TEXT(" stingray "), Glide, 20.f, 0.45f, 55.f, 0.f, 0 },
 		{ TEXT(" crab lobster isopod yeticrab "), Crawl, 9.f, 0.45f, 0.f, 0.f, 0 },
-		{ TEXT(" seapig nudibranch brittlestar starfish urchin seatoad mawworm stilt "), Crawl, 14.f, 0.3f, 0.f, 0.f, 0 },
+		// worms live in the sand: buried at rest, out to slither (in S-curves) to the next spot, a lunge at what comes close
+		{ TEXT(" mawworm bobbit polychaete "), Crawl, 12.f, 0.45f, 0.f, 0.f, Burrow | Hunter },
+		{ TEXT(" seapig nudibranch brittlestar starfish urchin seatoad stilt "), Crawl, 14.f, 0.3f, 0.f, 0.f, 0 },
 		{ TEXT(" jelly lionsmane atolla siphon "), Drift, 0.f, 0.f, 10.f, 0.f, Upright },
 		{ TEXT(" seaangel vampsquid choir "), Drift, 0.f, 0.f, 5.f, 0.f, 0 },
 		{ TEXT(" oarfish "), Hang, 0.f, 0.f, 0.f, 0.f, 0 } };
@@ -274,7 +282,25 @@ namespace DCLife
 			OutYaw = YawA + FMath::FindDeltaAngleDegrees(YawA, YawB) * FMath::SmoothStep(Start * 0.5f, Start * 0.95f, F);
 			if (One.Beh == Crawl)
 			{
+				// nothing walks a ruler line: the path sways side to side, a worm's in deep S-curves
+				const FVector Dir = (B - A).GetSafeNormal2D(), Perp(-Dir.Y, Dir.X, 0.0);
+				const bool bWorm = (One.Flags & Burrow) != 0;
+				const double Sway = (bWorm ? 0.35 : 0.06) * One.Length * FMath::Min(1.0, Dist / 300.0);
+				const double Waves = bWorm ? 3.0 : 2.0;
+				P += Perp * (Sway * FMath::Sin(2.0 * PI * Waves * E) * FMath::Sin(PI * E));
+				if (X > 0.f && X < 1.f)
+				{
+					// it faces along the curve it is on, not along the straight line
+					const double dS = Sway * (2.0 * PI * Waves * FMath::Cos(2.0 * PI * Waves * E) * FMath::Sin(PI * E) + PI * FMath::Sin(2.0 * PI * Waves * E) * FMath::Cos(PI * E));
+					OutYaw = (float)(Dir * FMath::Max(1.0, (double)Dist) + Perp * dS).Rotation().Yaw;
+				}
 				P.Z = W->GroundZ(P.X, P.Y) + One.Half; // over the mounds
+				if (bWorm)
+				{
+					// at rest it lies buried with only the head out; it rises out of the sand before it goes and digs in when it stops
+					const float Buried = F < Start ? 1.f - FMath::SmoothStep(Start * 0.7f, Start, F) : FMath::SmoothStep(Start + Dur * 0.92f, FMath::Min(1.f, Start + Dur + 0.08f), F);
+					P.Z -= (One.Half * 2.0 + 10.0) * 0.85 * Buried;
+				}
 			}
 			else if (OnFloor(One.Beh))
 			{
@@ -1296,6 +1322,22 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 					}
 				}
 			}
+			if (One.Flags & DCLife::Burrow)
+			{
+				// an ambush hunter: when the diver comes near it rears up and lunges at them, then sinks back
+				const FVector To = HeroPos - P;
+				const double D = To.Size();
+				const float Want = D < 2.2 * One.Length + 200.0 ? 1.f : 0.f;
+				One.Surge = FMath::FInterpTo(One.Surge, Want, Dt, Want > One.Surge ? 6.f : 1.5f);
+				if (One.Surge > 0.01f)
+				{
+					const float Snap = One.Surge * (0.75f + 0.25f * FMath::Sin((float)T * 9.f + One.Seed));
+					P += To.GetSafeNormal() * FMath::Min(D * 0.45, 0.6 * One.Length) * Snap;
+					P.Z = FMath::Max(P.Z, (double)W->GroundZ(P.X, P.Y) + One.Half);
+					Yaw += FMath::FindDeltaAngleDegrees(Yaw, (float)To.Rotation().Yaw) * One.Surge;
+					Pitch = 35.f * Snap;
+				}
+			}
 			if (!Push.IsNearlyZero(1.0))
 			{
 				Push.Z *= bFloor ? 0.0 : 0.35;
@@ -1314,9 +1356,15 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 			}
 			else
 			{
-				One.Beat += Dt * One.Beats * (One.Beh == DCLife::Crawl ? Ratio : 0.3f + 0.9f * Ratio);
+				// never quite still: legs and feelers fidget at rest, a worm writhes all the time
+				const bool bWorm = (One.Flags & DCLife::Burrow) != 0;
+				One.Beat += Dt * One.Beats * (bWorm ? 0.55f + 0.8f * Ratio : One.Beh == DCLife::Crawl ? 0.22f + Ratio : 0.35f + 0.9f * Ratio) * (1.f + One.Surge);
 			}
-			const float Amp = bPulse || One.Beh == DCLife::Hang ? 0.f : FMath::Clamp(0.5f + 0.55f * Ratio, 0.5f, 1.45f) - 1.f;
+			float Amp = bPulse || One.Beh == DCLife::Hang ? 0.f : FMath::Clamp(0.6f + 0.55f * Ratio, 0.6f, 1.45f) - 1.f;
+			if (One.Surge > 0.f)
+			{
+				Amp += 0.8f * One.Surge; // a lunge: the whole body snaps
+			}
 			for (const TWeakObjectPtr<UMaterialInstanceDynamic>& Skin : One.Skins)
 			{
 				if (UMaterialInstanceDynamic* MID = Skin.Get())

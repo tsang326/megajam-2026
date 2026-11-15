@@ -1,0 +1,13 @@
+# maw worm outside lunge range: crawl / burrow pose
+wait 1.5
+lamp 1
+subject mawworm 2600 3
+wait 0.3
+snap f1
+wait 2.0
+snap f2
+wait 3.0
+snap f3
+wait 4.0
+snap f4
+quit

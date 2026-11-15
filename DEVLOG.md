@@ -203,3 +203,10 @@ All three use rules the game already had (near things come through the cut, a th
 - Picture: Retina rendering in game (`bAllowHighDPIInGameMode`) at 70 % screen percentage upscaled by TSR, `r.Tonemapper.Sharpen=0.8`, chromatic fringe 0.9 → 0.2, grain 0.18 → 0.06, camera depth of field f/2.2 → f/4.5.
 - Unit 0 uses the swimming material too (kind `hero`: axis head to feet, swing forward and back): a fin kick in the legs and a paddle in the arms, scaled by speed every frame so the beat never jumps. `M_DC_Creature` gained an emissive map so the eyes and lamp still glow.
 - Tests: `d9_look.txt` (hero side views, the shoal close); `d3_film` 6 of 6, 18 of 18 stars, median 25 ms, p90 69 ms.
+
+### 2026-11-16, ~01:40: the base from outside, creatures that act their kind (playtest: "the base outside does not match the inside, no door; the worm is a statue")
+
+- The station hull is cut down to the room it holds (it was twice as wide); under the moon pool hangs a short entrance trunk with a yellow rim and a warm light, so the way in reads from the sand. Scatter keeps clear of the base footprint; the station model that sat under it is gone.
+- Worms (maw worm, bobbit, polychaete) get their own swim kind (an S-wave through the whole body) and a new habit flag `Burrow`: they lie buried at rest, come out and slither in S-curves to the next spot, and lunge, rearing up, at a diver who comes within about two body lengths.
+- The beat never stops (crawlers and worms keep moving at rest, slower). The career subjects have their own motion: the Ribcage Ray flaps like a manta, the Hollow Diver drifts upright and kicks, the Drowner perches and jets like an octopus, the Lamp Widow hangs by its lure and darts, the Warden cruises as a hunter.
+- Tests: `d32_base.txt` (outside and deck views), `d33_worm.txt` / `d35_wormfar.txt` (worm near and far), `d36_uniques.txt` (the six subjects).

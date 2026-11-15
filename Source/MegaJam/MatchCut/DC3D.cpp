@@ -487,7 +487,7 @@ void FDC3D::BuildArea()
 	Place(TEXT("scene:debris"), 0, FVector(3950.0, 450.0, -40.0), FRotator(0.f, 160.f, 0.f), 2.4f);
 
 	// the station, where the dive starts and the crewmate waits (the crewmate belongs to the documentary, DCDoc.cpp)
-	Place(TEXT("scene:station"), 0, FVector(1150.0, -1150.0, 0.0), FRotator(0.f, 30.f, 0.f), 6.f);
+	// (the old station model sat right under the base, in the way of the moon pool: left out, 2026-11-16)
 	Glow(FVector(800.0, -700.0, 380.0), FLinearColor(1.f, 0.82f, 0.55f), 5000.f, 1100.f);
 
 	// the vent field: warm light low in the water
@@ -690,6 +690,10 @@ void FDC3D::BuildArea()
 			if (FVector::Dist2D(At, FVector::ZeroVector) < 500.0 || (At.Y > 1900.0 && At.Y < 2900.0 && At.X > 200.0 && At.X < 4400.0 && bCollide))
 			{
 				continue; // not on the start, nothing solid in the trench
+			}
+			if (FMath::Abs(At.X - BaseC.X) < BaseHalf.X + 600.0 && FMath::Abs(At.Y - BaseC.Y) < BaseHalf.Y + 500.0)
+			{
+				continue; // the sand under the base and round its way in stays clear
 			}
 			bool bFree = true;
 			if (bKeepClear)
