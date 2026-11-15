@@ -936,6 +936,30 @@ void FDCDoc::SpawnAmbient()
 				}
 			}
 		}
+		if (!bFits && Prey == INDEX_NONE)
+		{
+			// nothing fits where it was put (the trench walls): the loop moves off, out to 30 m in eight directions, smaller
+			for (int32 Ring = 1; Ring <= 3 && !bFits; ++Ring)
+			{
+				for (int32 Dir = 0; Dir < 8 && !bFits; ++Dir)
+				{
+					for (int32 s = 0; s < UE_ARRAY_COUNT(Scales) && !bFits; ++s)
+					{
+						const double Ang = Dir * PI / 4.0;
+						One.Ra = WasRa * Scales[s];
+						One.Rb = WasRb * Scales[s];
+						One.Omega = WasOmega / Scales[s];
+						One.Rot = WasRot;
+						One.Dive = WasDive;
+						One.Centre = Home + FVector(FMath::Cos(Ang), FMath::Sin(Ang), 0.0) * (1000.0 * Ring);
+						const double Floor = W->Terrain(One.Centre.X, One.Centre.Y);
+						One.Centre.Z = FMath::Max(One.Centre.Z, Floor + 300.0);
+						++Tries;
+						bFits = Clear(One, false);
+					}
+				}
+			}
+		}
 		if (!bFits)
 		{
 			// nothing fits: it keeps the loop it was given
