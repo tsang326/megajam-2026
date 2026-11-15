@@ -1,0 +1,33 @@
+# the smaller base, the newspaper on the wall, read
+wait 1.5
+look3 0 -5
+wait 0.5
+snap n1_toward_pool
+look3 180 -5
+wait 0.5
+snap n2_toward_desk
+look3 90 -5
+wait 0.5
+snap n3_north
+look3 -90 -5
+wait 0.5
+snap n4_south
+look3 135 -5
+wait 0.5
+snap n5_corner
+look3 90 0
+key3 1 0 0 0.6
+wait 0.5
+snap n6_news_close
+use 4
+wait 0.5
+snap n7_news_open
+lang vi
+wait 0.3
+snap n8_news_vi
+lang en
+back
+tp 2600 -900 900 200 5
+wait 0.8
+snap n9_outside
+quit

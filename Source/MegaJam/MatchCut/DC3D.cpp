@@ -32,8 +32,8 @@
 
 namespace DC3
 {
-	const float Swim = 560.f;        // cm/s
-	const float Boost = 980.f;
+	const float Swim = 660.f;        // cm/s
+	const float Boost = 1150.f;
 	const float Push = 2.4f;         // 1/s: how fast the thrusters reach the wanted speed
 	const float Drag = 0.75f;        // 1/s: how fast the water takes speed away while gliding
 	const float BoomLen = 440.f;
@@ -1542,7 +1542,7 @@ void FDC3D::Tick(float Dt)
 		{
 			Walk.Normalize();
 		}
-		const FVector WantV = Walk * ((bFast ? 420.0 : 280.0) * FMath::Lerp(1.f, 0.6f, Aim));
+		const FVector WantV = Walk * ((bFast ? 500.0 : 335.0) * FMath::Lerp(1.f, 0.6f, Aim));
 		Vel.X += (WantV.X - Vel.X) * (1.0 - FMath::Exp(-10.0 * Dt));
 		Vel.Y += (WantV.Y - Vel.Y) * (1.0 - FMath::Exp(-10.0 * Dt));
 		Vel.Z -= 1800.0 * Dt; // air: things fall

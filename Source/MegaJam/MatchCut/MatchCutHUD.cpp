@@ -10,7 +10,9 @@
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
+#include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "UObject/StrongObjectPtr.h"
 #include "CanvasItem.h"
 #include "Fonts/CompositeFont.h"
 #include "Fonts/FontMeasure.h"
@@ -1490,7 +1492,7 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 	// the way home: the hatch under the base
 	if (!D.bInBase && D.bLeftBase && !D.bRecording)
 	{
-		const FVector Hatch = W.BaseC + FVector(W.BaseHalf.X - 260.0, 0.0, -W.BaseHalf.Z - 120.0);
+		const FVector Hatch = W.HatchAt - FVector(0.0, 0.0, 120.0);
 		FVector2D At;
 		const bool bFront = D.Bearing(Hatch, At);
 		const float Metres = (float)FVector::Dist(Hatch, W.Pos) / 100.f;
@@ -1514,6 +1516,7 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		}
 	}
 
+	DrawMission(W, D);
 	// under the moon pool: how to get in
 	if (W.bHatchAssist && D.Spot == INDEX_NONE)
 	{
@@ -1523,7 +1526,7 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 	// in the base: what the control in front of the diver does
 	if (D.Spot != INDEX_NONE)
 	{
-		static const TCHAR* What[4] = { TEXT("E   EDIT DESK: cut and upload today's tape"), TEXT("E   LOCKER: buy gear"), TEXT("E   BUNK: sleep to the next day"), TEXT("E   BOARD: the proofs") };
+		static const TCHAR* What[5] = { TEXT("E   EDIT DESK: cut and upload today's tape"), TEXT("E   LOCKER: buy gear"), TEXT("E   BUNK: sleep to the next day"), TEXT("E   BOARD: the proofs"), TEXT("E   NEWSPAPER: read it") };
 		FString Line = What[D.Spot];
 		if (D.Spot == 2 && D.Day >= D.Days)
 		{
@@ -1532,37 +1535,17 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 		Rect(660.f, 690.f, 600.f, 52.f, FLinearColor(0.f, 0.f, 0.f, 0.55f));
 		Text(Line, 960.f, 700.f, 1.4f, Amber, 1);
 	}
-	if (D.bBoardOpen)
+	if (D.bBoardOpen || D.bBagOpen)
 	{
-		Rect(360.f, 170.f, 1200.f, 640.f, FLinearColor(0.05f, 0.04f, 0.03f, 0.92f));
-		Frame(360.f, 170.f, 1200.f, 640.f, FLinearColor(0.6f, 0.45f, 0.25f, 1.f), 3.f);
-		Text(FString::Printf(TEXT("THE PROOFS   %d / %d"), D.EvidenceCount(), D.EvidenceTotal()), 960.f, 196.f, 2.2f, White, 1);
-		Text(TEXT("The company's film says the trench is empty. Film what is there, upload it, and it goes in the archive."), 960.f, 250.f, 1.05f, Dim, 1);
-		int32 Row = 0;
-		for (int32 s = 0; s < D.Subjects.Num(); ++s)
-		{
-			const FDCSubject& S = D.Subjects[s];
-			if (!S.bEvidence)
-			{
-				continue;
-			}
-			bool bHave = false;
-			for (const FDCTake& Kept : D.Archive)
-			{
-				bHave |= Kept.Shot == s;
-			}
-			const float Y = 300.f + Row * 52.f;
-			const FString Where = W.Zones.IsValidIndex(S.Zone) ? FString(W.Zones[S.Zone].Title) : FString(TEXT("near the station"));
-			Text(bHave ? S.Name : FString(TEXT("? ? ?")), 420.f, Y, 1.5f, bHave ? Green : White);
-			Text(FString::Printf(TEXT("%s%s"), *Where, S.bLensOnly ? TEXT("   (seen only through the camera)") : TEXT("")), 900.f, Y + 4.f, 1.1f, Dim);
-			++Row;
-		}
-		Text(FString::Printf(TEXT("Day %d of %d. The hearing is after day %d."), D.Day, D.Days, D.Days), 960.f, 770.f, 1.2f, Amber, 1);
-		Text(TEXT("E / ESC  close"), 1540.f, 196.f, 1.2f, Dim, 2);
+		DrawTargets(W, D, D.bBagOpen);
+	}
+	if (D.bNewsOpen)
+	{
+		DrawNews();
 	}
 
 	// the verdict on the last clip
-	if (D.ResultTime > 0.f)
+	if (D.ResultTime > 0.f && !D.PageOpen())
 	{
 		const float A = FMath::Clamp(D.ResultTime, 0.f, 1.f);
 		const bool bTip = !D.Tip.IsEmpty();
@@ -1594,7 +1577,7 @@ void AMatchCutHUD::Draw3D(AMatchCutGameMode* GM)
 	// one line of help at a time
 	FString Line;
 	FLinearColor LineColor(1.f, 1.f, 1.f, 0.85f);
-	if (D.Day == 1 && !D.bLeftBase && D.Spot == INDEX_NONE && !D.bBoardOpen)
+	if (D.Day == 1 && !D.bLeftBase && D.Spot == INDEX_NONE && !D.PageOpen())
 	{
 		Line = TEXT("The hatch in the floor leads out. Film what you find. Come back before the air runs out.");
 	}
@@ -1686,10 +1669,229 @@ float AMatchCutHUD::Wrap(const FString& InStr, float X, float Y, float Scale, co
 	return Yy - Y;
 }
 
+// the targets: the board in the base and the bag (TAB) show the same list, ticked once filmed, with the still of each
+void AMatchCutHUD::DrawTargets(const FDC3D& W, const FDCDoc& D, bool bBag)
+{
+	TArray<int32> List = D.Missions;
+	if (List.Num() == 0)
+	{
+		for (int32 s = 0; s < D.Subjects.Num(); ++s)
+		{
+			if (D.Subjects[s].bEvidence)
+			{
+				List.Add(s);
+			}
+		}
+	}
+	int32 Found = 0, Proofs = 0, ProofsFound = 0;
+	for (int32 s : List)
+	{
+		Found += D.IsFound(s) ? 1 : 0;
+		Proofs += D.Subjects[s].bEvidence ? 1 : 0;
+		ProofsFound += D.Subjects[s].bEvidence && D.IsFound(s) ? 1 : 0;
+	}
+	const float X0 = 300.f, Y0 = 110.f, Wd = 1320.f, Ht = 880.f;
+	Rect(X0, Y0, Wd, Ht, FLinearColor(0.05f, 0.04f, 0.03f, 0.93f));
+	Frame(X0, Y0, Wd, Ht, FLinearColor(0.6f, 0.45f, 0.25f, 1.f), 3.f);
+	Text(bBag ? FString::Printf(TEXT("BAG   %d / %d"), Found, List.Num()) : FString::Printf(TEXT("THE PROOFS   %d / %d"), ProofsFound, Proofs), 960.f, Y0 + 22.f, 2.2f, White, 1);
+	Text(TEXT("Film each target: in the frame is enough. Upload at the edit desk to make it count."), 960.f, Y0 + 76.f, 1.05f, Dim, 1);
+	const int32 Now = D.Mission();
+	const float RowH = 82.f;
+	for (int32 r = 0; r < List.Num() && r < 9; ++r)
+	{
+		const int32 s = List[r];
+		const FDCSubject& S = D.Subjects[s];
+		const bool bHave = D.IsFound(s), bUp = D.IsUploaded(s);
+		const float Y = Y0 + 120.f + r * RowH;
+		if (s == Now)
+		{
+			Rect(X0 + 20.f, Y - 6.f, Wd - 40.f, RowH - 8.f, FLinearColor(1.f, 0.78f, 0.3f, 0.10f));
+		}
+		// the tick box
+		const float Bx = X0 + 40.f, By = Y + 14.f;
+		Frame(Bx, By, 36.f, 36.f, bHave ? Green : Dim, 2.f);
+		if (bHave)
+		{
+			Line(Bx + 7.f, By + 19.f, Bx + 15.f, By + 28.f, Green, 4.f);
+			Line(Bx + 15.f, By + 28.f, Bx + 30.f, By + 8.f, Green, 4.f);
+		}
+		// the still
+		const float Px = X0 + 100.f, Pw = 112.f, Ph = 63.f;
+		Rect(Px, Y + 2.f, Pw, Ph, FLinearColor(0.12f, 0.12f, 0.12f, 1.f));
+		if (const TStrongObjectPtr<UTextureRenderTarget2D>* Ph2 = D.Photos.Find(s))
+		{
+			if (Ph2->IsValid() && (*Ph2)->GetResource())
+			{
+				FCanvasTileItem Tile(FVector2D(Px * K, (Y + 2.f) * K), (*Ph2)->GetResource(), FVector2D(Pw * K, Ph * K), FLinearColor::White);
+				Tile.BlendMode = SE_BLEND_Opaque;
+				Canvas->DrawItem(Tile);
+			}
+		}
+		const bool bNamed = bHave || !S.bEvidence;
+		Text(bNamed ? S.Name : FString(TEXT("? ? ?")), X0 + 240.f, Y + 6.f, 1.5f, bHave ? Green : White);
+		const FString Where = W.Zones.IsValidIndex(S.Zone) ? FString(W.Zones[S.Zone].Title) : FString(TEXT("near the station"));
+		Text(FString::Printf(TEXT("%s%s"), *Where, S.bLensOnly ? TEXT("   (seen only through the camera)") : TEXT("")), X0 + 240.f, Y + 42.f, 1.0f, Dim);
+		const TCHAR* State = bUp ? TEXT("uploaded") : bHave ? TEXT("on the tape: upload it at the edit desk") : s == Now ? TEXT("TARGET NOW") : TEXT("");
+		Text(State, X0 + Wd - 40.f, Y + 20.f, 1.1f, bUp ? Green : bHave ? Amber : Amber, 2);
+	}
+	Text(FString::Printf(TEXT("Day %d of %d. The hearing is after day %d."), D.Day, D.Days, D.Days), 960.f, Y0 + Ht - 50.f, 1.2f, Amber, 1);
+	Text(bBag ? TEXT("TAB / ESC  close") : TEXT("E / ESC  close"), X0 + Wd - 24.f, Y0 + 26.f, 1.1f, Dim, 2);
+}
+
+// the target now: its name at the top left, a marker on it in the sea; the saved still flying into the bag
+void AMatchCutHUD::DrawMission(const FDC3D& W, const FDCDoc& D)
+{
+	const FLinearColor Gold(1.f, 0.82f, 0.25f, 1.f);
+	const int32 Now = D.Mission();
+	if (Now != INDEX_NONE && !D.PageOpen() && D.Subjects.IsValidIndex(Now))
+	{
+		const FDCSubject& S = D.Subjects[Now];
+		const bool bNamed = !S.bEvidence;
+		const FString Name = bNamed ? S.Name : FString(TEXT("? ? ?"));
+		const FString Where = W.Zones.IsValidIndex(S.Zone) ? FString(W.Zones[S.Zone].Title) : FString(TEXT("near the station"));
+		FVector At;
+		const bool bAt = D.MissionWhere(Now, At);
+		const float Metres = bAt ? (float)FVector::Dist(At, W.Pos) / 100.f : 0.f;
+		Rect(180.f, 112.f, 560.f, 64.f, FLinearColor(0.f, 0.f, 0.f, 0.45f));
+		Text(FString::Printf(TEXT("TARGET  %s"), *Name), 196.f, 118.f, 1.35f, Gold);
+		Text(D.bInBase ? FString(TEXT("Dive through the moon pool to find it.")) : FString::Printf(TEXT("%s  ·  %.0f m"), *Where, Metres), 196.f, 150.f, 1.0f, Dim);
+		if (bAt && !D.bInBase && Metres > 2.f)
+		{
+			FVector2D P;
+			const bool bFront = D.Bearing(At, P);
+			const FLinearColor C(Gold.R, Gold.G, Gold.B, 0.85f);
+			const FString Label = FString::Printf(TEXT("%s  %.0f m"), *Name, Metres);
+			if (bFront && FMath::Abs(P.X) < 0.9 && FMath::Abs(P.Y) < 0.8)
+			{
+				const float X = 960.f + (float)P.X * 960.f, Y = 540.f - (float)P.Y * 540.f;
+				// a diamond
+				Line(X, Y - 16.f, X + 16.f, Y, C, 3.f);
+				Line(X + 16.f, Y, X, Y + 16.f, C, 3.f);
+				Line(X, Y + 16.f, X - 16.f, Y, C, 3.f);
+				Line(X - 16.f, Y, X, Y - 16.f, C, 3.f);
+				Text(Label, X, Y + 24.f, 1.1f, C, 1);
+			}
+			else
+			{
+				const double Kx = FMath::Abs(P.X) / 0.86, Ky = FMath::Abs(P.Y) / 0.74;
+				const FVector2D E = P / FMath::Max(1.0, FMath::Max(Kx, Ky));
+				const FVector2D Q(960.0 + E.X * 960.0, 540.0 - E.Y * 540.0);
+				const FVector2D Dir = FVector2D(P.X, -P.Y).GetSafeNormal();
+				Arrow(Q - Dir * 22.f, Q + Dir * 22.f, C, 3.f);
+				Text(Label, FMath::Clamp((float)(Q.X - Dir.X * 70.0), 150.f, 1770.f), FMath::Clamp((float)(Q.Y - Dir.Y * 60.0) - 10.f, 200.f, 900.f), 1.1f, C, 1);
+			}
+		}
+	}
+	// the bag, bottom right: TAB
+	int32 Found = 0;
+	for (int32 s : D.Missions)
+	{
+		Found += D.IsFound(s) ? 1 : 0;
+	}
+	const float Bx = 1770.f, By = 940.f;
+	const float Pulse = D.SavedTime > 0.f && D.SavedTime < 0.6f ? FMath::Sin(D.SavedTime / 0.6f * UE_PI) : 0.f;
+	const FLinearColor BagC(0.85f + 0.15f * Pulse, 0.7f + 0.3f * Pulse, 0.45f, 0.9f);
+	Rect(Bx - 4.f * Pulse, By - 4.f * Pulse, 84.f + 8.f * Pulse, 62.f + 8.f * Pulse, FLinearColor(0.f, 0.f, 0.f, 0.5f));
+	Frame(Bx - 4.f * Pulse, By - 4.f * Pulse, 84.f + 8.f * Pulse, 62.f + 8.f * Pulse, BagC, 2.f);
+	Line(Bx + 26.f, By, Bx + 30.f, By - 12.f, BagC, 2.f);
+	Line(Bx + 30.f, By - 12.f, Bx + 54.f, By - 12.f, BagC, 2.f);
+	Line(Bx + 54.f, By - 12.f, Bx + 58.f, By, BagC, 2.f);
+	Text(FString::Printf(TEXT("%d/%d"), Found, D.Missions.Num()), Bx + 42.f, By + 8.f, 1.3f, BagC, 1);
+	Text(TEXT("TAB  bag"), Bx + 42.f, By + 70.f, 0.9f, Dim, 1);
+	// the still, just saved: it comes up big, then drops into the bag
+	if (D.SavedTime > 0.f && D.Subjects.IsValidIndex(D.SavedSub))
+	{
+		const float El = 2.4f - D.SavedTime;
+		const float Grow = FMath::Clamp(El / 0.18f, 0.f, 1.f);
+		const float Go = FMath::Clamp((El - 1.3f) / 0.6f, 0.f, 1.f);
+		const float Ease = Go * Go * (3.f - 2.f * Go);
+		const float Scale = FMath::Lerp(0.7f + 0.3f * Grow, 0.1f, Ease);
+		const FVector2D From(960.0, 640.0), To(Bx + 42.0, By + 30.0); // below the verdict panel (y 256..446)
+		const FVector2D C = From + (To - From) * Ease;
+		const float Cw = 440.f * Scale, Ch = 300.f * Scale;
+		const float A = 1.f - FMath::Clamp((El - 1.85f) / 0.15f, 0.f, 1.f);
+		if (El < 0.12f)
+		{
+			Rect(0.f, 0.f, 1920.f, 1080.f, FLinearColor(1.f, 1.f, 1.f, 0.55f * (1.f - El / 0.12f))); // the shutter's flash
+		}
+		Rect(C.X - Cw * 0.5f, C.Y - Ch * 0.5f, Cw, Ch, FLinearColor(0.95f, 0.94f, 0.9f, A));
+		const float Iw = 400.f * Scale, Ih = 225.f * Scale;
+		const float Ix = C.X - Iw * 0.5f, Iy = C.Y - Ch * 0.5f + 20.f * Scale;
+		if (const TStrongObjectPtr<UTextureRenderTarget2D>* Ph = D.Photos.Find(D.SavedSub))
+		{
+			if (Ph->IsValid() && (*Ph)->GetResource())
+			{
+				FCanvasTileItem Tile(FVector2D(Ix * K, Iy * K), (*Ph)->GetResource(), FVector2D(Iw * K, Ih * K), FLinearColor(1.f, 1.f, 1.f, A));
+				Tile.BlendMode = SE_BLEND_Translucent;
+				Canvas->DrawItem(Tile);
+			}
+		}
+		if (Scale > 0.5f)
+		{
+			Text(FString::Printf(TEXT("SAVED  %s"), *D.Subjects[D.SavedSub].Name), C.X, Iy + Ih + 12.f * Scale, 1.2f * Scale, FLinearColor(0.1f, 0.1f, 0.1f, A), 1);
+		}
+	}
+}
+
+// the newspaper on the base's wall, read: the front page set in the HUD's own type (so it is translated), the photo
+// taken from the printed page's texture (scene:news, a page whose photo sits at NewsPhotoUV on it)
+void AMatchCutHUD::DrawNews()
+{
+	static TStrongObjectPtr<UTexture2D> Page; // kept from the garbage collector
+	static bool bTried = false;
+	if (!bTried)
+	{
+		bTried = true;
+		Page.Reset(LoadObject<UTexture2D>(nullptr, TEXT("/Game/DeepCut/Art/scene_news/scene_news/Textures/news_page.news_page")));
+		UE_LOG(LogTemp, Display, TEXT("DEEPCUT news page texture %s"), Page.IsValid() ? TEXT("found") : TEXT("missing"));
+	}
+	const FLinearColor Paper(0.86f, 0.83f, 0.76f, 0.98f), Ink(0.08f, 0.07f, 0.06f, 1.f), Grey(0.30f, 0.28f, 0.25f, 1.f);
+	const float X0 = 330.f, Y0 = 120.f, Wd = 1260.f, Ht = 860.f;
+	Rect(X0 - 8.f, Y0 - 8.f, Wd + 16.f, Ht + 16.f, FLinearColor(0.f, 0.f, 0.f, 0.6f));
+	Rect(X0, Y0, Wd, Ht, Paper);
+	Text(TEXT("THE HARBOUR LIGHT"), 960.f, Y0 + 18.f, 2.6f, Ink, 1);
+	Rect(X0 + 30.f, Y0 + 70.f, Wd - 60.f, 3.f, Ink);
+	Text(TEXT("Local news   ·   Saturday edition   ·   cut out and pinned up by the last crew"), 960.f, Y0 + 80.f, 0.95f, Grey, 1);
+	Rect(X0 + 30.f, Y0 + 104.f, Wd - 60.f, 1.f, Ink);
+	Text(TEXT("THIRD DIVER MISSING OFF THE TRENCH"), 960.f, Y0 + 120.f, 2.3f, Ink, 1);
+	Text(TEXT("The company calls the water empty. The families ask what is in the photo."), 960.f, Y0 + 172.f, 1.15f, Grey, 1);
+	// the photo, left
+	const float PX = X0 + 40.f, PY = Y0 + 215.f, PW = 560.f, PH = 358.f;
+	Rect(PX - 3.f, PY - 3.f, PW + 6.f, PH + 6.f, Ink);
+	if (UTexture2D* T = Page.Get())
+	{
+		if (T->GetResource())
+		{
+			FCanvasTileItem Tile(FVector2D(PX * K, PY * K), T->GetResource(), FVector2D(PW * K, PH * K), FVector2D(NewsPhotoUV.X, NewsPhotoUV.Y), FVector2D(NewsPhotoUV.Z, NewsPhotoUV.W), FLinearColor::White);
+			Tile.BlendMode = SE_BLEND_Opaque;
+			Canvas->DrawItem(Tile);
+		}
+	}
+	else
+	{
+		Rect(PX, PY, PW, PH, FLinearColor(0.12f, 0.13f, 0.13f, 1.f));
+	}
+	Wrap(TEXT("Taken from the dive boat minutes before the third diver's line went slack. The company says it is the shadow of a cloud."), PX, PY + PH + 14.f, 0.95f, Grey, PW);
+	// the story, right
+	const float TX = X0 + 640.f, TW = Wd - 680.f;
+	float Y = Y0 + 215.f;
+	static const TCHAR* Story[] = {
+		TEXT("The search boats were called back on Thursday, after a third diver failed to come up near the abyss trench, a few kilometres from the research station."),
+		TEXT("All three worked for contractors of the company that is surveying the trench for drilling. Each went down in daylight, in calm water, with an hour of air."),
+		TEXT("The company's survey film, shown to the council last month, says the trench holds \"nothing larger than a shrimp\". Asked about the photo, a spokesperson called it \"a cloud on the water\" and took no more questions."),
+		TEXT("At the harbour they tell it another way. \"Nets come up cut clean,\" said a fisherman who would not give his name. \"Nobody fishes past the drop any more. Not for years.\""),
+		TEXT("The search is over. The survey goes on as planned.") };
+	for (const TCHAR* Para : Story)
+	{
+		Y += Wrap(Para, TX, Y, 1.05f, Ink, TW) + 12.f;
+	}
+	Text(TEXT("E / ESC  close"), X0 + Wd - 24.f, Y0 + Ht - 36.f, 1.1f, Grey, 2);
+}
+
 void AMatchCutHUD::DrawTutorial(AMatchCutGameMode* GM)
 {
 	const FDC3D* W = GM->World3D();
-	if (!W || !W->Doc || W->Doc->State != EDCDocState::Shooting || W->Doc->bBoardOpen || W->Doc->bBlackout)
+	if (!W || !W->Doc || W->Doc->State != EDCDocState::Shooting || W->Doc->PageOpen() || W->Doc->bBlackout)
 	{
 		return;
 	}

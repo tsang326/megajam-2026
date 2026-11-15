@@ -11,6 +11,11 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "Engine/SceneCapture2D.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 namespace DCCar
 {
@@ -139,6 +144,176 @@ int32 FDCDoc::EvidenceCount() const
 	return Archive.Num();
 }
 
+bool FDCDoc::IsUploaded(int32 Sub) const
+{
+	if (Uploaded.Contains(Sub))
+	{
+		return true;
+	}
+	for (const FDCTake& K : Archive)
+	{
+		if (K.Shot == Sub)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool FDCDoc::IsFound(int32 Sub) const
+{
+	if (IsUploaded(Sub))
+	{
+		return true;
+	}
+	for (const FDCTake& T : Takes)
+	{
+		if (T.Shot == Sub)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+int32 FDCDoc::Mission() const
+{
+	for (int32 Sub : Missions)
+	{
+		if (!IsFound(Sub))
+		{
+			return Sub;
+		}
+	}
+	return INDEX_NONE;
+}
+
+bool FDCDoc::MissionWhere(int32 Sub, FVector& Out) const
+{
+	double Near = 1e30;
+	bool bAny = false;
+	for (const FAmbient& One : Ambient)
+	{
+		if (One.Subject != Sub)
+		{
+			continue;
+		}
+		const AActor* A = One.Actor.Get();
+		const FVector At = A && !One.bAway ? A->GetActorLocation() : One.Centre;
+		const double D = FVector::DistSquared(At, W->Pos);
+		if (D < Near)
+		{
+			Near = D;
+			Out = At;
+			bAny = true;
+		}
+	}
+	if (!bAny && Sub == Legend)
+	{
+		if (const AActor* H = Hunter.Get())
+		{
+			Out = H->GetActorLocation();
+			return true;
+		}
+	}
+	if (!bAny && Subjects.IsValidIndex(Sub) && W->Zones.IsValidIndex(Subjects[Sub].Zone))
+	{
+		const FVector2D Z = W->Zones[Subjects[Sub].Zone].At;
+		Out = FVector(Z.X, Z.Y, W->Terrain(Z.X, Z.Y) + 600.0);
+		return true;
+	}
+	return bAny;
+}
+
+void FDCDoc::BuildMissions()
+{
+	Missions.Reset();
+	FirstTarget = INDEX_NONE;
+	const FVector From = W->HatchAt;
+	// the first: a calm animal of the station's own site, big enough to see, the nearest to the moon pool
+	double Near = 1e30;
+	for (const FAmbient& One : Ambient)
+	{
+		if (!Subjects.IsValidIndex(One.Subject) || One.Subject < DCSub::Num || One.Radius < 45.f)
+		{
+			continue;
+		}
+		const FDCSubject& S = Subjects[One.Subject];
+		if (S.bDanger || S.bEvidence || S.bLensOnly || S.Zone != -1)
+		{
+			continue;
+		}
+		const double D = FVector::DistSquared(One.Centre, From);
+		if (D < Near)
+		{
+			Near = D;
+			FirstTarget = One.Subject;
+		}
+	}
+	if (FirstTarget != INDEX_NONE)
+	{
+		Missions.Add(FirstTarget);
+	}
+	TArray<TPair<double, int32>> Proofs;
+	for (int32 s = 0; s < Subjects.Num(); ++s)
+	{
+		if (Subjects[s].bEvidence)
+		{
+			FVector At;
+			Proofs.Add(TPair<double, int32>(MissionWhere(s, At) ? FVector::Dist(At, From) : 1e12, s));
+		}
+	}
+	Proofs.Sort([](const TPair<double, int32>& A, const TPair<double, int32>& B) { return A.Key < B.Key; });
+	for (const TPair<double, int32>& P : Proofs)
+	{
+		Missions.Add(P.Value);
+	}
+	UE_LOG(LogMatchCut, Display, TEXT("DOC MISSIONS first %s (%.0f m from the pool), %d targets"), FirstTarget != INDEX_NONE ? *Subjects[FirstTarget].Name : TEXT("none"), FMath::Sqrt(Near) / 100.0, Missions.Num());
+}
+
+void FDCDoc::TakePhoto(int32 Sub)
+{
+	UWorld* World = GM->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	if (!PhotoCam.IsValid())
+	{
+		ASceneCapture2D* C = World->SpawnActor<ASceneCapture2D>(CamP, CamR);
+		if (!C)
+		{
+			return;
+		}
+		USceneCaptureComponent2D* Cap = C->GetCaptureComponent2D();
+		Cap->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+		Cap->bCaptureEveryFrame = false;
+		Cap->bCaptureOnMovement = false;
+		Cap->PostProcessBlendWeight = 1.f;
+		PhotoCam = C;
+	}
+	TStrongObjectPtr<UTextureRenderTarget2D>& RT = Photos.FindOrAdd(Sub);
+	if (!RT.IsValid())
+	{
+		UTextureRenderTarget2D* T = NewObject<UTextureRenderTarget2D>(GetTransientPackage());
+		T->RenderTargetFormat = RTF_RGBA8_SRGB;
+		T->ClearColor = FLinearColor::Black;
+		T->InitAutoFormat(384, 216);
+		T->UpdateResourceImmediate(true);
+		RT.Reset(T);
+	}
+	ASceneCapture2D* C = PhotoCam.Get();
+	USceneCaptureComponent2D* Cap = C->GetCaptureComponent2D();
+	if (ACameraActor* V = W->Cam.Get())
+	{
+		Cap->PostProcessSettings = V->GetCameraComponent()->PostProcessSettings;
+	}
+	Cap->TextureTarget = RT.Get();
+	Cap->FOVAngle = CamFov;
+	C->SetActorLocationAndRotation(CamP, CamR);
+	Cap->CaptureScene();
+}
+
 // ---------------------------------------------------------------------------------------------
 // gear
 // ---------------------------------------------------------------------------------------------
@@ -218,7 +393,7 @@ void FDCDoc::StartDay()
 	Headline = INDEX_NONE;
 	bLeftBase = bUploadedToday = bBlackout = bLostTape = false;
 	BlackT = -1.f;
-	bBoardOpen = false;
+	bBoardOpen = bNewsOpen = false;
 	SleepAsk = 0.f;
 	W->Pos = W->BaseWake;
 	W->Vel = FVector::ZeroVector;
@@ -325,6 +500,9 @@ void FDCDoc::UseSpot(int32 S)
 	case 3:
 		bBoardOpen = !bBoardOpen;
 		break;
+	case 4:
+		bNewsOpen = !bNewsOpen;
+		break;
 	}
 }
 
@@ -363,6 +541,7 @@ void FDCDoc::TickDive(float Dt)
 	{
 		bLeftBase = true;
 		bBoardOpen = false;
+		bNewsOpen = false;
 	}
 	if (bInBase != bWasIn && GM->Audio)
 	{
@@ -481,13 +660,34 @@ void FDCDoc::TickDive(float Dt)
 		}
 	}
 	W->ReachAmt = FMath::FInterpTo(W->ReachAmt, Spot != INDEX_NONE ? 0.35f : 0.f, Dt, 6.f);
-	if (bBoardOpen)
+	SavedTime = FMath::Max(0.f, SavedTime - Dt);
+	if (Missions.Num() == 0 && Ambient.Num() > 0 && !W->HatchAt.IsZero())
 	{
-		// the board closes on any of E, ENTER, ESC, or on walking away from it
-		const bool bAway = W->BaseSpots.IsValidIndex(3) && FVector::Dist(W->Pos, W->BaseSpots[3]) > 650.0;
+		BuildMissions();
+	}
+	if (bBagPressed)
+	{
+		// TAB: the bag, anywhere
+		const bool bWas = bBagOpen;
+		bBoardOpen = bNewsOpen = false;
+		bBagOpen = !bWas;
+		bEverBag |= bBagOpen;
+		bUsePressed = false;
+		if (GM->Audio)
+		{
+			GM->Audio->Play(TEXT("ui_select"), 0.6f, bBagOpen ? 1.1f : 0.9f);
+		}
+	}
+	else if (PageOpen())
+	{
+		// the board (or the news, the bag) closes on any of E, ENTER, ESC, or on walking away from it
+		const int32 At = bBoardOpen ? 3 : bNewsOpen ? 4 : INDEX_NONE;
+		const bool bAway = W->BaseSpots.IsValidIndex(At) && FVector::Dist(W->Pos, W->BaseSpots[At]) > 650.0;
 		if (bUsePressed || bBackPressed || bAway)
 		{
 			bBoardOpen = false;
+			bNewsOpen = false;
+			bBagOpen = false;
 			bUsePressed = false;
 		}
 	}
@@ -540,6 +740,7 @@ void FDCDoc::MakeUpload()
 			BestValue = S.Value * StarMul;
 			BestSub = T.Shot;
 		}
+		Uploaded.Add(T.Shot);
 		// a proof goes into the archive for the Director's Cut: the best clip of each
 		if (S.bEvidence)
 		{
@@ -651,12 +852,14 @@ void FDC3D::BuildBase()
 	const FLinearColor PanelC(0.50f, 0.52f, 0.54f), FrameC(0.10f, 0.11f, 0.12f), DeckC(0.11f, 0.115f, 0.12f), CeilC(0.34f, 0.35f, 0.36f), Paint(0.55f, 0.40f, 0.06f);
 	const double T = 30.0;
 	// never into the sea floor: the whole box (and a little room under it) sits above the highest ground in its footprint
+	// (the hull outside is about twice as long as it is wide, longer than the room: its footprint counts)
 	double GroundTop = -1e9;
-	for (int32 ix = 0; ix <= 8; ++ix)
+	const double FootX = FMath::Max(BaseHalf.X, 2.0 * (BaseHalf.Y + 160.0)) + 50.0, FootY = BaseHalf.Y + 160.0;
+	for (int32 ix = 0; ix <= 10; ++ix)
 	{
 		for (int32 iy = 0; iy <= 6; ++iy)
 		{
-			GroundTop = FMath::Max(GroundTop, (double)Terrain(BaseC.X - BaseHalf.X + 2.0 * BaseHalf.X * ix / 8.0, BaseC.Y - BaseHalf.Y + 2.0 * BaseHalf.Y * iy / 6.0));
+			GroundTop = FMath::Max(GroundTop, (double)Terrain(BaseC.X - FootX + 2.0 * FootX * ix / 10.0, BaseC.Y - FootY + 2.0 * FootY * iy / 6.0));
 		}
 	}
 	BaseC.Z = FMath::Max(BaseC.Z, GroundTop + 260.0 + BaseHalf.Z);
@@ -701,9 +904,11 @@ void FDC3D::BuildBase()
 	float KitFront = 1.f, CeilFront = 1.f;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCKitFront="), KitFront);
 	FParse::Value(FCommandLine::Get(), TEXT("-MCCeilFront="), CeilFront);
-	// the floor and the ceiling are a grid of 12 x 8 tiles; the hatch is a hole of 2 x 2 of them, toward the +x end
-	const double TileX = 2.0 * H.X / 12.0, TileY = 2.0 * H.Y / 8.0;
-	const FVector Hatch = C + FVector(-H.X + 10.0 * TileX, 0.0, -H.Z);
+	// the floor and the ceiling are a grid of NX x NY tiles (about 1.9 x 1.6 m); the hatch is a hole of 2 x 2 of them, one
+	// tile in from the +x end. NY is even: the hatch sits on the middle line
+	const int32 NX = FMath::Max(4, FMath::RoundToInt(2.0 * H.X / 191.0)), NY = FMath::Max(2, FMath::RoundToInt(H.Y / 162.0)) * 2;
+	const double TileX = 2.0 * H.X / NX, TileY = 2.0 * H.Y / NY;
+	const FVector Hatch = C + FVector(-H.X + (NX - 2) * TileX, 0.0, -H.Z);
 	const double HW = 150.0;
 	const double HoleX = bKit ? TileX : HW, HoleY = bKit ? TileY : HW;
 	const double FloorZ = FloorTop - T * 0.5;
@@ -729,9 +934,9 @@ void FDC3D::BuildBase()
 			AActor* Under = GM->SpawnGroup(FVector(SB.GetCenter().X, SB.GetCenter().Y, FloorTop - 12.0));
 			GM->AddPart(Under, GM->CubeMesh, FVector::ZeroVector, FRotator::ZeroRotator, FVector(SB.GetSize().X, SB.GetSize().Y, 4.0) / 100.0, FLinearColor(0.05f, 0.05f, 0.055f), FLinearColor::Black);
 		}
-		for (int32 ix = 0; ix < 12; ++ix)
+		for (int32 ix = 0; ix < NX; ++ix)
 		{
-			for (int32 iy = 0; iy < 8; ++iy)
+			for (int32 iy = 0; iy < NY; ++iy)
 			{
 				const double X = C.X - H.X + (ix + 0.5) * TileX, Y = C.Y - H.Y + (iy + 0.5) * TileY;
 				if (FMath::Abs(X - Hatch.X) < TileX && FMath::Abs(Y - Hatch.Y) < TileY)
@@ -782,10 +987,11 @@ void FDC3D::BuildBase()
 		{
 			// one hidden box holds the room in (the windows are glass), panels about 2.4 m wide cover it
 			Shell.Add(WallPiece(bAlongX, Fixed, A0, A1, FloorTop, CeilZ, PanelC, T));
-			const int32 N = FMath::Max(1, FMath::RoundToInt((A1 - A0) / 240.0));
+			const bool bDoor = !bAlongX && InSide > 0.0; // the far end: a door to the rest of the station (shut)
+			int32 N = FMath::Max(1, FMath::RoundToInt((A1 - A0) / 240.0));
+			N += bDoor && N % 2 == 0 ? 1 : 0; // the door in the middle panel
 			const double W = (A1 - A0) / N;
 			const float Yaw = bAlongX ? (InSide * KitFront > 0.0 ? 0.f : 180.f) : (float)(-90.0 * InSide * KitFront);
-			const bool bDoor = !bAlongX && InSide > 0.0; // the far end: a door to the rest of the station (shut)
 			for (int32 i = 0; i < N; ++i)
 			{
 				const double Mid = A0 + (i + 0.5) * W;
@@ -872,9 +1078,10 @@ void FDC3D::BuildBase()
 		}
 		Block(FVector(X, C.Y, CeilZ - 12.0), FRotator::ZeroRotator, FVector(26.0, 2.0 * H.Y, 24.0), FrameC);
 	}
-	for (int32 i = 0; i < 6; ++i)
+	const int32 NLights = FMath::Clamp(FMath::RoundToInt(2.0 * H.X / 450.0), 2, 6); // one room light every ~4.5 m
+	for (int32 i = 0; i < NLights; ++i)
 	{
-		const double X = C.X - H.X + Bay * (i + 0.5);
+		const double X = C.X - H.X + 2.0 * H.X / NLights * (i + 0.5);
 		if (!bA)
 		{
 			LightPanel(FVector(X, C.Y - 160.0, CeilZ - 3.0), FVector(150.0, 50.0, 4.0), CeilLightC);
@@ -944,7 +1151,7 @@ void FDC3D::BuildBase()
 	// set A outside: a habitat module (scene:ahull, a long rounded hull with portholes) wraps the room (scene:ahull, a long rounded hull with portholes),
 	// standing on steel legs (scene:aleg). Only seen from the sea; the room's walls hide them from inside
 	const bool bHull = bA && KitMesh(TEXT("scene:ahull")) && !FParse::Param(FCommandLine::Get(), TEXT("MCNoHull"));
-	const double HullBot = FloorTop - 80.0, HullTop = CeilZ + T + 90.0, HullHalfX = H.X + T + 130.0, HullW = H.Y + T + 130.0;
+	const double HullBot = FloorTop - 80.0, HullTop = CeilZ + T + 90.0, HullW = H.Y + T + 130.0, HullHalfX = FMath::Max(H.X + T + 130.0, 2.0 * HullW); // the module's own shape: long, not a box
 	if (bHull)
 	{
 		// one module round the whole room (two side by side would each put an inner wall down the middle of the room)
@@ -953,7 +1160,7 @@ void FDC3D::BuildBase()
 	// the legs down to the sand
 	for (int32 i = 0; i < 6; ++i)
 	{
-		const FVector Leg(C.X + (i % 3 - 1) * (H.X - 80.0), C.Y + (i / 3 ? 1.0 : -1.0) * (H.Y - 80.0), 0.0);
+		const FVector Leg(C.X + (i % 3 - 1) * ((bHull ? HullHalfX - 120.0 : H.X) - 80.0), C.Y + (i / 3 ? 1.0 : -1.0) * (H.Y - 80.0), 0.0);
 		const double Top = bHull ? HullBot + 20.0 : FloorZ - T * 0.5, Bot = Terrain(Leg.X, Leg.Y) - 40.0;
 		AActor* LegBox = Block(FVector(Leg.X, Leg.Y, (Top + Bot) * 0.5), FRotator::ZeroRotator, FVector(60.0, 60.0, Top - Bot), FrameC);
 		if (bHull && KitMesh(TEXT("scene:aleg")) && Kit(TEXT("scene:aleg"), FVector(Leg.X, Leg.Y, (Top + Bot) * 0.5), FRotator::ZeroRotator, FVector(110.0, 110.0, Top - Bot)))
@@ -969,35 +1176,22 @@ void FDC3D::BuildBase()
 		LightPanel(At, FVector(14.0, 14.0, 14.0), FLinearColor(6.f, 3.5f, 0.6f));
 	}
 
-	// a plotting table in the middle: the sea floor drawn in light
-	float MapYaw = 0.f;
-	FParse::Value(FCommandLine::Get(), TEXT("-MCMapYaw="), MapYaw);
-	const UStaticMesh* MapM = bA ? KitMesh(TEXT("scene:amaptable")) : nullptr;
-	if (MapM && Place(TEXT("scene:amaptable"), 0, FVector(C.X + 120.0, C.Y, FloorTop), FRotator(0.f, MapYaw, 0.f), (float)(105.0 / FMath::Max(1.0, MapM->GetBoundingBox().GetSize().Z)), false))
-	{
-		const FVector MS = MapM->GetBoundingBox().GetSize() * (105.0 / FMath::Max(1.0, MapM->GetBoundingBox().GetSize().Z));
-		Shell.Add(Block(FVector(C.X + 120.0, C.Y, FloorTop + 52.0), FRotator(0.f, MapYaw, 0.f), FVector(MS.X, MS.Y, 104.0), FrameC));
-	}
-	else if (bKit && Kit(TEXT("scene:console"), FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator(0.f, 0.f, 0.f), FVector(210.0, 150.0, 100.0)))
-	{
-		Shell.Add(Block(FVector(C.X + 120.0, C.Y, FloorTop + 50.0), FRotator::ZeroRotator, FVector(200.0, 140.0, 100.0), FrameC)); // the kit's table is in the way too
-	}
-	else
-	{
-		Block(FVector(C.X + 120.0, C.Y, FloorTop + 42.0), FRotator::ZeroRotator, FVector(200.0, 110.0, 84.0), FrameC);
-		LightPanel(FVector(C.X + 120.0, C.Y, FloorTop + 85.0), FVector(184.0, 94.0, 2.0), FLinearColor(0.2f, 1.4f, 1.6f));
-	}
-
-	// the controls: desk, locker, bunk, board along the walls, each fitted to its real size (length, height)
+	// the controls: desk, locker, bunk, board, news along the walls of the dry end (-x), each fitted to its real size
+	// (length, height). W0 is the -x wall: the door, the desk and the board are on it
+	const double W0 = C.X - H.X;
 	BaseSpots.Reset();
 	float WorkYaw = 90.f; // the edit desk's screens toward the room
 	FParse::Value(FCommandLine::Get(), TEXT("-MCWorkYaw="), WorkYaw);
+	float NewsYaw = 180.f; // the page's printed face toward the room (-y)
+	FParse::Value(FCommandLine::Get(), TEXT("-MCNewsYaw="), NewsYaw);
 	struct FSpotDef { const TCHAR* Id; FVector At; float Yaw; double Len; double High; FVector Box; FLinearColor Color; };
 	const FSpotDef Defs[] = {
 		{ bA && KitMesh(TEXT("scene:adesk")) ? TEXT("scene:adesk") : bKit && KitMesh(TEXT("scene:workstation")) ? TEXT("scene:workstation") : TEXT("scene:editdesk"), FVector(C.X - H.X + 95.0, C.Y - 260.0, FloorTop), WorkYaw, 200.0, 140.0, FVector(90.0, 180.0, 78.0), FLinearColor(0.16f, 0.15f, 0.13f) },
-		{ Pick(TEXT("scene:alocker"), TEXT("scene:locker")), FVector(C.X - 430.0, C.Y - H.Y + 55.0, FloorTop), 0.f, bA ? 170.0 : 120.0, bA ? 205.0 : 195.0, FVector(120.0, 60.0, 190.0), FLinearColor(0.20f, 0.24f, 0.22f) },
-		{ Pick(TEXT("scene:abunk"), TEXT("scene:bunk")), FVector(C.X - 600.0, C.Y + H.Y - 55.0, FloorTop), 180.f, 205.0, bA ? 195.0 : 175.0, FVector(205.0, 90.0, 60.0), FLinearColor(0.18f, 0.17f, 0.16f) },
-		{ TEXT("scene:corkboard"), FVector(C.X - H.X + 12.0, C.Y + 220.0, FloorTop + 95.0), 90.f, 150.0, 115.0, FVector(10.0, 150.0, 110.0), FLinearColor(0.40f, 0.30f, 0.18f) } };
+		{ Pick(TEXT("scene:alocker"), TEXT("scene:locker")), FVector(W0 + 265.0, C.Y - H.Y + 55.0, FloorTop), 0.f, bA ? 170.0 : 120.0, bA ? 205.0 : 195.0, FVector(120.0, 60.0, 190.0), FLinearColor(0.20f, 0.24f, 0.22f) },
+		{ Pick(TEXT("scene:abunk"), TEXT("scene:bunk")), FVector(W0 + 175.0, C.Y + H.Y - 55.0, FloorTop), 180.f, 205.0, bA ? 195.0 : 175.0, FVector(205.0, 90.0, 60.0), FLinearColor(0.18f, 0.17f, 0.16f) },
+		{ TEXT("scene:corkboard"), FVector(C.X - H.X + 12.0, C.Y + 220.0, FloorTop + 95.0), 90.f, 150.0, 115.0, FVector(10.0, 150.0, 110.0), FLinearColor(0.40f, 0.30f, 0.18f) },
+		// the news: a newspaper page framed on the north wall, the shadow in the water on its front page
+		{ TEXT("scene:news"), FVector(W0 + 440.0, C.Y + H.Y - 9.0, FloorTop + 95.0), NewsYaw, 95.0, 125.0, FVector(80.0, 4.0, 110.0), FLinearColor(0.75f, 0.73f, 0.68f) } };
 	for (const FSpotDef& D : Defs)
 	{
 		AActor* Made = nullptr;
@@ -1024,7 +1218,7 @@ void FDC3D::BuildBase()
 		if (Set->Num() > 0 && GM->ArtMeshes.IsValidIndex((*Set)[0].Mesh))
 		{
 			const FVector Raw = GM->ArtMeshes[(*Set)[0].Mesh]->GetBoundingBox().GetSize();
-			Place(TEXT("scene:locker"), 0, FVector(C.X - 500.0, C.Y - H.Y + 45.0, FloorTop), FRotator::ZeroRotator, (float)FMath::Min(120.0 / FMath::Max(Raw.X, Raw.Y), 195.0 / Raw.Z));
+			Place(TEXT("scene:locker"), 0, FVector(W0 + 150.0, C.Y - H.Y + 45.0, FloorTop), FRotator::ZeroRotator, (float)FMath::Min(120.0 / FMath::Max(Raw.X, Raw.Y), 195.0 / Raw.Z));
 		}
 	}
 	LightPanel(FVector(C.X - H.X + 8.0, C.Y - 260.0, FloorTop + 215.0), FVector(4.0, 170.0, 70.0), FLinearColor(0.25f, 0.9f, 1.2f));
@@ -1032,13 +1226,13 @@ void FDC3D::BuildBase()
 	{
 		if (const UStaticMesh* TanksM = bA ? KitMesh(TEXT("scene:atanks")) : nullptr)
 		{
-			Place(TEXT("scene:atanks"), 0, FVector(C.X - 160.0, C.Y - H.Y + 50.0, FloorTop), FRotator(0.f, 0.f, 0.f), (float)(175.0 / FMath::Max(1.0, TanksM->GetBoundingBox().GetSize().Z)));
+			Place(TEXT("scene:atanks"), 0, FVector(W0 + 460.0, C.Y - H.Y + 50.0, FloorTop), FRotator(0.f, 0.f, 0.f), (float)(175.0 / FMath::Max(1.0, TanksM->GetBoundingBox().GetSize().Z)));
 		}
 		else if (const TArray<FDCArtRef>* Set = GM->Art.Find(TEXT("scene:gearcases")))
 		{
 			if (Set->Num() > 0)
 			{
-				Place(TEXT("scene:gearcases"), 0, FVector(C.X - 160.0, C.Y - H.Y + 70.0, FloorTop), FRotator(0.f, 0.f, 0.f), 0.75f);
+				Place(TEXT("scene:gearcases"), 0, FVector(W0 + 460.0, C.Y - H.Y + 70.0, FloorTop), FRotator(0.f, 0.f, 0.f), 0.75f);
 			}
 		}
 		for (AActor* A : Shell)

@@ -277,3 +277,37 @@ The Warden	Kẻ Canh Ngục
 THE LEVIATHAN	THỦY QUÁI LEVIATHAN
 Restore defaults	Khôi phục mặc định
 SPACE   MOON POOL: swim up into the base	SPACE   GIẾNG LẶN: bơi lên để vào căn cứ
+E   NEWSPAPER: read it	E   TỜ BÁO: đọc
+Local news   ·   Saturday edition   ·   cut out and pinned up by the last crew	Tin địa phương   ·   Số thứ Bảy   ·   kíp trước cắt ra và dán lên tường
+THIRD DIVER MISSING OFF THE TRENCH	THỢ LẶN THỨ BA MẤT TÍCH GẦN RÃNH SÂU
+The company calls the water empty. The families ask what is in the photo.	Công ty nói vùng nước này trống không. Gia đình các nạn nhân hỏi: vậy trong ảnh là gì?
+Taken from the dive boat minutes before the third diver's line went slack. The company says it is the shadow of a cloud.	Chụp từ thuyền lặn vài phút trước khi dây của thợ lặn thứ ba chùng xuống. Công ty nói đó là bóng một đám mây.
+The search boats were called back on Thursday, after a third diver failed to come up near the abyss trench, a few kilometres from the research station.	Thứ Năm, các tàu tìm kiếm đã được gọi về, sau khi một thợ lặn thứ ba không ngoi lên được gần rãnh vực thẳm, cách trạm nghiên cứu vài cây số.
+All three worked for contractors of the company that is surveying the trench for drilling. Each went down in daylight, in calm water, with an hour of air.	Cả ba đều làm cho nhà thầu của công ty đang khảo sát rãnh sâu để khoan. Ai cũng lặn ban ngày, nước lặng, mang đủ khí cho một giờ.
+The company's survey film, shown to the council last month, says the trench holds "nothing larger than a shrimp". Asked about the photo, a spokesperson called it "a cloud on the water" and took no more questions.	Phim khảo sát của công ty, chiếu cho hội đồng tháng trước, nói dưới rãnh "không có gì lớn hơn một con tôm". Hỏi về tấm ảnh, người phát ngôn gọi đó là "bóng mây trên mặt nước" rồi không trả lời thêm.
+At the harbour they tell it another way. "Nets come up cut clean," said a fisherman who would not give his name. "Nobody fishes past the drop any more. Not for years."	Ngoài cảng người ta kể khác. "Lưới kéo lên bị cắt gọn," một ngư dân giấu tên nói. "Không ai đánh cá quá mép vực nữa. Cả mấy năm rồi."
+The search is over. The survey goes on as planned.	Cuộc tìm kiếm đã dừng. Việc khảo sát vẫn tiếp tục theo kế hoạch.
+BAG   {} / {}	TÚI   {} / {}
+Film each target: in the frame is enough. Upload at the edit desk to make it count.	Quay từng mục tiêu: chỉ cần nằm trong khung hình. Đăng lên ở bàn dựng phim để được tính.
+uploaded	đã đăng
+on the tape: upload it at the edit desk	trong băng: đăng ở bàn dựng phim
+TARGET NOW	MỤC TIÊU HIỆN TẠI
+TAB / ESC  close	TAB / ESC  đóng
+TARGET  {}	MỤC TIÊU  {}
+Dive through the moon pool to find it.	Lặn xuống qua giếng lặn để tìm nó.
+{}  ·  {} m	{}  ·  {} m
+{}  {} m	{}  {} m
+TAB  bag	TAB  túi
+SAVED  {}	ĐÃ LƯU  {}
+Saved. Closer, steadier, in the middle: more views.	Đã lưu. Gần hơn, vững hơn, ở giữa khung: nhiều view hơn.
+UP AND DOWN	LÊN VÀ XUỐNG
+FIND THE TARGET	TÌM MỤC TIÊU
+FILM IT	QUAY NÓ
+THE BAG	TÚI ĐỒ
+W A S D to swim the way you look. SHIFT to swim fast. Watch the AIR bar at the top.	W A S D để bơi theo hướng nhìn. SHIFT để bơi nhanh. Để ý thanh KHÍ ở trên cùng.
+SPACE to rise, Q to sink. Try both.	SPACE để nổi lên, Q để chìm xuống. Thử cả hai.
+Your first target is at the yellow TARGET marker. Swim to it. Its name is at the top left.	Mục tiêu đầu tiên ở dấu MỤC TIÊU màu vàng. Bơi tới đó. Tên nó ở góc trên bên trái.
+Close enough. Hold RIGHT MOUSE to raise the camera (or press C).	Đủ gần rồi. Giữ CHUỘT PHẢI để giơ máy quay lên (hoặc bấm C).
+Get the animal anywhere in the frame and press LEFT MOUSE. Keep the camera up until the red dot goes out.	Đưa con vật vào bất kỳ đâu trong khung hình rồi bấm CHUỘT TRÁI. Giữ máy quay đến khi chấm đỏ tắt.
+Saved. Press TAB to open your bag: a tick and a photo for what you have filmed.	Đã lưu. Bấm TAB để mở túi: mục đã quay có dấu tích và ảnh.
+The board lists what to film. Look at it and press E.	Bảng ghi những gì cần quay. Nhìn vào nó và bấm E.

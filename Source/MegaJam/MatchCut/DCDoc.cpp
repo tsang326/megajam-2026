@@ -1585,6 +1585,16 @@ void FDCDoc::EndTake()
 		}
 	}
 	Sub = Worth != INDEX_NONE ? Worth : Sub;
+	// the target the player is after counts when it was in the picture at all (the user: in the frame is enough)
+	const int32 Want = Mission();
+	if (Tally.IsValidIndex(Want) && Tally[Want].In >= FMath::Max(2, N / 8))
+	{
+		Sub = Want;
+	}
+	if (Sub != INDEX_NONE && Tally[Sub].In < 2)
+	{
+		Sub = INDEX_NONE; // one stray frame is not a clip of it
+	}
 	ResultTime = 5.f;
 	ResultShot = Sub;
 	ResultStars = 0;
@@ -1631,9 +1641,19 @@ void FDCDoc::EndTake()
 			Sub, ResultStars, *ResultReason, In, Whole, Act, Size, Off, Shake, N);
 	}
 	Tip = ResultStars <= 1 ? TipFor(ResultReason, Sub) : TEXT("");
-	if (ResultStars <= 1)
+	if (Sub != INDEX_NONE && ResultStars == 0)
+	{
+		// in the picture is enough: the clip is saved. The stars only say how many views it will get
+		ResultStars = 1;
+	}
+	if (ResultStars <= 1 && Sub == INDEX_NONE)
 	{
 		ResultTime = 8.f; // time to read the tip
+	}
+	if (Sub != INDEX_NONE)
+	{
+		Tip = TEXT("");
+		ResultReason = ResultStars >= 3 ? DCDocText::Perfect : TEXT("Saved. Closer, steadier, in the middle: more views.");
 	}
 	if (ResultStars == 0)
 	{
@@ -1652,6 +1672,9 @@ void FDCDoc::EndTake()
 	Rec.bDanger = GDangerFrames * 4 > N;
 	GDangerFrames = 0;
 	Takes.Add(Rec);
+	SavedTime = 2.4f;
+	SavedSub = Sub;
+	TakePhoto(Sub);
 	UE_LOG(LogMatchCut, Display, TEXT("DOC CLIP %d/%d: %s, %d stars%s"), Takes.Num(), TapeCap(), *SubjectName(Sub), ResultStars, Rec.bDanger ? TEXT(", danger") : TEXT(""));
 	if (GM->Audio)
 	{
@@ -1708,7 +1731,7 @@ void FDCDoc::TickShooting(float Dt)
 		Alert = TEXT("TAPE FULL. Go home and upload.");
 		AlertTime = 3.f;
 	}
-	else if (bRecordPressed && bAim && !bRecording && !bBlackout)
+	else if (bRecordPressed && bAim && !bRecording && !bBlackout && !bBagOpen)
 	{
 		bRecording = true;
 		bEverRecorded = true;
@@ -1771,9 +1794,9 @@ void FDCDoc::TickShooting(float Dt)
 		RecTime += Dt;
 		if (RecTime >= DCD::TakeLen || !bAim)
 		{
-			if (RecTime < DCD::TakeLen * 0.6f)
+			if (RecTime < 0.5f)
 			{
-				// the camera came down too soon: not a take
+				// the camera came down at once: not a take
 				bRecording = false;
 			}
 			else
@@ -2021,7 +2044,7 @@ void FDCDoc::Tick(float Dt)
 			}
 		}
 	}
-	bEnterPressed = bBackPressed = bUsePressed = false;
+	bEnterPressed = bBackPressed = bUsePressed = bBagPressed = false;
 	NavX = NavY = 0;
 
 	// the headlamp looks where the lens looks
@@ -2230,6 +2253,34 @@ int32 FDCDoc::RunLine(const TArray<FString>& T)
 	if (Cmd == TEXT("enter"))
 	{
 		bEnterPressed = true;
+		return 1;
+	}
+	if (Cmd == TEXT("bag"))
+	{
+		bBagPressed = true;
+		return 1;
+	}
+	if (Cmd == TEXT("gotarget"))
+	{
+		// gotarget DIST: put the diver DIST cm in front of the target now, looking at it (a test of the first target)
+		FVector At;
+		if (Missions.Num() == 0)
+		{
+			BuildMissions();
+		}
+		const int32 s = Mission();
+		if (s != INDEX_NONE && MissionWhere(s, At))
+		{
+			const double Dist = T.Num() > 1 ? Num(1) : 400.0;
+			W->Pos = At + FVector(-Dist, 0.0, 60.0);
+			W->Vel = FVector::ZeroVector;
+			W->bDry = false;
+			const FRotator Look = (At - W->Pos).Rotation();
+			W->Yaw = Look.Yaw;
+			W->Pitch = Look.Pitch;
+			W->BodyYaw = Look.Yaw;
+			UE_LOG(LogMatchCut, Display, TEXT("SCRIPT gotarget %s at (%.0f,%.0f,%.0f)"), *Subjects[s].Name, At.X, At.Y, At.Z);
+		}
 		return 1;
 	}
 	if (Cmd == TEXT("back"))

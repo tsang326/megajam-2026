@@ -40,16 +40,19 @@ bool FDCTutorial::IsActive() const
 
 void FDCTutorial::Card(int32 S, FString& Head, FString& Body)
 {
-	static const TCHAR* Heads[NumSteps] = { TEXT("LOOK AROUND"), TEXT("WALK"), TEXT("THE BOARD"), TEXT("DIVE"), TEXT("SWIM"),
-		TEXT("RAISE THE CAMERA"), TEXT("RECORD"), TEXT("COME BACK"), TEXT("UPLOAD"), TEXT("GEAR AND SLEEP") };
+	static const TCHAR* Heads[NumSteps] = { TEXT("LOOK AROUND"), TEXT("WALK"), TEXT("THE BOARD"), TEXT("DIVE"), TEXT("SWIM"), TEXT("UP AND DOWN"),
+		TEXT("FIND THE TARGET"), TEXT("RAISE THE CAMERA"), TEXT("FILM IT"), TEXT("THE BAG"), TEXT("COME BACK"), TEXT("UPLOAD"), TEXT("GEAR AND SLEEP") };
 	static const TCHAR* Bodies[NumSteps] = {
 		TEXT("Move the mouse to look. No mouse: the arrow keys."),
 		TEXT("W A S D to walk. SHIFT to run."),
-		TEXT("The board by the table lists what to film. Look at it and press E."),
+		TEXT("The board lists what to film. Look at it and press E."),
 		TEXT("Walk into the moon pool, the railed opening in the floor, to dive."),
-		TEXT("SPACE up, Q down, SHIFT fast. Watch the AIR bar at the top."),
-		TEXT("Hold RIGHT MOUSE to raise the camera (or press C)."),
-		TEXT("LEFT MOUSE or E to record. Keep the subject in the frame."),
+		TEXT("W A S D to swim the way you look. SHIFT to swim fast. Watch the AIR bar at the top."),
+		TEXT("SPACE to rise, Q to sink. Try both."),
+		TEXT("Your first target is at the yellow TARGET marker. Swim to it. Its name is at the top left."),
+		TEXT("Close enough. Hold RIGHT MOUSE to raise the camera (or press C)."),
+		TEXT("Get the animal anywhere in the frame and press LEFT MOUSE. Keep the camera up until the red dot goes out."),
+		TEXT("Saved. Press TAB to open your bag: a tick and a photo for what you have filmed."),
 		TEXT("Follow the BASE marker and swim up into the moon pool before the air runs out."),
 		TEXT("At the edit desk, press E to upload the tape. Views bring money."),
 		TEXT("The locker sells gear. Sleep in the bunk to start the next dive.") };
@@ -80,25 +83,39 @@ void FDCTutorial::Tick(FDC3D& W, float Dt)
 	else
 	{
 		bOut = true;
-		if (W.Move.SizeSquared() > 0.01)
+		if (FVector2D(W.Move.X, W.Move.Y).SizeSquared() > 0.01)
 		{
 			Swum += Dt;
 		}
+		Rose += W.Move.Z > 0.1 ? Dt : 0.f;
+		Sank += W.Move.Z < -0.1 ? Dt : 0.f;
+	}
+	// the first target: how far it is
+	const int32 First = D.FirstTarget;
+	const bool bFirstDone = First != INDEX_NONE && D.IsFound(First);
+	double FirstDist = 1e9;
+	FVector FirstAt;
+	if (First != INDEX_NONE && D.MissionWhere(First, FirstAt))
+	{
+		FirstDist = FVector::Dist(FirstAt, W.Pos);
 	}
 	bool Now[NumSteps];
 	Now[0] = Looked > 75.f;
 	Now[1] = Walked > 260.f;
 	Now[2] = D.bBoardOpen;
 	Now[3] = bOut || D.bLeftBase;
-	Now[4] = Swum > 4.f;
-	Now[5] = D.bEverAimed;
-	Now[6] = D.bEverRecorded;
-	Now[7] = bOut && W.bDry && D.bInBase;
-	Now[8] = D.bUploadedToday || D.Day > 1;
-	Now[9] = D.Day > 1;
-	// a step done marks the ones before it in its group done too (moving 0-4, filming 5-6, the day's end 7-9): swimming
-	// means the player walked, but coming home does not mean they filmed anything
-	const int32 GroupStart[NumSteps] = { 0, 0, 0, 0, 0, 5, 5, 7, 7, 7 };
+	Now[4] = Swum > 2.5f;
+	Now[5] = Rose > 0.5f && Sank > 0.5f;
+	Now[6] = FirstDist < 1500.0 || bFirstDone;
+	Now[7] = D.bEverAimed && Now[6];
+	Now[8] = bFirstDone;
+	Now[9] = D.bEverBag;
+	Now[10] = bOut && W.bDry && D.bInBase && bFirstDone;
+	Now[11] = D.bUploadedToday || D.Day > 1;
+	Now[12] = D.Day > 1;
+	// a step done marks the ones before it in its group done too (moving 0-5, the first target 6-8, the bag 9, the day's
+	// end 10-12): swimming means the player walked, but coming home does not mean they filmed anything
+	const int32 GroupStart[NumSteps] = { 0, 0, 0, 0, 0, 0, 6, 6, 6, 9, 10, 10, 10 };
 	for (int32 s = NumSteps - 1; s >= 0; --s)
 	{
 		if (Now[s] && !Done[s])
@@ -119,17 +136,24 @@ void FDCTutorial::Tick(FDC3D& W, float Dt)
 	// can be done here; none, and no card
 	const bool bHome = W.bDry && D.bInBase;
 	const bool bTape = D.Takes.Num() > 0;
+	const bool bSea = !W.bDry;
 	bool Can[NumSteps];
 	Can[0] = true;
 	Can[1] = W.bDry;
 	Can[2] = bHome;
 	Can[3] = bHome;
-	Can[4] = !W.bDry;
-	Can[5] = !W.bDry;
-	Can[6] = !W.bDry;
-	Can[7] = !W.bDry && bTape;
-	Can[8] = bHome && bTape && !D.bUploadedToday;
-	Can[9] = bHome && D.bUploadedToday;
+	// close to the first target the filming cards come first, even if the player never tried rising and sinking
+	// (6 m: the first target sits ~7 m from the moon pool, so the swim cards still show when the player drops in)
+	const bool bNearFirst = FirstDist < 600.0 && !bFirstDone;
+	Can[4] = bSea && !bNearFirst;
+	Can[5] = bSea && !bNearFirst;
+	Can[6] = bSea && First != INDEX_NONE && !bFirstDone;
+	Can[7] = bSea && FirstDist < 2500.0 && !bFirstDone;
+	Can[8] = bSea && FirstDist < 2500.0 && !bFirstDone;
+	Can[9] = bFirstDone && !D.bAim;
+	Can[10] = bSea && bTape;
+	Can[11] = bHome && bTape && !D.bUploadedToday;
+	Can[12] = bHome && D.bUploadedToday;
 	const int32 Was = Step;
 	const bool bWasWaiting = bWaiting;
 	Step = NumSteps;

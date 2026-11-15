@@ -1,0 +1,39 @@
+# the first target: marker, film it, the still flies into the bag, the bag ticked
+tut on
+wait 1.5
+snap m1_base_target
+tp 1437 -1150 700 0 -10
+wait 1.0
+snap m2_in_water_card
+gotarget 2500
+wait 0.6
+snap m3_marker_far
+gotarget 450
+wait 0.6
+snap m4_close_card
+aim 1
+wait 0.6
+snap m5_aimed_card
+rec 0
+wait 1.2
+aim 0
+wait 0.1
+snap m6_saved_flash
+wait 0.5
+snap m7_saved_card
+wait 0.9
+snap m8_saved_flying
+wait 0.6
+snap m9_bag_card
+bag
+wait 0.4
+snap m10_bag_open
+lang vi
+wait 0.3
+snap m11_bag_vi
+lang en
+bag
+tp 2600 -900 900 200 5
+wait 0.8
+snap m12_hull
+quit

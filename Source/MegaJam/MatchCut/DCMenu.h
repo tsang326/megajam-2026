@@ -62,7 +62,7 @@ struct FDCMenu
 /** The first dive's tutorial: one card at a time, each step done by doing it (in any order). */
 struct FDCTutorial
 {
-	static constexpr int32 NumSteps = 10;
+	static constexpr int32 NumSteps = 13;
 	bool Done[NumSteps] = {};
 	int32 Step = 0;          // the first step not done that can be done right now; NumSteps when all are
 	bool bWaiting = false;   // steps are left but none can be done where the player is: no card
@@ -71,6 +71,7 @@ struct FDCTutorial
 	float Looked = 0.f;      // degrees turned
 	float Walked = 0.f;      // cm walked in the base
 	float Swum = 0.f;        // seconds swimming
+	float Rose = 0.f, Sank = 0.f; // seconds of SPACE, of Q in the water
 	float LastYaw = 0.f;
 	bool bHadYaw = false;
 	bool bOut = false;       // has been in the sea

@@ -48,6 +48,10 @@ private:
 	/** Width of a line in layout pixels (already translated text). */
 	float TextWidth(const FString& Str, float Scale);
 	/** Translates, then breaks the text into lines no wider than MaxW. Returns the height used. */
+	void DrawNews();
+	void DrawTargets(const struct FDC3D& W, const struct FDCDoc& D, bool bBag);
+	void DrawMission(const struct FDC3D& W, const struct FDCDoc& D);
+	FVector4 NewsPhotoUV = FVector4(0.05, 0.2625, 0.95, 0.69375); // where the photo sits on the newspaper page's texture (u0, v0, u1, v1)
 	float Wrap(const FString& Str, float X, float Y, float Scale, const FLinearColor& Color, float MaxW, int32 Align = 0);
 	bool bNoTr = false; // the text is already in the player's language
 

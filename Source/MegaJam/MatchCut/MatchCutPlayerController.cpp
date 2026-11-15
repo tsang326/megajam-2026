@@ -63,7 +63,7 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 			UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
 			return;
 		}
-		if (D3->State == EDCDocState::Shooting && !D3->bBoardOpen && D3->Spot == INDEX_NONE)
+		if (D3->State == EDCDocState::Shooting && !D3->PageOpen() && D3->Spot == INDEX_NONE)
 		{
 			Menu.Open(EDCMenuPage::Pause);
 			if (GM->GetAudio())
@@ -120,6 +120,7 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 			D->bAimHeld = IsInputKeyDown(EKeys::RightMouseButton) || IsInputKeyDown(EKeys::Gamepad_LeftShoulder);
 			if (WasInputKeyJustPressed(EKeys::C)) { D->bAimToggle = !D->bAimToggle; }
 			D->bRecordPressed |= WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::E) || WasInputKeyJustPressed(EKeys::Gamepad_RightShoulder);
+			D->bBagPressed |= WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::I) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Left);
 			D->bLampPressed |= WasInputKeyJustPressed(EKeys::F) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Top);
 			D->bEnterPressed |= WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
 			D->bUsePressed |= WasInputKeyJustPressed(EKeys::E) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::Gamepad_FaceButton_Bottom);

@@ -6,6 +6,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UObject/StrongObjectPtr.h"
+#include "Engine/TextureRenderTarget2D.h"
+class ASceneCapture2D;
 
 class AMatchCutGameMode;
 class AActor;
@@ -258,7 +261,7 @@ struct FDCDoc
 	// the base: a flooded habitat over the station. The day starts and ends here.
 	bool bInBase = true;
 	bool bLeftBase = false;     // went out on today's dive
-	int32 Spot = INDEX_NONE;    // the base's control the diver looks at: 0 desk, 1 locker, 2 bunk, 3 board
+	int32 Spot = INDEX_NONE;    // the base's control the diver looks at: 0 desk, 1 locker, 2 bunk, 3 board, 4 news
 	int32 Headline = INDEX_NONE; // index in Takes: the clip on the thumbnail
 	bool bUploadedToday = false;
 	TArray<FDCTake> Archive;    // the best clip of every proof found, kept for the Director's Cut
@@ -268,6 +271,25 @@ struct FDCDoc
 	bool bFinalCut = false;     // the film now playing is the Director's Cut
 	float DangerNear = 0.f;     // seconds a biter or the legend was close during this take
 	bool bBoardOpen = false;    // the board on the wall: the proofs found and missing
+	bool bNewsOpen = false;     // the newspaper on the wall: the missing divers, the shadow in the photo
+	bool bBagOpen = false;      // the bag (TAB): the targets, ticked once filmed, with a still of each
+	bool bEverBag = false;
+	bool bBagPressed = false;
+	bool PageOpen() const { return bBoardOpen || bNewsOpen || bBagOpen; }
+	// the targets: first an easy animal near the base (the tutorial's), then the proofs, nearest first
+	TArray<int32> Missions;
+	int32 FirstTarget = INDEX_NONE;
+	TSet<int32> Uploaded;       // every subject ever uploaded
+	void BuildMissions();
+	bool IsUploaded(int32 Sub) const;
+	bool IsFound(int32 Sub) const;   // on today's tape, or uploaded
+	int32 Mission() const;           // the target to go for now; INDEX_NONE when all are found
+	bool MissionWhere(int32 Sub, FVector& Out) const; // the nearest one of it (its home when it is far off)
+	float SavedTime = 0.f;           // a clip was just saved: its still flies into the bag
+	int32 SavedSub = INDEX_NONE;
+	TMap<int32, TStrongObjectPtr<UTextureRenderTarget2D>> Photos; // a still of each subject's latest clip
+	TWeakObjectPtr<ASceneCapture2D> PhotoCam;
+	void TakePhoto(int32 Sub);
 	float SleepAsk = 0.f;       // the bunk asks once when there is footage not uploaded
 	void UseSpot(int32 S);
 	void Sleep();
