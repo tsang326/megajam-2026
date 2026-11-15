@@ -1,0 +1,19 @@
+# the sea's look at a few vistas: before/after for motion and depth
+wait 1.5
+tp 1437 -1150 700 0 -5
+wait 1.0
+snap v1_station
+tp -1800 1200 450 135 -8
+wait 1.0
+snap v2_reef
+tp 1800 -300 450 0 -5
+wait 1.0
+snap v3_wreck
+tp -1500 -2000 400 225 15
+wait 1.0
+snap v4_shaft_up
+tp 1437 -1150 500 90 -5
+hold3 0.6 0 0 2.0
+wait 1.0
+snap v5_moving
+quit

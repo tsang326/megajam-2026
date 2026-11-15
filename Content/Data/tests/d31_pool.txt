@@ -1,0 +1,22 @@
+# the open moon pool from the deck, from under, and the breath bubbles
+wait 1.5
+tp 1137 -1150 1105 0 -40
+wait 0.8
+snap p1_pool_deck
+tp 1300 -1050 1105 -30 -70
+wait 0.6
+snap p2_pool_down
+tp 1437 -1150 600 0 70
+wait 0.8
+snap p3_pool_from_under
+tp 1800 -300 450 0 -5
+wait 0.4
+snap p4_breath_a
+wait 0.25
+snap p5_breath_b
+wait 0.35
+snap p6_breath_c
+tp -1800 1200 450 135 -8
+wait 1.0
+snap p7_reef
+quit

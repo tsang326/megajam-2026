@@ -63,7 +63,9 @@ void AMatchCutPlayerController::PlayerTick(float DeltaTime)
 			UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
 			return;
 		}
-		if (D3->State == EDCDocState::Shooting && !D3->PageOpen() && D3->Spot == INDEX_NONE)
+		// (not held back when the eyes rest on a control of the base: in the small base that is nearly always, and ESC
+		// did nothing)
+		if (D3->State == EDCDocState::Shooting && !D3->PageOpen())
 		{
 			Menu.Open(EDCMenuPage::Pause);
 			if (GM->GetAudio())

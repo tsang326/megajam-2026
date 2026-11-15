@@ -452,7 +452,7 @@ void FDC3D::SpawnFlecks()
 		OutMID = MID;
 		return A;
 	};
-	Snow = Make(GM->CubeMesh, 420, 2.2f, 5.5f, 4711, SnowMID);
+	Snow = Make(GM->CubeMesh, 1100, 1.4f, 6.5f, 4711, SnowMID); // denser than it was: the water is never empty, it moves
 	Bubbles = Make(GM->SphereMesh, 40, 3.5f, 8.f, 1213, BubbleMID);
 }
 
@@ -1125,7 +1125,7 @@ void FDC3D::Start()
 	L.Saturation = 0.88f;
 	L.Contrast = 1.12f;
 	L.Tint = FLinearColor(0.94f, 1.f, 1.07f);
-	L.SnowColor = FLinearColor(0.22f, 0.36f, 0.46f);
+	L.SnowColor = FLinearColor(0.30f, 0.45f, 0.55f);
 	L.bShafts = false;
 	FParse::Value(FCommandLine::Get(), TEXT("-MCFog="), L.FogDensity);
 	FParse::Value(FCommandLine::Get(), TEXT("-MCVolExt="), L.VolExtinction);
@@ -1180,6 +1180,64 @@ void FDC3D::Start()
 // ---------------------------------------------------------------------------------------------
 // every frame
 // ---------------------------------------------------------------------------------------------
+
+// the diver's breath: every few seconds a burst of bubbles from the regulator, under the chin, wobbling up past the
+// view. The cheapest thing that makes first person under water feel alive (one diver: the component is kept here)
+static TWeakObjectPtr<UInstancedStaticMeshComponent> GBreath;
+static TWeakObjectPtr<UMaterialInstanceDynamic> GBreathMID;
+void FDC3D::TickBreath(float Dt)
+{
+	constexpr int32 N = 16;
+	UInstancedStaticMeshComponent* C = GBreath.Get();
+	if (!C || C->GetWorld() != GM->GetWorld())
+	{
+		AActor* A = GM->SpawnGroup(FVector::ZeroVector);
+		UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(GM->UnlitMaterial, A);
+		C = NewObject<UInstancedStaticMeshComponent>(A);
+		C->SetMobility(EComponentMobility::Movable);
+		C->SetStaticMesh(GM->SphereMesh);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetCastShadow(false);
+		C->SetupAttachment(A->GetRootComponent());
+		C->RegisterComponent();
+		C->SetMaterial(0, MID);
+		C->SetAbsolute(true, true, true);
+		for (int32 i = 0; i < N; ++i)
+		{
+			C->AddInstance(FTransform(FRotator::ZeroRotator, FVector::ZeroVector, FVector(0.001)));
+		}
+		GBreath = C;
+		GBreathMID = MID;
+	}
+	if (UMaterialInstanceDynamic* MID = GBreathMID.Get())
+	{
+		MID->SetVectorParameterValue(TEXT("Color"), GM->Look.SnowColor * 1.4f);
+	}
+	const double Cycle = 4.3, T = FMath::Fmod((double)Time, Cycle);
+	const FRotationMatrix M(FRotator(0.f, Yaw, 0.f));
+	const FVector F = M.GetUnitAxis(EAxis::X), R = M.GetUnitAxis(EAxis::Y);
+	// out of the regulator: a little forward and below the eyes, a hand's width to the side
+	// (off to the right and low, so the bubbles stream up the edge of the view and never sit in the middle of it)
+	const FVector Mouth = CamPos + F * 30.0 + R * 22.0 - FVector(0.0, 0.0, 26.0);
+	FRandomStream Rand(7 + (int32)(Time / Cycle));
+	for (int32 i = 0; i < N; ++i)
+	{
+		const double Age = T - i * 0.045 - Rand.FRandRange(0.f, 0.08f);
+		const double Size = Rand.FRandRange(0.25f, 0.9f);
+		const FVector Side = F * Rand.FRandRange(-4.f, 8.f) + R * Rand.FRandRange(2.f, 12.f);
+		FTransform X(FRotator::ZeroRotator, FVector::ZeroVector, FVector(0.001));
+		if (DryAmt < 0.5f && Age > 0.0 && Age < 2.2)
+		{
+			// rising faster as it goes (buoyancy), wobbling, spreading, growing as the pressure drops a little
+			const double Up = 40.0 * Age + 55.0 * Age * Age;
+			const FVector Wob = R * (5.0 * FMath::Sin(Age * 11.0 + i)) + F * (4.0 * FMath::Cos(Age * 9.0 + i * 1.7));
+			const FVector At = Mouth + Side * (0.4 + Age) + Wob + FVector(0.0, 0.0, Up);
+			const double S = Size * (0.8 + 0.25 * Age) / 100.0;
+			X = FTransform(FRotator::ZeroRotator, At, FVector(S, S, S * 0.8));
+		}
+		C->UpdateInstanceTransform(i, X, true, i == N - 1, true);
+	}
+}
 
 void FDC3D::MoveHero(const FVector& Delta, bool bStanding)
 {
@@ -1719,10 +1777,10 @@ void FDC3D::Tick(float Dt)
 
 	// ---- the water: flecks that sink and bubbles that rise, around the camera wherever it goes
 	const double P = DC3::FleckPeriod;
-	auto Around = [this, P](double Drift)
+	auto Around = [this, P](const FVector& Drift)
 	{
-		const FVector C = CamPos + FVector(0.0, 0.0, Drift);
-		return FVector(FMath::RoundToDouble(C.X / P) * P + P * 0.5, FMath::RoundToDouble(C.Y / P) * P + P * 0.5, FMath::RoundToDouble(C.Z / P) * P + P * 0.5 - Drift);
+		const FVector C = CamPos + Drift;
+		return FVector(FMath::RoundToDouble(C.X / P) * P + P * 0.5 - Drift.X, FMath::RoundToDouble(C.Y / P) * P + P * 0.5 - Drift.Y, FMath::RoundToDouble(C.Z / P) * P + P * 0.5 - Drift.Z);
 	};
 	DryAmt = Dt > 0.f ? FMath::FInterpTo(DryAmt, bDry ? 1.f : 0.f, Dt, 5.f) : (bDry ? 1.f : 0.f);
 	if (GM->Fog)
@@ -1739,7 +1797,9 @@ void FDC3D::Tick(float Dt)
 	}
 	if (AActor* A = Snow.Get())
 	{
-		A->SetActorLocation(Around(FMath::Fmod(Time * 14.0, P)));
+		// marine snow: sinking, and carried sideways by a slow current that breathes (the stream's petals on the wind)
+		const double Cur = Time * 26.0 + 120.0 * FMath::Sin(Time * 0.21);
+		A->SetActorLocation(Around(FVector(-FMath::Fmod(Cur, P), -FMath::Fmod(Cur * 0.45 + 60.0 * FMath::Sin(Time * 0.33), P), FMath::Fmod(Time * 14.0, P))));
 		if (UMaterialInstanceDynamic* MID = SnowMID.Get())
 		{
 			MID->SetVectorParameterValue(TEXT("Color"), GM->Look.SnowColor);
@@ -1747,12 +1807,13 @@ void FDC3D::Tick(float Dt)
 	}
 	if (AActor* A = Bubbles.Get())
 	{
-		A->SetActorLocation(Around(-FMath::Fmod(Time * 80.0, P)));
+		A->SetActorLocation(Around(FVector(0.0, 0.0, -FMath::Fmod(Time * 80.0, P))));
 		if (UMaterialInstanceDynamic* MID = BubbleMID.Get())
 		{
 			MID->SetVectorParameterValue(TEXT("Color"), GM->Look.SnowColor * 1.6f);
 		}
 	}
+	TickBreath(Dt);
 	for (int32 i = 0; i < Slats.Num() && i < SlatBase.Num(); ++i)
 	{
 		if (AActor* A = Slats[i].Get())

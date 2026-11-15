@@ -184,6 +184,7 @@ private:
 	void BuildArea();
 	void SpawnHero();
 	void SpawnFlecks();
+	void TickBreath(float Dt); // the diver's breath: bubble bursts from the regulator
 	AActor* Place(const TCHAR* Id, int32 Variant, const FVector& Base, const FRotator& Rot, float Scale, bool bCollide = true);
 	TArray<TWeakObjectPtr<UStaticMeshComponent>> LateSolid; // big hard set dressing: made solid once everything has found its place
 	UStaticMeshComponent* Bare(UStaticMesh* Mesh, UMaterialInterface* Mat, const FVector& At, const FRotator& Rot, const FVector& Scale, const FLinearColor& Color, UMaterialInstanceDynamic** OutMID = nullptr);

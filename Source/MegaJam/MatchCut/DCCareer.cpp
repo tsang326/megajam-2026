@@ -1097,55 +1097,34 @@ void FDC3D::BuildBase()
 		}
 	}
 
-	// the moon pool: a lit shaft down through the floor, a yellow rim, a rail on three sides (the -x side is the way in)
-	const bool bRing = bKit && (KitMesh(TEXT("scene:moonring")) || (bA && KitMesh(TEXT("scene:apoolrail"))));
-	if (bKit && bA && KitMesh(TEXT("scene:apoolrail")))
+	// the moon pool: an open square in the floor straight onto the sea below (the user, 2026-11-16: no trunk, no lid of
+	// water, no rim model in the way), a thin steel lip flush with the deck and a rail on three sides (-x is the way in)
 	{
-		// set A: a rim slab with a rail on three sides, sitting on the floor; its opening is about PoolHole of its width
-		float PoolHole = 0.5f;
-		FParse::Value(FCommandLine::Get(), TEXT("-MCPoolHole="), PoolHole);
-		float PoolYaw = 0.f;
-		FParse::Value(FCommandLine::Get(), TEXT("-MCPoolYaw="), PoolYaw);
-		// the model: a shaft below, the rim slab's top at 0.75 of its height, a low rail above; scaled by its width
-		const UStaticMesh* PoolM = KitMesh(TEXT("scene:apoolrail"));
-		const FVector Raw = PoolM->GetBoundingBox().GetSize();
-		const double Wide = 2.0 * FMath::Max(HoleX, HoleY) / PoolHole;
-		const double PoolH = Raw.Z * Wide / FMath::Max(1.0, FMath::Max(Raw.X, Raw.Y));
-		Kit(TEXT("scene:apoolrail"), FVector(Hatch.X, Hatch.Y, FloorTop + 1.0 - 0.75 * PoolH + PoolH * 0.5), FRotator(0.f, PoolYaw, 0.f), FVector(2.0 * HoleX / PoolHole, 2.0 * HoleY / PoolHole, PoolH));
-	}
-	if (bRing)
-	{
+		const FLinearColor Lip(0.58f, 0.60f, 0.62f), Rail(0.80f, 0.58f, 0.06f);
 		for (int32 i = 0; i < 4; ++i)
 		{
-			const FVector Off = i < 2 ? FVector(0.0, (i ? 1.0 : -1.0) * (HoleY + 10.0), 0.0) : FVector((i == 3 ? 1.0 : -1.0) * (HoleX + 10.0), 0.0, 0.0);
-			const FVector Side = i < 2 ? FVector(2.0 * HoleX + 40.0, 20.0, 230.0) : FVector(20.0, 2.0 * HoleY + 40.0, 230.0);
-			Block(Hatch + Off - FVector(0.0, 0.0, 130.0), FRotator::ZeroRotator, Side, bA ? FLinearColor(0.42f, 0.43f, 0.44f) : FrameC); // set A: the trunk in the hull's grey
+			const bool bYSide = i < 2;
+			const double Sg = (i % 2) ? 1.0 : -1.0;
+			const FVector Off = bYSide ? FVector(0.0, Sg * (HoleY + 7.0), 0.0) : FVector(Sg * (HoleX + 7.0), 0.0, 0.0);
+			const FVector Size = bYSide ? FVector(2.0 * HoleX + 28.0, 14.0, 3.0) : FVector(14.0, 2.0 * HoleY + 28.0, 3.0);
+			if (AActor* L = Block(FVector(Hatch.X + Off.X, Hatch.Y + Off.Y, FloorTop + 1.5), FRotator::ZeroRotator, Size, Lip))
+			{
+				L->SetActorEnableCollision(false);
+			}
 		}
-	}
-	if (bKit && !bA && KitMesh(TEXT("scene:moonring")))
-	{
-		// the ring's deck sits at about 0.74 of its height (its ladder hangs below): that height goes at the floor
-		const double RingH = 340.0;
-		Kit(TEXT("scene:moonring"), FVector(Hatch.X, Hatch.Y, FloorTop - 0.74 * RingH + RingH * 0.5), FRotator(0.f, 90.f, 0.f), FVector(2.0 * HoleY + 30.0, 2.0 * HoleX + 30.0, RingH));
-	}
-	for (int32 i = 0; i < 4 && !bRing; ++i)
-	{
-		const FVector Off = i < 2 ? FVector(0.0, (i ? 1.0 : -1.0) * (HW + 10.0), 0.0) : FVector((i == 3 ? 1.0 : -1.0) * (HW + 10.0), 0.0, 0.0);
-		const FVector Side = i < 2 ? FVector(2.0 * HW + 40.0, 20.0, 0.0) : FVector(20.0, 2.0 * HW + 40.0, 0.0);
-		Block(Hatch + Off + FVector(0.0, 0.0, 5.0), FRotator::ZeroRotator, Side + FVector(0.0, 0.0, 10.0), Paint);
-		Block(Hatch + Off - FVector(0.0, 0.0, 130.0), FRotator::ZeroRotator, Side + FVector(0.0, 0.0, 230.0), FrameC);
-	}
-	for (int32 i = 0; i < 6 && !bRing; ++i)
-	{
-		const double PX = i < 2 ? Hatch.X + HW + 30.0 : Hatch.X + (i % 2 ? HW + 30.0 : -HW - 30.0);
-		const double PY = i < 2 ? Hatch.Y + (i ? 1.0 : -1.0) * (HW + 30.0) : Hatch.Y + (i < 4 ? -1.0 : 1.0) * (HW + 30.0);
-		Block(FVector(PX, PY, FloorTop + 52.0), FRotator::ZeroRotator, FVector(8.0, 8.0, 104.0), Paint);
-	}
-	if (!bRing)
-	{
-		Block(FVector(Hatch.X + HW + 30.0, Hatch.Y, FloorTop + 104.0), FRotator::ZeroRotator, FVector(8.0, 2.0 * HW + 68.0, 6.0), Paint);
-		Block(FVector(Hatch.X, Hatch.Y - HW - 30.0, FloorTop + 104.0), FRotator::ZeroRotator, FVector(2.0 * HW + 68.0, 8.0, 6.0), Paint);
-		Block(FVector(Hatch.X, Hatch.Y + HW + 30.0, FloorTop + 104.0), FRotator::ZeroRotator, FVector(2.0 * HW + 68.0, 8.0, 6.0), Paint);
+		const double RX = HoleX + 30.0, RY = HoleY + 30.0;
+		const FVector2D Posts[6] = { {RX, -RY}, {RX, 0.0}, {RX, RY}, {-RX, -RY}, {-RX, RY}, {0.0, -RY} };
+		for (const FVector2D& Pt : Posts)
+		{
+			Block(FVector(Hatch.X + Pt.X, Hatch.Y + Pt.Y, FloorTop + 52.0), FRotator::ZeroRotator, FVector(7.0, 7.0, 104.0), Rail);
+		}
+		Block(FVector(Hatch.X, Hatch.Y + RY, FloorTop + 52.0), FRotator::ZeroRotator, FVector(7.0, 7.0, 104.0), Rail);
+		Block(FVector(Hatch.X + RX, Hatch.Y, FloorTop + 104.0), FRotator::ZeroRotator, FVector(6.0, 2.0 * RY + 6.0, 6.0), Rail);
+		Block(FVector(Hatch.X, Hatch.Y - RY, FloorTop + 104.0), FRotator::ZeroRotator, FVector(2.0 * RX + 6.0, 6.0, 6.0), Rail);
+		Block(FVector(Hatch.X, Hatch.Y + RY, FloorTop + 104.0), FRotator::ZeroRotator, FVector(2.0 * RX + 6.0, 6.0, 6.0), Rail);
+		Block(FVector(Hatch.X + RX, Hatch.Y, FloorTop + 55.0), FRotator::ZeroRotator, FVector(5.0, 2.0 * RY + 6.0, 5.0), Rail);
+		Block(FVector(Hatch.X, Hatch.Y - RY, FloorTop + 55.0), FRotator::ZeroRotator, FVector(2.0 * RX + 6.0, 5.0, 5.0), Rail);
+		Block(FVector(Hatch.X, Hatch.Y + RY, FloorTop + 55.0), FRotator::ZeroRotator, FVector(2.0 * RX + 6.0, 5.0, 5.0), Rail);
 	}
 	Glow(Hatch - FVector(0.0, 0.0, 160.0), FLinearColor(0.35f, 0.8f, 1.f), 5000.f, 1400.f);
 	// set A outside: a habitat module (scene:ahull, a long rounded hull with portholes) wraps the room (scene:ahull, a long rounded hull with portholes),
@@ -1250,10 +1229,6 @@ void FDC3D::BuildBase()
 	BaseWake = C + FVector(-H.X * 0.35, 60.0, -H.Z + DCCar::Stand);
 	HatchAt = FVector(Hatch.X, Hatch.Y, FloorZ + T * 0.5 - 12.0);
 	HatchHalf = HW;
-	// the sea's surface in the hatch: still, dark, a little light in it
-	if (AActor* Water = Block(HatchAt, FRotator::ZeroRotator, FVector(2.0 * HW, 2.0 * HW, 2.0), FLinearColor(0.02f, 0.10f, 0.12f)))
-	{
-		Water->SetActorEnableCollision(false);
-	}
+	// no lid of water in the hatch: the sea is seen straight through it
 	UE_LOG(LogMatchCut, Display, TEXT("3D base at (%.0f,%.0f,%.0f) half (%.0f,%.0f,%.0f), ground top %.0f, hatch (%.0f,%.0f,%.0f)"), C.X, C.Y, C.Z, H.X, H.Y, H.Z, GroundTop, Hatch.X, Hatch.Y, Hatch.Z);
 }
