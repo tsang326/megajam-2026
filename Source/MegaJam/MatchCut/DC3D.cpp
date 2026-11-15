@@ -60,6 +60,59 @@ namespace DC3
 // building
 // ---------------------------------------------------------------------------------------------
 
+// the soft things on the floor (kelp, grass, fans, anemones, tube worms) sway about their roots in a swell that rolls
+// across the site, neighbours together, as grass does in wind. Each Place root is at the sand, so a turn of the actor is
+// a bend from the root. One sea at a time: the list is kept here and starts again with a new world.
+struct FDCSoft
+{
+	TWeakObjectPtr<AActor> A;
+	FRotator Rot;
+	FVector Base;
+	float Amp;
+	float Phase;
+};
+static TArray<FDCSoft> GSoft;
+static TWeakObjectPtr<UWorld> GSoftWorld;
+static void AddSoft(AActor* A, const TCHAR* Id, const FVector& Base, const FRotator& Rot)
+{
+	struct FKind { const TCHAR* Id; float Amp; };
+	static const FKind Kinds[] = { { TEXT("scene:kelp"), 6.f }, { TEXT("scene:seagrass"), 9.f }, { TEXT("scene:seafan"), 3.5f },
+		{ TEXT("scene:seapen"), 5.f }, { TEXT("scene:crinoid"), 4.f }, { TEXT("scene:anemone"), 3.f }, { TEXT("scene:tubeworms"), 3.f } };
+	for (const FKind& K : Kinds)
+	{
+		if (FString(Id).StartsWith(K.Id))
+		{
+			if (GSoftWorld.Get() != A->GetWorld())
+			{
+				GSoft.Reset();
+				GSoftWorld = A->GetWorld();
+			}
+			GSoft.Add({ A, Rot, Base, K.Amp, FMath::FRand() * 6.f });
+			return;
+		}
+	}
+}
+static void TickSoft(UWorld* World, const FVector& Cam, float Time)
+{
+	if (GSoftWorld.Get() != World)
+	{
+		return;
+	}
+	for (const FDCSoft& S : GSoft)
+	{
+		AActor* A = S.A.Get();
+		if (!A || FVector::DistSquared(S.Base, Cam) > 6000.0 * 6000.0)
+		{
+			continue; // far off, the haze has it: no need to move it
+		}
+		// the swell: a long wave along the current (+x, a little +y), a slower one across it, and each plant's own flutter
+		const float W = (float)(S.Base.X * 0.0011 + S.Base.Y * 0.0005);
+		const float Bend = FMath::Sin(Time * 0.9f - W) * 0.75f + FMath::Sin(Time * 2.3f + S.Phase) * 0.25f;
+		const float Side = FMath::Sin(Time * 0.55f - (float)(S.Base.Y * 0.0009) + S.Phase * 0.3f);
+		A->SetActorRotation(FQuat(FRotator(Bend * S.Amp, 0.f, Side * S.Amp * 0.6f)) * FQuat(S.Rot));
+	}
+}
+
 AActor* FDC3D::Place(const TCHAR* Id, int32 Variant, const FVector& Base, const FRotator& Rot, float Scale, bool bCollide)
 {
 	const TArray<FDCArtRef>* Set = GM->Art.Find(Id);
@@ -111,6 +164,10 @@ AActor* FDC3D::Place(const TCHAR* Id, int32 Variant, const FVector& Base, const 
 				LateSolid.Add(C);
 			}
 		}
+	}
+	if (!bCollide)
+	{
+		AddSoft(A, Id, Base, Rot);
 	}
 	return A;
 }
@@ -1818,6 +1875,7 @@ void FDC3D::Tick(float Dt)
 		}
 	}
 	TickBreath(Dt);
+	TickSoft(GM->GetWorld(), CamPos, Time);
 	for (int32 i = 0; i < Slats.Num() && i < SlatBase.Num(); ++i)
 	{
 		if (AActor* A = Slats[i].Get())

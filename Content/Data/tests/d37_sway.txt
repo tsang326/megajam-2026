@@ -1,0 +1,10 @@
+# kelp and grass sway in the swell: the same view a second apart
+wait 1.5
+tp -1800 1200 450 135 -8
+wait 1.0
+snap s1_reef_a
+wait 1.6
+snap s2_reef_b
+wait 1.6
+snap s3_reef_c
+quit
