@@ -532,11 +532,11 @@
    "mesh": "/Game/DeepCut/Art/creature_oarfish/creature_oarfish/StaticMeshes/creature_oarfish.creature_oarfish",
    "yaw": 0,
    "file": "creature_oarfish.glb",
-   "triangles": 3336,
+   "triangles": 2984,
    "sizeCm": [
     39,
-    189,
-    116
+    321,
+    84
    ],
    "emissive": "none"
   }
