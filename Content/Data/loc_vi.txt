@@ -299,7 +299,7 @@ Dive through the moon pool to find it.	Lặn xuống qua giếng lặn để tì
 {}  {} m	{}  {} m
 TAB  bag	TAB  túi
 SAVED  {}	ĐÃ LƯU  {}
-Saved. Closer, steadier, in the middle: more views.	Đã lưu. Gần hơn, vững hơn, ở giữa khung: nhiều view hơn.
+Saved.	Đã lưu.
 UP AND DOWN	LÊN VÀ XUỐNG
 FIND THE TARGET	TÌM MỤC TIÊU
 FILM IT	QUAY NÓ

@@ -1653,7 +1653,7 @@ void FDCDoc::EndTake()
 	if (Sub != INDEX_NONE)
 	{
 		Tip = TEXT("");
-		ResultReason = ResultStars >= 3 ? DCDocText::Perfect : TEXT("Saved. Closer, steadier, in the middle: more views.");
+		ResultReason = ResultStars >= 3 ? DCDocText::Perfect : TEXT("Saved.");
 	}
 	if (ResultStars == 0)
 	{
