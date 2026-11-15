@@ -812,13 +812,13 @@ void FDCDoc::TickHunter(float Dt, bool bLive)
 		if (bHunting)
 		{
 			Want = W->Pos;
-			Speed = 520.f + 400.f * HuntAlert;
+			Speed = 360.f + 300.f * HuntAlert; // never faster than the diver unaimed (660): it can be outswum and framed
 		}
 		else
 		{
-			const float T = Clock * 0.05f;
+			const float T = Clock * 0.035f; // a slow patrol: 2600 cm circle at ~90 cm/s, long enough in frame to film
 			Want = Home + FVector(FMath::Cos(T) * 2600.0, FMath::Sin(T) * 2600.0, 300.0 * FMath::Sin(T * 3.f));
-			Speed = 260.f;
+			Speed = 180.f;
 		}
 		if (HuntPos.IsZero())
 		{
