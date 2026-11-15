@@ -1486,16 +1486,19 @@ void FDC3D::Tick(float Dt)
 	// under the moon pool: as in a habitat's wet porch (or a game's moon pool), coming home is easy. Near the shaft and
 	// below it, swimming up (SPACE) lines the diver up with the opening and lifts them in; no hunting for a narrow hole
 	bHatchAssist = false;
+	// a moment after going through the hatch either way, it does not take the diver straight back (one diver, one hero)
+	static float HatchCool = 0.f;
+	HatchCool = FMath::Max(0.f, HatchCool - Dt);
 	if (!bDry)
 	{
 		const FVector2D ToHatch(HatchAt.X - Pos.X, HatchAt.Y - Pos.Y);
 		const double Below = HatchAt.Z - Pos.Z;
-		if (ToHatch.Size() < 450.0 && Below > -20.0 && Below < 900.0)
+		if (ToHatch.Size() < 700.0 && Below > -20.0 && Below < 1100.0)
 		{
 			bHatchAssist = true;
-			if (In.Z > 0.f)
+			if (In.Z > 0.f || (Vel.Z > 60.0 && Below < 400.0))
 			{
-				const double K = FMath::Min(1.0, 4.0 * Dt);
+				const double K = FMath::Min(1.0, 6.0 * Dt);
 				Pos.X += ToHatch.X * K;
 				Pos.Y += ToHatch.Y * K;
 				Vel.X *= 1.0 - K;
@@ -1504,8 +1507,10 @@ void FDC3D::Tick(float Dt)
 			}
 		}
 	}
-	if (!bDry && bInBox && OverHatch(Pos) && Pos.Z > HatchAt.Z - 70.0 && (Vel.Z > 0.0 || In.Z > 0.f))
+	// up: anywhere in the trunk under the opening (it is 2.3 m deep), rising, and the diver is out on the deck
+	if (!bDry && bInBox && OverHatch(Pos, -20.0) && Pos.Z > HatchAt.Z - 260.0 && (Vel.Z > 0.0 || In.Z > 0.f) && HatchCool <= 0.f)
 	{
+		HatchCool = 0.8f;
 		// up through the surface: the hands on the rim, out onto the deck
 		Pos = FVector(HatchAt.X - HatchHalf - 90.0, HatchAt.Y, Floor + Stand);
 		Vel = FVector::ZeroVector;
@@ -1519,9 +1524,16 @@ void FDC3D::Tick(float Dt)
 		LandDip = 1.f;
 		UE_LOG(LogMatchCut, Display, TEXT("3D BASE climbed out onto the deck"));
 	}
-	else if (bDry && (!bInBox || Pos.Z < HatchAt.Z))
+	else if (bDry && (!bInBox || Pos.Z < HatchAt.Z || (OverHatch(Pos, 30.0) && HatchCool <= 0.f)))
 	{
-		// through the surface: into the sea
+		// through the surface: into the sea. Stepping over the rim drops the diver straight down the middle of the trunk,
+		// so the standing body never catches on the edge of the deck
+		if (bInBox && OverHatch(Pos, 30.0))
+		{
+			Pos = FVector(HatchAt.X, HatchAt.Y, HatchAt.Z - 150.0);
+			Vel = FVector(0.0, 0.0, -260.0);
+			HatchCool = 0.8f;
+		}
 		bDry = false;
 		Vel *= 0.35;
 		if (GM->Audio)

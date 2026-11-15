@@ -1,0 +1,24 @@
+# the moon pool both ways: off-centre walk in, swim back up, come home from under the hull, walk in again
+wait 1.5
+tp 1137 -1040 1105 0 0
+wait 0.3
+key3 1 0 0 1.6
+wait 0.8
+career
+snap h1_after_drop
+key3 0 0 -1 1.0
+key3 0 0 1 3.0
+wait 0.5
+career
+snap h2_back_up
+look3 0 -10
+key3 1 0 0 1.6
+wait 0.8
+career
+tp 1937 -950 650 180 0
+wait 0.3
+key3 0 0 1 4.0
+wait 0.5
+career
+snap h3_from_under
+quit
