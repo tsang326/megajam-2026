@@ -1,0 +1,167 @@
+# life: each species where it lives, three pictures a few seconds apart (pose, height over the floor, motion).
+# The log line DOC SUBJECT gives where the animal is and how high over the floor.
+wait 1.5
+lamp 1
+subject oarfish 900 9
+wait 0.4
+snap oarfish_a
+wait 2.5
+snap oarfish_b
+wait 3.0
+subject oarfish 900 2
+wait 0.3
+snap oarfish_c
+subject squid 400 9
+wait 0.4
+snap squid_a
+wait 2.5
+snap squid_b
+wait 3.0
+subject squid 400 2
+wait 0.3
+snap squid_c
+subject octopus 250 9
+wait 0.4
+snap octopus_a
+wait 2.5
+snap octopus_b
+wait 3.0
+subject octopus 250 2
+wait 0.3
+snap octopus_c
+subject stingray 450 9
+wait 0.4
+snap stingray_a
+wait 2.5
+snap stingray_b
+wait 3.0
+subject stingray 450 2
+wait 0.3
+snap stingray_c
+subject shark 900 9
+wait 0.4
+snap shark_a
+wait 2.5
+snap shark_b
+wait 3.0
+subject shark 900 2
+wait 0.3
+snap shark_c
+subject hatchet 350 9
+wait 0.4
+snap hatchet_a
+wait 2.5
+snap hatchet_b
+wait 3.0
+subject hatchet 350 2
+wait 0.3
+snap hatchet_c
+subject lantern 300 9
+wait 0.4
+snap lantern_a
+wait 2.5
+snap lantern_b
+wait 3.0
+subject lantern 300 2
+wait 0.3
+snap lantern_c
+subject grouper 450 9
+wait 0.4
+snap grouper_a
+wait 2.5
+snap grouper_b
+wait 3.0
+subject grouper 450 2
+wait 0.3
+snap grouper_c
+subject coelacanth 450 9
+wait 0.4
+snap coelacanth_a
+wait 2.5
+snap coelacanth_b
+wait 3.0
+subject coelacanth 450 2
+wait 0.3
+snap coelacanth_c
+subject cuttle 250 9
+wait 0.4
+snap cuttle_a
+wait 2.5
+snap cuttle_b
+wait 3.0
+subject cuttle 250 2
+wait 0.3
+snap cuttle_c
+subject nautilus 250 9
+wait 0.4
+snap nautilus_a
+wait 2.5
+snap nautilus_b
+wait 3.0
+subject nautilus 250 2
+wait 0.3
+snap nautilus_c
+subject crab 450 9
+wait 0.4
+snap crab_a
+wait 2.5
+snap crab_b
+wait 3.0
+subject crab 450 2
+wait 0.3
+snap crab_c
+subject eel 400 9
+wait 0.4
+snap eel_a
+wait 2.5
+snap eel_b
+wait 3.0
+subject eel 400 2
+wait 0.3
+snap eel_c
+subject seahorse 120 9
+wait 0.4
+snap seahorse_a
+wait 2.5
+snap seahorse_b
+wait 3.0
+subject seahorse 120 2
+wait 0.3
+snap seahorse_c
+subject barreleye 200 9
+wait 0.4
+snap barreleye_a
+wait 2.5
+snap barreleye_b
+wait 3.0
+subject barreleye 200 2
+wait 0.3
+snap barreleye_c
+subject frilled 700 9
+wait 0.4
+snap frilled_a
+wait 2.5
+snap frilled_b
+wait 3.0
+subject frilled 700 2
+wait 0.3
+snap frilled_c
+subject lionsmane 400 9
+wait 0.4
+snap lionsmane_a
+wait 2.5
+snap lionsmane_b
+wait 3.0
+subject lionsmane 400 2
+wait 0.3
+snap lionsmane_c
+subject krill 200 9
+wait 0.4
+snap krill_a
+wait 2.5
+snap krill_b
+wait 3.0
+subject krill 200 2
+wait 0.3
+snap krill_c
+quit

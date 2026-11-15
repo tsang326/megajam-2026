@@ -99,7 +99,7 @@ mel.connect_material_property(eadd, "", unreal.MaterialProperty.MP_EMISSIVE_COLO
 
 # ---- the swim
 custom = node(unreal.MaterialExpressionCustom, -300, 1100)
-names = ["P", "T", "R", "Axis", "Side", "Lat", "Up", "Centre", "Tail", "Wing", "Pulse"]
+names = ["P", "T", "R", "Axis", "Side", "Lat", "Up", "Centre", "Tail", "Wing", "Pulse", "Drive", "Fin"]
 ins = []
 for n in names:
     ci = unreal.CustomInput()
@@ -110,17 +110,22 @@ custom.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_F
 custom.set_editor_property("code", """
 // Axis: xyz from head to tail, w the head's place along it.  Side: xyz the tail's swing, w the body's length.
 // Lat: xyz across the body, w the middle.  Up: xyz the wing's swing, w half the width.  Centre: xyz, w phase.
-// Tail: amount, power, waves, beats.  Wing: amount, waves, rate.  Pulse: amount, waves, rate.
+// Tail: amount, power, waves, beats.  Wing: amount, waves, rate, half the height.  Pulse: amount, waves, rate.
+// Drive (set every frame by the game for an animal whose beat follows its speed): x is added to the beat's phase,
+// y z w are added to 1 to scale the tail, the wing and the pulse.  With Tail.w = 0 the phase is Drive.x alone.
+// Fin: a ripple along the body in what stands off its middle line (a ribbon fin): amount, waves, rate, where it starts.
 float u = saturate((dot(P, Axis.xyz) - Axis.w) / max(Side.w, 0.001));
 float ph = Centre.w + R * 6.2832;
-float w = T * Tail.w;
-float tail = Tail.x * pow(u, max(Tail.y, 0.01)) * sin(Tail.z * u * 6.2832 - w + ph);
+float w = T * Tail.w + Drive.x;
+float tail = Tail.x * (1.0 + Drive.y) * pow(u, max(Tail.y, 0.01)) * sin(Tail.z * u * 6.2832 - w + ph);
 float lat = saturate(abs(dot(P, Lat.xyz) - Lat.w) / max(Up.w, 0.001));
-float wing = Wing.x * lat * lat * sin(w * Wing.z - lat * Wing.y * 6.2832 + ph);
+float wing = Wing.x * (1.0 + Drive.z) * lat * lat * sin(w * Wing.z - lat * Wing.y * 6.2832 + ph);
 float3 d = P - Centre.xyz;
 float3 rad = d - Axis.xyz * dot(d, Axis.xyz);
-float pulse = Pulse.x * sin(w * Pulse.z - u * Pulse.y * 6.2832 + ph);
-return Side.xyz * (tail * Side.w) + Up.xyz * (wing * Up.w) + rad * pulse;
+float pulse = Pulse.x * (1.0 + Drive.w) * sin(w * Pulse.z - u * Pulse.y * 6.2832 + ph);
+float hgt = abs(dot(d, Up.xyz)) / max(Wing.w, 0.001);
+float fin = Fin.x * saturate((hgt - Fin.w) / max(1.0 - Fin.w, 0.01)) * sin(Fin.y * u * 6.2832 - w * Fin.z + ph * 1.7);
+return Side.xyz * (tail * Side.w) + Up.xyz * (wing * Up.w) + rad * pulse + Lat.xyz * (fin * Side.w);
 """)
 srcs = {
     "P": node(unreal.MaterialExpressionPreSkinnedPosition, -900, 900),

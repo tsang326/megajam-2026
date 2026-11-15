@@ -11,6 +11,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/CommandLine.h"
@@ -60,7 +61,9 @@ namespace DCSwim
 	};
 	static const FKind Kinds[] = {
 		{ TEXT(" shark goblin hammerhead barracuda "), 0, 0.055f, 1.8f, 0.7f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" eel oarfish frilled gulper dragonfish viperfish "), 0, 0.065f, 1.1f, 1.6f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" eel frilled gulper dragonfish viperfish "), 0, 0.065f, 1.1f, 1.6f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// the oarfish holds its body nearly straight: a slow shallow wave in the trunk, the swimming is the fin along its back (Fin below)
+		{ TEXT(" oarfish "), 0, 0.008f, 1.0f, 1.3f, 2.2f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" whale dolphin "), 1, 0.035f, 1.8f, 0.6f, 1.5f, 0.10f, 0.2f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" manta stingray "), 1, 0.02f, 2.0f, 0.5f, 2.4f, 0.30f, 0.30f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" cuttle "), 0, 0.01f, 2.0f, 0.5f, 6.0f, 0.10f, 1.4f, 1.f, 0.02f, 0.6f, 0.5f },
@@ -90,6 +93,12 @@ namespace DCSwim
 			}
 		}
 		return Fish;
+	}
+
+	// a ripple that runs along the body in whatever stands off its middle line (a ribbon fin): amount, waves, rate, where it starts
+	static FLinearColor Fin(const FString& Id)
+	{
+		return Id == TEXT("creature:oarfish") ? FLinearColor(0.022f, 7.f, 2.6f, 0.45f) : FLinearColor(0.f, 0.f, 0.f, 0.f);
 	}
 
 	// models that came with the nose at the other end (seen in the parade, Content/Data/tests/d5_facing.txt)
@@ -141,7 +150,8 @@ namespace DCSwim
 			MID->SetVectorParameterValue(TEXT("SwimUp"), FLinearColor(Up.X, Up.Y, Up.Z, Ext(Across, E)));
 			MID->SetVectorParameterValue(TEXT("SwimCentre"), FLinearColor(Cn.X, Cn.Y, Cn.Z, Phase));
 			MID->SetVectorParameterValue(TEXT("SwimTail"), FLinearColor(K.TailAmp, K.TailPow, K.TailWaves, K.Beats * Pace));
-			MID->SetVectorParameterValue(TEXT("SwimWing"), FLinearColor(K.WingAmp, K.WingWaves, K.WingRate, 0.f));
+			MID->SetVectorParameterValue(TEXT("SwimWing"), FLinearColor(K.WingAmp, K.WingWaves, K.WingRate, Ext(Up, E)));
+			MID->SetVectorParameterValue(TEXT("SwimFin"), Fin(Id));
 			MID->SetVectorParameterValue(TEXT("SwimPulse"), FLinearColor(K.PulseAmp, K.PulseWaves, K.PulseRate, 0.f));
 			C->SetMaterial(m, MID);
 		}
@@ -151,6 +161,147 @@ namespace DCSwim
 void DCApplySwim(UStaticMeshComponent* C, const FString& Id, const FQuat& Q, float Pace, float Phase)
 {
 	DCSwim::Apply(C, Id, Q, Pace, Phase);
+}
+
+// ---- how each kind of animal lives (sources per species: LIFE_NOTES.md). Everything is still a function of the clock
+// (and of where the diver is), so a take plays back as it was shot.
+namespace DCLife
+{
+	// Cruise: a wide wandering loop, never at one speed.  School: one path, each fish its own place in the group.
+	// Hover: hangs in the water at one of its places, darts to the next.  Perch: sits on the floor or a rock, jets to the next.
+	// Glide: lies on the sand, lifts off, glides low, settles.  Crawl: walks the floor, stops, walks.
+	// Drift: carried slowly, rising a little with each pulse.  Hang: head up in open water, sinking and rising.  Far: passes in the haze.
+	enum { Cruise = 0, School, Hover, Perch, Glide, Crawl, Drift, Hang, Far };
+	enum { Hunter = 1, Jet = 2, HeadDown = 4, Upright = 8, Prey = 16 };
+	struct FHabit { const TCHAR* Ids; int32 Beh; float Cycle, Rest, Lift, Flee; int32 Flags; };
+	static const FHabit Habits[] = {
+		{ TEXT(" shark hammerhead "), Cruise, 0.f, 0.f, 0.f, 0.f, Hunter },
+		{ TEXT(" barracuda dolphin "), School, 0.f, 0.f, 0.f, 0.f, Hunter },
+		{ TEXT(" giantsquid "), Cruise, 0.f, 0.f, 0.f, 0.f, Jet },
+		{ TEXT(" lantern hatchet parrotfish "), School, 0.f, 0.f, 0.f, 380.f, Prey },
+		{ TEXT(" krill ventshrimp "), School, 0.f, 0.f, 0.f, 160.f, Prey },
+		{ TEXT(" squid "), Hover, 7.f, 0.55f, 0.f, 320.f, Jet | Prey },
+		{ TEXT(" cuttle "), Hover, 11.f, 0.7f, 0.f, 260.f, 0 },
+		{ TEXT(" nautilus "), Hover, 14.f, 0.6f, 0.f, 0.f, Upright },
+		{ TEXT(" grouper "), Hover, 16.f, 0.6f, 0.f, 0.f, 0 },
+		{ TEXT(" coelacanth "), Hover, 18.f, 0.75f, 0.f, 0.f, HeadDown },
+		{ TEXT(" barreleye gulper "), Hover, 20.f, 0.8f, 0.f, 0.f, 0 },
+		{ TEXT(" dragonfish viperfish "), Hover, 12.f, 0.8f, 0.f, 0.f, 0 },
+		{ TEXT(" seahorse seadragon "), Hover, 15.f, 0.8f, 0.f, 0.f, Upright },
+		{ TEXT(" octopus "), Perch, 18.f, 0.7f, 70.f, 0.f, Jet },
+		{ TEXT(" eel "), Perch, 22.f, 0.8f, 25.f, 0.f, 0 },
+		{ TEXT(" stingray "), Glide, 20.f, 0.45f, 55.f, 0.f, 0 },
+		{ TEXT(" crab lobster isopod yeticrab "), Crawl, 9.f, 0.45f, 0.f, 0.f, 0 },
+		{ TEXT(" seapig nudibranch brittlestar starfish urchin seatoad mawworm stilt "), Crawl, 14.f, 0.3f, 0.f, 0.f, 0 },
+		{ TEXT(" jelly lionsmane atolla siphon "), Drift, 0.f, 0.f, 10.f, 0.f, Upright },
+		{ TEXT(" seaangel vampsquid choir "), Drift, 0.f, 0.f, 5.f, 0.f, 0 },
+		{ TEXT(" oarfish "), Hang, 0.f, 0.f, 0.f, 0.f, 0 } };
+	static const FHabit Plain = { TEXT(""), Cruise, 0.f, 0.f, 0.f, 0.f, 0 };
+
+	static const FHabit& HabitOf(const FString& Id)
+	{
+		FString Name = Id;
+		Name.RemoveFromStart(TEXT("creature:"));
+		const FString Key = FString::Printf(TEXT(" %s "), *Name);
+		for (const FHabit& H : Habits)
+		{
+			if (FString(H.Ids).Contains(Key))
+			{
+				return H;
+			}
+		}
+		return Plain;
+	}
+
+	static bool OnFloor(int32 Beh) { return Beh == Perch || Beh == Glide || Beh == Crawl; }
+	static bool Hops(int32 Beh) { return Beh == Hover || OnFloor(Beh); }
+	static float Hash(int32 N, float Seed) { return FMath::Frac(FMath::Sin(N * 12.9898f + Seed * 78.233f) * 43758.547f); }
+
+	typedef FDCDoc::FAmbient FOne;
+
+	/** A loop that is not a circle and is not swum at one speed: a hunter is fastest where the loop touches its prey. */
+	static FVector LoopAt(const FOne& One, double T)
+	{
+		const double U = One.Phase + One.Omega * T;
+		double Th = U + One.Warp * FMath::Sin(U) + 0.3 * FMath::Sin(0.37 * U + One.Seed);
+		double Z = One.Bob * FMath::Sin(T * 0.6 + One.Phase * 3.0);
+		if (One.JetW > 0.f)
+		{
+			// what swims by a jet goes in surges, one to each pulse of its body
+			Th += One.Omega * 0.6 / One.JetW * FMath::Sin(One.JetW * T + One.Seed);
+			Z += One.Lift * FMath::Sin(One.JetW * T + One.Seed - 0.8);
+		}
+		const double X = One.Ra * (0.86 * FMath::Cos(Th) + 0.14 * FMath::Cos(2.0 * Th + One.Seed));
+		const double Y = One.Rb * (0.86 * FMath::Sin(Th) + 0.14 * FMath::Sin(3.0 * Th + 2.0 * One.Seed));
+		const double C = FMath::Cos(One.Rot), S = FMath::Sin(One.Rot);
+		Z += One.Rise * FMath::Sin(2.0 * Th + One.Seed * 3.0) - One.Dive * FMath::Pow(0.5 + 0.5 * FMath::Cos(U), 6.0);
+		return One.Centre + FVector(X * C - Y * S, X * S + Y * C, Z);
+	}
+
+	/** Which of its resting places it is at in cycle N: never the same one twice running. */
+	static int32 Stop(const FOne& One, int32 N)
+	{
+		const int32 K = One.Way.Num() / 2;
+		return 2 * FMath::Min(K - 1, (int32)(Hash(N, One.Seed) * K)) + (N & 1);
+	}
+
+	/** Where one animal is at the time T, before anything frightens it. OutYaw is set for what rests and hangs. */
+	static FVector At(const TArray<FOne>& All, const FDC3D* W, const FOne& One, double T, float& OutYaw)
+	{
+		OutYaw = 0.f;
+		if (One.Beh == Hang)
+		{
+			// the oarfish: upright, head up, hardly moving; it sinks and rises slowly and turns about itself
+			OutYaw = One.Seed * 57.3f + 4.f * (float)T + 25.f * FMath::Sin((float)T * 0.07f);
+			return One.Centre + FVector(One.Ra * 0.5 * FMath::Sin(T * 0.021 + One.Seed), One.Rb * 0.5 * FMath::Sin(T * 0.017 + 2.0 * One.Seed),
+				260.0 * FMath::Sin(T * 0.05 + One.Seed) + 50.0 * FMath::Sin(T * 0.19));
+		}
+		if (Hops(One.Beh) && One.Way.Num() >= 2)
+		{
+			const double C = T / One.Cycle + One.Seed * 3.0;
+			const int32 N = FMath::FloorToInt32(C);
+			const float F = (float)(C - N);
+			const FVector A0 = One.Way[Stop(One, N - 1)], A = One.Way[Stop(One, N)], B = One.Way[Stop(One, N + 1)];
+			const float Start = One.Rest * (0.7f + 0.3f * Hash(N, One.Seed + 1.f)); // it rests first, a different while each time
+			const float Dist = (float)FVector::Dist(A, B);
+			const float Dur = FMath::Clamp(Dist / FMath::Max(1.f, One.Speed) / One.Cycle, 0.04f, 1.f - Start);
+			const float X = FMath::Clamp((F - Start) / Dur, 0.f, 1.f);
+			// a fish darts off and glides to a stop; what walks or lifts off the floor starts and stops gently
+			const float E = One.Beh == Hover ? 1.f - FMath::Pow(1.f - X, 2.2f) : X * X * (3.f - 2.f * X);
+			FVector P = FMath::Lerp(A, B, (double)E);
+			// it turns to where it will go before it sets off
+			const float YawA = (float)(A - A0).Rotation().Yaw, YawB = (float)(B - A).Rotation().Yaw;
+			OutYaw = YawA + FMath::FindDeltaAngleDegrees(YawA, YawB) * FMath::SmoothStep(Start * 0.5f, Start * 0.95f, F);
+			if (One.Beh == Crawl)
+			{
+				P.Z = W->GroundZ(P.X, P.Y) + One.Half; // over the mounds
+			}
+			else if (OnFloor(One.Beh))
+			{
+				P.Z = FMath::Max(FMath::Lerp(A.Z, B.Z, (double)E), (double)W->GroundZ(P.X, P.Y)) + One.Half * 0.8
+					+ One.Lift * FMath::Sin(PI * E) * FMath::Min(1.f, Dist / 200.f);
+			}
+			else
+			{
+				// hanging in the water it is never quite still
+				const double R = One.Length * 0.08;
+				P += FVector(R * FMath::Sin(T * 0.5 + One.Seed), R * FMath::Sin(T * 0.37 + 2.0 * One.Seed), R * FMath::Sin(T * 0.43 + 3.0 * One.Seed));
+				OutYaw += 6.f * FMath::Sin((float)T * 0.31f + One.Seed);
+			}
+			return P;
+		}
+		if (All.IsValidIndex(One.Lead))
+		{
+			// one of a school: the leader's path a moment later, and its own place beside it, which breathes
+			const FOne& L = All[One.Lead];
+			const double Tl = T - One.Slot.X;
+			const FVector A = LoopAt(L, Tl);
+			const FVector Fwd = (LoopAt(L, Tl + 0.1) - A).GetSafeNormal2D();
+			return A + FVector(-Fwd.Y, Fwd.X, 0.0) * (One.Slot.Y * (1.0 + 0.25 * FMath::Sin(T * 0.3 + One.Seed)))
+				+ FVector(0.0, 0.0, One.Slot.Z + 0.12 * One.Length * FMath::Sin(T * 1.3 + One.Seed * 5.0));
+		}
+		return LoopAt(One, T);
+	}
 }
 
 static int32 GFewFrames = 0; // frames of the running take with some of a group in the picture, but too few
@@ -370,89 +521,90 @@ UPointLightComponent* FDCDoc::SoftLight(const FLinearColor& Color, float Power, 
 
 void FDCDoc::SpawnAmbient()
 {
-	// kind: 0 swims a loop in open water, 1 crawls on the floor, 2 passes far off in the haze
+	// kind: 0 lives in the water, 1 on the floor, 2 passes far off in the haze. How it moves there: DCLife::Habits.
+	// Centre and Spread: where its homes are. RMin..RMax: how far it ranges from home. ZMin..ZMax: how high over the floor.
 	struct FRow { const TCHAR* Id; int32 Kind; int32 Count; float Length; FVector Centre; float Spread; float RMin, RMax; float ZMin, ZMax; float Speed; };
 	static const FRow Rows[] = {
-		{ TEXT("creature:squid"), 0, 3, 130.f, FVector(2600.0, -600.0, 0.0), 1500.f, 300.f, 800.f, 500.f, 1300.f, 90.f },
-		{ TEXT("creature:nautilus"), 0, 3, 60.f, FVector(-3000.0, 2200.0, 0.0), 1200.f, 150.f, 400.f, 300.f, 900.f, 25.f },
+		// ---- the station's site
+		{ TEXT("creature:squid"), 0, 3, 110.f, FVector(2600.0, -600.0, 0.0), 1300.f, 150.f, 380.f, 70.f, 210.f, 60.f }, // by day, close over the bottom
+		{ TEXT("creature:nautilus"), 0, 3, 60.f, FVector(-3000.0, 2200.0, 0.0), 1200.f, 120.f, 300.f, 150.f, 500.f, 14.f }, // along the reef's face
 		{ TEXT("creature:crab"), 1, 3, 230.f, FVector(1300.0, -2600.0, 0.0), 1500.f, 150.f, 400.f, 0.f, 0.f, 14.f },
 		{ TEXT("creature:isopod"), 1, 4, 55.f, FVector(900.0, 2300.0, 0.0), 1100.f, 80.f, 260.f, 0.f, 0.f, 9.f },
-		{ TEXT("creature:lantern"), 0, 12, 26.f, FVector(2400.0, 2390.0, 0.0), 1300.f, 60.f, 150.f, 140.f, 420.f, 45.f },
+		{ TEXT("creature:lantern"), 0, 12, 26.f, FVector(2400.0, 2390.0, 0.0), 1300.f, 60.f, 150.f, 140.f, 420.f, 45.f }, // one school, in the dark of the trench
 		{ TEXT("creature:whale"), 2, 1, 1500.f, FVector(0.0, 0.0, 0.0), 0.f, 5600.f, 6000.f, 1900.f, 2200.f, 160.f },
-		{ TEXT("creature:shark"), 0, 1, 400.f, FVector(2400.0, 900.0, 0.0), 300.f, 1300.f, 1700.f, 900.f, 1100.f, 110.f },
-		{ TEXT("creature:eel"), 1, 1, 220.f, FVector(3900.0, -100.0, 0.0), 200.f, 250.f, 400.f, 0.f, 0.f, 30.f },
-		// on their way to the art drop: each joins in when its model is imported
-		{ TEXT("creature:vampsquid"), 0, 2, 90.f, FVector(3200.0, 1300.0, 0.0), 900.f, 200.f, 500.f, 300.f, 700.f, 35.f },
-		{ TEXT("creature:hatchet"), 0, 10, 22.f, FVector(-800.0, -1800.0, 0.0), 900.f, 80.f, 240.f, 500.f, 1100.f, 50.f },
-		{ TEXT("creature:frilled"), 0, 1, 330.f, FVector(-1200.0, 2600.0, 0.0), 300.f, 1100.f, 1500.f, 350.f, 500.f, 70.f },
+		{ TEXT("creature:hatchet"), 0, 10, 22.f, FVector(-800.0, -1800.0, 0.0), 700.f, 120.f, 300.f, 450.f, 800.f, 50.f }, // a midwater school (before the shark: it hunts them)
+		{ TEXT("creature:shark"), 0, 1, 400.f, FVector(900.0, -2900.0, 0.0), 300.f, 1100.f, 1500.f, 260.f, 460.f, 95.f }, // low, slow, wide
+		{ TEXT("creature:eel"), 1, 1, 220.f, FVector(3900.0, -100.0, 0.0), 200.f, 70.f, 160.f, 0.f, 0.f, 30.f }, // a moray keeps to its hole
+		{ TEXT("creature:vampsquid"), 0, 2, 90.f, FVector(3200.0, 1300.0, 0.0), 900.f, 200.f, 500.f, 300.f, 700.f, 20.f },
+		{ TEXT("creature:frilled"), 0, 1, 330.f, FVector(-1200.0, 2600.0, 0.0), 300.f, 800.f, 1200.f, 130.f, 260.f, 45.f }, // close over the bottom
 		{ TEXT("creature:seapig"), 1, 5, 40.f, FVector(-2500.0, -2700.0, 0.0), 1300.f, 60.f, 200.f, 0.f, 0.f, 5.f },
-		{ TEXT("creature:barreleye"), 0, 3, 45.f, FVector(400.0, 1200.0, 0.0), 900.f, 150.f, 400.f, 400.f, 900.f, 30.f },
-		{ TEXT("creature:coelacanth"), 0, 1, 190.f, FVector(-2600.0, 600.0, 0.0), 300.f, 500.f, 900.f, 300.f, 450.f, 40.f },
-		{ TEXT("creature:oarfish"), 2, 1, 900.f, FVector(-500.0, -500.0, 0.0), 0.f, 4200.f, 4600.f, 1500.f, 1700.f, 120.f },
-		{ TEXT("creature:stingray"), 0, 2, 190.f, FVector(-400.0, -2200.0, 0.0), 900.f, 400.f, 900.f, 130.f, 200.f, 60.f },
-		{ TEXT("creature:cuttle"), 0, 2, 70.f, FVector(-3300.0, 2700.0, 0.0), 700.f, 150.f, 350.f, 350.f, 650.f, 30.f },
+		{ TEXT("creature:barreleye"), 0, 3, 45.f, FVector(400.0, 1200.0, 0.0), 900.f, 120.f, 300.f, 400.f, 900.f, 25.f }, // hangs still in midwater
+		{ TEXT("creature:coelacanth"), 0, 1, 190.f, FVector(-2600.0, 600.0, 0.0), 300.f, 250.f, 500.f, 110.f, 280.f, 30.f },
+		{ TEXT("creature:oarfish"), 0, 1, 700.f, FVector(-900.0, 3600.0, 0.0), 600.f, 150.f, 300.f, 800.f, 950.f, 12.f }, // upright in open water
+		{ TEXT("creature:stingray"), 1, 2, 190.f, FVector(-400.0, -2200.0, 0.0), 900.f, 300.f, 700.f, 0.f, 0.f, 55.f }, // on the sand
+		{ TEXT("creature:cuttle"), 0, 2, 70.f, FVector(-3300.0, 2700.0, 0.0), 700.f, 120.f, 300.f, 50.f, 170.f, 30.f },
 		{ TEXT("creature:brittlestar"), 1, 6, 45.f, FVector(-3300.0, 2400.0, 0.0), 1300.f, 20.f, 60.f, 0.f, 0.f, 3.f },
-		{ TEXT("creature:siphon"), 0, 4, 60.f, FVector(-2500.0, -2700.0, 0.0), 800.f, 100.f, 300.f, 900.f, 1500.f, 15.f },
-		{ TEXT("creature:seaangel"), 0, 5, 30.f, FVector(-1800.0, -300.0, 0.0), 1100.f, 60.f, 200.f, 400.f, 1100.f, 18.f },
-		{ TEXT("creature:octopus"), 0, 2, 60.f, FVector(2600.0, -2300.0, 0.0), 900.f, 120.f, 320.f, 350.f, 800.f, 16.f },
-		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(3600.0, 1000.0, 0.0), 300.f, 1000.f, 1500.f, 500.f, 700.f, 75.f },
-		{ TEXT("creature:gulper"), 0, 1, 170.f, FVector(4300.0, -2300.0, 0.0), 500.f, 400.f, 800.f, 400.f, 800.f, 35.f },
+		{ TEXT("creature:siphon"), 0, 4, 60.f, FVector(-2500.0, -2700.0, 0.0), 800.f, 100.f, 300.f, 900.f, 1500.f, 10.f },
+		{ TEXT("creature:seaangel"), 0, 5, 30.f, FVector(-1800.0, -300.0, 0.0), 1100.f, 60.f, 200.f, 400.f, 1100.f, 12.f },
+		{ TEXT("creature:octopus"), 1, 2, 60.f, FVector(2600.0, -2300.0, 0.0), 900.f, 120.f, 320.f, 0.f, 0.f, 45.f }, // on the bottom and the rocks
+		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(3600.0, 1000.0, 0.0), 300.f, 900.f, 1300.f, 220.f, 400.f, 55.f },
+		{ TEXT("creature:gulper"), 0, 1, 170.f, FVector(4300.0, -2300.0, 0.0), 500.f, 250.f, 500.f, 400.f, 800.f, 25.f },
 		{ TEXT("creature:sunfish"), 2, 1, 420.f, FVector(300.0, 300.0, 0.0), 0.f, 3300.f, 3700.f, 1500.f, 1900.f, 55.f },
-		{ TEXT("creature:seadragon"), 0, 3, 45.f, FVector(-3000.0, 2300.0, 0.0), 800.f, 80.f, 220.f, 250.f, 550.f, 10.f },
-		{ TEXT("creature:seahorse"), 0, 4, 24.f, FVector(-3500.0, 2600.0, 0.0), 800.f, 30.f, 90.f, 250.f, 500.f, 5.f },
-		{ TEXT("creature:grouper"), 0, 1, 190.f, FVector(2700.0, -200.0, 0.0), 300.f, 500.f, 800.f, 250.f, 400.f, 30.f },
+		{ TEXT("creature:seadragon"), 0, 3, 45.f, FVector(-3000.0, 2300.0, 0.0), 800.f, 60.f, 160.f, 80.f, 300.f, 8.f },
+		{ TEXT("creature:seahorse"), 0, 4, 24.f, FVector(-3500.0, 2600.0, 0.0), 800.f, 20.f, 60.f, 60.f, 260.f, 4.f },
+		{ TEXT("creature:grouper"), 0, 1, 190.f, FVector(2700.0, -200.0, 0.0), 300.f, 200.f, 420.f, 120.f, 280.f, 30.f }, // by the wreck, near the bottom
 		{ TEXT("creature:lobster"), 1, 3, 50.f, FVector(1800.0, -1900.0, 0.0), 1200.f, 60.f, 200.f, 0.f, 0.f, 8.f },
-		{ TEXT("creature:lionsmane"), 0, 2, 150.f, FVector(-900.0, -3500.0, 0.0), 1100.f, 150.f, 400.f, 700.f, 1300.f, 12.f },
+		{ TEXT("creature:lionsmane"), 0, 2, 150.f, FVector(-900.0, -3500.0, 0.0), 1100.f, 150.f, 400.f, 700.f, 1300.f, 9.f },
 		{ TEXT("creature:nudibranch"), 1, 5, 22.f, FVector(-3200.0, 2000.0, 0.0), 1200.f, 15.f, 50.f, 0.f, 0.f, 2.f },
-		{ TEXT("creature:krill"), 0, 10, 12.f, FVector(-200.0, 1100.0, 0.0), 700.f, 60.f, 180.f, 500.f, 900.f, 30.f },
-		{ TEXT("creature:turtle2"), 0, 1, 170.f, FVector(-1700.0, -1500.0, 0.0), 400.f, 900.f, 1300.f, 800.f, 1100.f, 55.f },
+		{ TEXT("creature:krill"), 0, 10, 12.f, FVector(-200.0, 1100.0, 0.0), 500.f, 60.f, 180.f, 500.f, 900.f, 22.f }, // a swarm
+		{ TEXT("creature:turtle2"), 0, 1, 170.f, FVector(-1700.0, -1500.0, 0.0), 400.f, 900.f, 1300.f, 600.f, 900.f, 50.f },
 		// ---- the wider sea (brief 08): each zone its own life (centres as in FDC3D::SetupZones)
 		// the kelp forest
-		{ TEXT("creature:turtle2"), 0, 2, 170.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 900.f, 1600.f, 600.f, 1200.f, 55.f },
-		{ TEXT("creature:dolphin"), 0, 3, 260.f, FVector(-13000.0, 7500.0, 0.0), 1500.f, 1400.f, 2400.f, 900.f, 1600.f, 260.f },
-		{ TEXT("creature:parrotfish"), 0, 5, 70.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 200.f, 600.f, 150.f, 500.f, 45.f },
-		{ TEXT("creature:barracuda"), 0, 4, 150.f, FVector(-12000.0, 8500.0, 0.0), 2500.f, 600.f, 1200.f, 400.f, 900.f, 110.f },
-		{ TEXT("creature:seahorse"), 0, 6, 24.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 30.f, 90.f, 200.f, 600.f, 5.f },
-		{ TEXT("creature:seadragon"), 0, 4, 45.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 80.f, 220.f, 250.f, 600.f, 10.f },
-		{ TEXT("creature:grouper"), 0, 2, 190.f, FVector(-13500.0, 6500.0, 0.0), 2500.f, 400.f, 900.f, 200.f, 400.f, 30.f },
-		{ TEXT("creature:krill"), 0, 8, 12.f, FVector(-13000.0, 7500.0, 0.0), 3000.f, 60.f, 180.f, 400.f, 1000.f, 30.f },
+		{ TEXT("creature:parrotfish"), 0, 5, 70.f, FVector(-13000.0, 7500.0, 0.0), 2000.f, 200.f, 500.f, 90.f, 300.f, 40.f }, // a grazing group, low
+		{ TEXT("creature:krill"), 0, 8, 12.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 60.f, 180.f, 400.f, 1000.f, 22.f },
+		{ TEXT("creature:turtle2"), 0, 2, 170.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 900.f, 1600.f, 500.f, 1000.f, 50.f },
+		{ TEXT("creature:dolphin"), 0, 3, 260.f, FVector(-13000.0, 7500.0, 0.0), 1500.f, 1400.f, 2400.f, 1100.f, 1700.f, 240.f }, // a pod, high and fast
+		{ TEXT("creature:barracuda"), 0, 4, 150.f, FVector(-12000.0, 8500.0, 0.0), 2000.f, 500.f, 900.f, 350.f, 700.f, 55.f }, // a slow school
+		{ TEXT("creature:seahorse"), 0, 6, 24.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 20.f, 60.f, 80.f, 500.f, 4.f },
+		{ TEXT("creature:seadragon"), 0, 4, 45.f, FVector(-13000.0, 7500.0, 0.0), 3500.f, 60.f, 160.f, 100.f, 450.f, 8.f },
+		{ TEXT("creature:grouper"), 0, 2, 190.f, FVector(-13500.0, 6500.0, 0.0), 2500.f, 200.f, 420.f, 120.f, 300.f, 30.f },
 		// the wreck graveyard
-		{ TEXT("creature:hammerhead"), 0, 2, 380.f, FVector(14500.0, -3900.0, 0.0), 1500.f, 1500.f, 2400.f, 800.f, 1300.f, 120.f },
-		{ TEXT("creature:shark"), 0, 1, 400.f, FVector(14500.0, -3900.0, 0.0), 1000.f, 1800.f, 2400.f, 600.f, 900.f, 110.f },
-		{ TEXT("creature:barracuda"), 0, 4, 150.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 500.f, 1100.f, 300.f, 800.f, 110.f },
-		{ TEXT("creature:grouper"), 0, 2, 200.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 400.f, 800.f, 200.f, 400.f, 30.f },
+		{ TEXT("creature:hammerhead"), 0, 2, 380.f, FVector(14500.0, -3900.0, 0.0), 1500.f, 1300.f, 2000.f, 450.f, 800.f, 100.f },
+		{ TEXT("creature:shark"), 0, 1, 400.f, FVector(14500.0, -3900.0, 0.0), 1000.f, 1500.f, 2000.f, 260.f, 460.f, 95.f },
+		{ TEXT("creature:barracuda"), 0, 4, 150.f, FVector(14500.0, -3900.0, 0.0), 2500.f, 500.f, 900.f, 300.f, 700.f, 55.f },
+		{ TEXT("creature:grouper"), 0, 2, 200.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 200.f, 420.f, 120.f, 300.f, 30.f },
 		{ TEXT("creature:lobster"), 1, 5, 50.f, FVector(14500.0, -3900.0, 0.0), 3500.f, 60.f, 200.f, 0.f, 0.f, 8.f },
-		{ TEXT("creature:octopus"), 0, 2, 60.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 120.f, 320.f, 300.f, 700.f, 16.f },
+		{ TEXT("creature:octopus"), 1, 2, 60.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 120.f, 320.f, 0.f, 0.f, 45.f },
 		// the drowned city
-		{ TEXT("creature:sunfish"), 0, 2, 380.f, FVector(6800.0, 14500.0, 0.0), 1500.f, 1200.f, 2000.f, 900.f, 1500.f, 50.f },
-		{ TEXT("creature:stingray"), 0, 4, 190.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 400.f, 1000.f, 120.f, 220.f, 60.f },
-		{ TEXT("creature:cuttle"), 0, 3, 70.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 150.f, 350.f, 300.f, 700.f, 30.f },
-		{ TEXT("creature:coelacanth"), 0, 2, 190.f, FVector(6800.0, 14500.0, 0.0), 2500.f, 600.f, 1000.f, 300.f, 500.f, 40.f },
-		{ TEXT("creature:nautilus"), 0, 4, 60.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 150.f, 400.f, 300.f, 900.f, 25.f },
-		{ TEXT("creature:oarfish"), 0, 1, 700.f, FVector(6800.0, 14500.0, 0.0), 500.f, 2200.f, 2800.f, 1300.f, 1600.f, 90.f },
+		{ TEXT("creature:sunfish"), 0, 2, 380.f, FVector(6800.0, 14500.0, 0.0), 1500.f, 1200.f, 2000.f, 900.f, 1500.f, 40.f },
+		{ TEXT("creature:stingray"), 1, 4, 190.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 300.f, 700.f, 0.f, 0.f, 55.f },
+		{ TEXT("creature:cuttle"), 0, 3, 70.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 120.f, 300.f, 50.f, 170.f, 30.f },
+		{ TEXT("creature:coelacanth"), 0, 2, 190.f, FVector(6800.0, 14500.0, 0.0), 2500.f, 250.f, 500.f, 110.f, 300.f, 30.f },
+		{ TEXT("creature:nautilus"), 0, 4, 60.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 120.f, 300.f, 150.f, 600.f, 14.f },
+		{ TEXT("creature:oarfish"), 0, 1, 600.f, FVector(6800.0, 14500.0, 0.0), 1800.f, 150.f, 300.f, 900.f, 1300.f, 12.f },
 		// the whale fall
 		{ TEXT("creature:isopod"), 1, 8, 55.f, FVector(-7500.0, -13000.0, 0.0), 3000.f, 80.f, 260.f, 0.f, 0.f, 9.f },
 		{ TEXT("creature:crab"), 1, 4, 230.f, FVector(-7500.0, -13000.0, 0.0), 3500.f, 150.f, 400.f, 0.f, 0.f, 14.f },
 		{ TEXT("creature:seapig"), 1, 8, 40.f, FVector(-7500.0, -13000.0, 0.0), 3500.f, 60.f, 200.f, 0.f, 0.f, 5.f },
-		{ TEXT("creature:hatchet"), 0, 10, 22.f, FVector(-7500.0, -13000.0, 0.0), 3000.f, 80.f, 240.f, 400.f, 1000.f, 50.f },
-		{ TEXT("creature:frilled"), 0, 1, 330.f, FVector(-7500.0, -13000.0, 0.0), 1000.f, 1200.f, 1800.f, 300.f, 500.f, 70.f },
+		{ TEXT("creature:hatchet"), 0, 10, 22.f, FVector(-7500.0, -13000.0, 0.0), 2000.f, 120.f, 300.f, 400.f, 900.f, 50.f },
+		{ TEXT("creature:frilled"), 0, 1, 330.f, FVector(-7500.0, -13000.0, 0.0), 1000.f, 1000.f, 1500.f, 130.f, 280.f, 45.f },
 		// the black smokers
 		{ TEXT("creature:yeticrab"), 1, 10, 45.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 30.f, 120.f, 0.f, 0.f, 4.f },
-		{ TEXT("creature:ventshrimp"), 0, 6, 40.f, FVector(6800.0, -14500.0, 0.0), 2500.f, 60.f, 200.f, 150.f, 500.f, 12.f },
+		{ TEXT("creature:ventshrimp"), 0, 6, 40.f, FVector(6800.0, -14500.0, 0.0), 2000.f, 60.f, 160.f, 60.f, 260.f, 12.f }, // a swarm close to the vents
 		{ TEXT("creature:lobster"), 1, 4, 50.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 60.f, 200.f, 0.f, 0.f, 8.f },
 		{ TEXT("creature:nudibranch"), 1, 6, 22.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 15.f, 50.f, 0.f, 0.f, 2.f },
-		{ TEXT("creature:octopus"), 0, 2, 60.f, FVector(6800.0, -14500.0, 0.0), 2500.f, 120.f, 320.f, 300.f, 700.f, 16.f },
+		{ TEXT("creature:octopus"), 1, 2, 60.f, FVector(6800.0, -14500.0, 0.0), 2500.f, 120.f, 320.f, 0.f, 0.f, 45.f },
 		// the abyss
-		{ TEXT("creature:giantsquid"), 0, 1, 900.f, FVector(-5500.0, 19500.0, 0.0), 800.f, 2000.f, 2800.f, 900.f, 1400.f, 80.f },
-		{ TEXT("creature:dragonfish"), 0, 5, 50.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 30.f },
-		{ TEXT("creature:viperfish"), 0, 5, 45.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 35.f },
-		{ TEXT("creature:atolla"), 0, 6, 70.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 500.f, 1500.f, 12.f },
+		{ TEXT("creature:giantsquid"), 0, 1, 900.f, FVector(-5500.0, 19500.0, 0.0), 800.f, 2000.f, 2800.f, 900.f, 1400.f, 60.f },
+		{ TEXT("creature:dragonfish"), 0, 5, 50.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 35.f },
+		{ TEXT("creature:viperfish"), 0, 5, 45.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 40.f },
+		{ TEXT("creature:atolla"), 0, 6, 70.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 500.f, 1500.f, 9.f },
 		{ TEXT("creature:seatoad"), 1, 5, 40.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 40.f, 140.f, 0.f, 0.f, 3.f },
-		{ TEXT("creature:vampsquid"), 0, 3, 90.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 200.f, 500.f, 300.f, 900.f, 35.f },
-		{ TEXT("creature:gulper"), 0, 2, 170.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 400.f, 800.f, 400.f, 1000.f, 35.f },
-		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(-5500.0, 19500.0, 0.0), 1000.f, 1500.f, 2200.f, 500.f, 900.f, 75.f },
-		{ TEXT("creature:barreleye"), 0, 4, 45.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 150.f, 400.f, 400.f, 1000.f, 30.f },
-		{ TEXT("creature:siphon"), 0, 5, 60.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 100.f, 300.f, 600.f, 1500.f, 15.f },
+		{ TEXT("creature:vampsquid"), 0, 3, 90.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 200.f, 500.f, 300.f, 900.f, 20.f },
+		{ TEXT("creature:gulper"), 0, 2, 170.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 250.f, 500.f, 400.f, 1000.f, 25.f },
+		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(-5500.0, 19500.0, 0.0), 1000.f, 1500.f, 2200.f, 300.f, 600.f, 55.f },
+		{ TEXT("creature:barreleye"), 0, 4, 45.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 120.f, 300.f, 400.f, 1000.f, 25.f },
+		{ TEXT("creature:siphon"), 0, 5, 60.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 100.f, 300.f, 600.f, 1500.f, 10.f },
 		// the things the official film says are not there: one place each, deeper is worse
 		{ TEXT("creature:ribray"), 0, 1, 520.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 900.f, 1400.f, 400.f, 900.f, 90.f },
 		{ TEXT("creature:hollowdiver"), 0, 2, 210.f, FVector(14500.0, -3900.0, 0.0), 2500.f, 300.f, 700.f, 150.f, 400.f, 45.f },
@@ -476,18 +628,39 @@ void FDCDoc::SpawnAmbient()
 		{
 			continue;
 		}
+		const DCLife::FHabit& Habit = DCLife::HabitOf(Row.Id);
+		const DCSwim::FKind& Swim = DCSwim::KindOf(Row.Id);
+		const int32 Beh = Row.Kind == 2 ? (int32)DCLife::Far : Habit.Beh;
+		const bool bFloor = DCLife::OnFloor(Beh);
+		const bool bTrench = Row.Id == FString(TEXT("creature:lantern"));
 		const int32 Count = Row.Count > 1 ? FMath::RoundToInt(Row.Count * Much) : (Much > 0.f ? 1 : 0);
+		int32 Leader = INDEX_NONE;
 		for (int32 i = 0; i < Count; ++i)
 		{
 			FAmbient One;
 			float Half = 0.f;
-			One.Actor = SpawnCreature(Row.Id, Row.Length * Rand.FRandRange(0.85f, 1.15f), Front, false, &Half, FMath::Clamp(Row.Speed / Row.Length * 4.f, 0.6f, 1.6f));
+			const float Len = Row.Length * Rand.FRandRange(0.85f, 1.15f);
+			One.Actor = SpawnCreature(Row.Id, Len, Front, false, &Half, 0.f); // pace 0: its beat is driven from here, with its speed
 			One.Radius = Row.Length * 0.5f;
 			for (int32 s = DCSub::Num; s < Subjects.Num(); ++s)
 			{
 				One.Subject = Subjects[s].Id == Row.Id ? s : One.Subject;
 			}
-			One.Surge = DCSwim::KindOf(Row.Id).PulseAmp > 0.f ? 0.5f : 0.f; // what swims by a jet goes in surges
+			One.Beh = Beh;
+			One.Flags = Habit.Flags;
+			One.Speed = Row.Speed;
+			One.Length = Len;
+			One.Half = Half;
+			One.Seed = Rand.FRandRange(0.f, 2.f * PI);
+			One.Rot = Rand.FRandRange(0.f, 2.f * PI);
+			One.Cycle = Habit.Cycle * Rand.FRandRange(0.75f, 1.3f);
+			One.Rest = Habit.Rest;
+			One.Lift = Habit.Lift;
+			One.Flee = Habit.Flee;
+			One.Beats = Swim.Beats * FMath::Clamp(Row.Speed / Row.Length * 4.f, 0.6f, 1.6f);
+			One.JetW = (Habit.Flags & DCLife::Jet) || Beh == DCLife::Drift ? One.Beats * Swim.PulseRate : 0.f;
+			One.Warp = Beh == DCLife::Far ? 0.f : (Habit.Flags & DCLife::Hunter) ? 0.45f : Rand.FRandRange(0.1f, 0.3f);
+			One.Rise = Beh == DCLife::Far || bFloor ? 0.f : Row.Id == FString(TEXT("creature:dolphin")) ? 260.f : FMath::Min(0.3f * (Row.ZMax - Row.ZMin) + 20.f, 150.f);
 			// ambient life casts no shadow: 20k triangles each, and every caster is drawn again for each shadow cascade
 			TInlineComponentArray<UStaticMeshComponent*> Parts; One.Actor->GetComponents(Parts);
 			for (UStaticMeshComponent* Part : Parts)
@@ -497,43 +670,75 @@ void FDCDoc::SpawnAmbient()
 				{
 					Part->SetCullDistance(FMath::Clamp(Row.Length * 70.f, 1800.f, 5200.f)); // too small to see from further off
 				}
+				for (int32 m = 0; m < Part->GetNumMaterials(); ++m)
+				{
+					if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(Part->GetMaterial(m)))
+					{
+						One.Skins.Add(MID);
+					}
+				}
 			}
 			One.Ra = Rand.FRandRange(Row.RMin, Row.RMax);
 			One.Rb = Row.Kind == 2 ? One.Ra : One.Ra * Rand.FRandRange(0.5f, 1.f);
 			One.Phase = Rand.FRandRange(0.f, 2.f * PI);
 			One.Omega = Row.Speed / FMath::Max(1.f, 0.5f * (One.Ra + One.Rb)) * (Rand.FRand() < 0.5f ? -1.f : 1.f);
-			One.Bob = Row.Kind == 1 ? 0.f : FMath::Min(40.f, Row.Length * 0.25f);
-			One.Wiggle = Row.Kind == 1 ? 2.f : 5.f;
-			// a free place: off the rock, and for a crawler on whatever lies there
-			for (int32 Try = 0; Try < 12; ++Try)
+			One.Bob = bFloor ? 0.f : FMath::Min(40.f, Row.Length * 0.25f);
+			One.Wiggle = bFloor ? 2.f : 5.f;
+			if (Beh == DCLife::School && Ambient.IsValidIndex(Leader))
+			{
+				// one more of the school: the leader's path, and a place of its own in the group
+				const FAmbient& L = Ambient[Leader];
+				One.Lead = Leader;
+				One.Centre = L.Centre;
+				One.Ra = L.Ra;
+				One.Rb = L.Rb;
+				One.Bob = 0.f;
+				const float Room = Row.Length * FMath::Sqrt((float)Count) * 0.8f;
+				One.Slot = FVector(Rand.FRandRange(0.2f, 1.5f) * Room / FMath::Max(1.f, Row.Speed), Rand.FRandRange(-0.6f, 0.6f) * Room, Rand.FRandRange(-0.35f, 0.35f) * Room);
+				if (Row.Length >= 150.f)
+				{
+					AddSolid(One.Actor.Get());
+				}
+				Ambient.Add(One);
+				++Total;
+				continue;
+			}
+			// a free place: off the rock, and for what lives on or near the floor a bare piece of it
+			for (int32 Try = 0; Try < 16; ++Try)
 			{
 				const float Ang = Rand.FRandRange(0.f, 2.f * PI);
 				const float Rad = Row.Spread * FMath::Sqrt(Rand.FRand());
-				One.Centre = Row.Centre + FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), Row.Kind == 1 ? Half : Rand.FRandRange(Row.ZMin, Row.ZMax));
-				if (Row.Kind != 1)
+				One.Centre = Row.Centre + FVector(Rad * FMath::Cos(Ang), Rad * FMath::Sin(Ang), bFloor ? 0.f : Rand.FRandRange(Row.ZMin, Row.ZMax));
+				One.Centre.Z += bFloor ? W->GroundZ(One.Centre.X, One.Centre.Y) + Half : W->Terrain(One.Centre.X, One.Centre.Y); // each over the floor where it is
+				if (Row.Kind == 2 || bTrench)
 				{
-					One.Centre.Z += W->Terrain(One.Centre.X, One.Centre.Y); // swimmers live over the floor where they are
-				}
-				if (Row.Kind == 2 || Row.Id == FString(TEXT("creature:lantern")))
-				{
-					if (Row.Kind == 0)
+					if (bTrench)
 					{
-						One.Centre.Y = Row.Centre.Y + Rand.FRandRange(-90.f, 90.f); // in the trench: a long narrow loop
+						One.Centre.Y = Row.Centre.Y + Rand.FRandRange(-60.f, 60.f); // in the trench: a long narrow loop
 						One.Ra = Rand.FRandRange(500.f, 1100.f);
-						One.Omega = Row.Speed / (0.5f * (One.Ra + One.Rb)) * (i % 2 ? -1.f : 1.f);
+						One.Rb = Rand.FRandRange(40.f, 90.f);
+						One.Rot = 0.f;
+						One.Rise = 40.f;
+						One.Omega = Row.Speed / (0.5f * (One.Ra + One.Rb));
+						One.bFixed = true;
 					}
 					break;
 				}
 				FHitResult Hit;
 				const double Floor = W->Terrain(One.Centre.X, One.Centre.Y);
 				const FVector Top(One.Centre.X, One.Centre.Y, Floor + 2500.0);
-				const float Reach = FMath::Max(One.Ra, One.Rb) + Row.Length;
-				if (Row.Kind == 1)
+				const float Reach = Beh == DCLife::Hang ? 0.5f * Row.Length + 300.f : FMath::Max(One.Ra, One.Rb) + Row.Length;
+				if (bFloor || (DCLife::Hops(Beh) && Row.ZMin < Reach))
 				{
-					// a crawler needs bare floor under its whole loop
+					// bare floor under its whole range
 					if (!World->SweepSingleByChannel(Hit, Top, FVector(One.Centre.X, One.Centre.Y, Floor + Half + Reach + 30.0), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(Reach), Query))
 					{
 						break;
+					}
+					if (Try >= 8)
+					{
+						One.Ra *= 0.85f; // a smaller range finds room sooner
+						One.Rb *= 0.85f;
 					}
 				}
 				else if (!World->OverlapAnyTestByChannel(One.Centre, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(Reach), Query)
@@ -542,12 +747,191 @@ void FDCDoc::SpawnAmbient()
 					break;
 				}
 			}
+			if (DCLife::Hops(Beh))
+			{
+				// its resting places, inside its range: on the floor (or on top of what lies there), or free water
+				for (int32 k = 0; k < 6; ++k)
+				{
+					FVector Place = One.Centre;
+					if (bFloor)
+					{
+						Place.Z -= Half;
+					}
+					for (int32 Try = 0; Try < 6; ++Try)
+					{
+						const float Ang = Rand.FRandRange(0.f, 2.f * PI), Rad = FMath::Sqrt(Rand.FRand());
+						FVector Q = One.Centre + FVector(One.Ra * Rad * FMath::Cos(Ang), One.Rb * Rad * FMath::Sin(Ang), 0.0);
+						FHitResult Hit;
+						if (bFloor)
+						{
+							Q.Z = W->GroundZ(Q.X, Q.Y);
+							if (Beh != DCLife::Crawl && World->LineTraceSingleByChannel(Hit, FVector(Q.X, Q.Y, Q.Z + 450.0), FVector(Q.X, Q.Y, Q.Z - 30.0), ECC_Visibility, Query))
+							{
+								Q.Z = FMath::Max(Q.Z, Hit.Location.Z);
+							}
+							Place = Q;
+							break;
+						}
+						Q.Z = W->Terrain(Q.X, Q.Y) + Rand.FRandRange(Row.ZMin, Row.ZMax);
+						if (!World->OverlapAnyTestByChannel(Q, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(FMath::Clamp(Len * 0.4f, 20.f, 120.f)), Query))
+						{
+							Place = Q;
+							break;
+						}
+					}
+					One.Way.Add(Place);
+				}
+				// a cycle long enough that the longest way is covered at its own pace
+				float Longest = 0.f;
+				for (int32 a = 0; a < 6; a += 2)
+				{
+					for (int32 b = 1; b < 6; b += 2)
+					{
+						Longest = FMath::Max(Longest, (float)FVector::Dist(One.Way[a], One.Way[b]));
+					}
+				}
+				const float Need = Longest / FMath::Max(0.1f, One.Speed) / FMath::Max(0.1f, 1.f - One.Rest) * 1.05f;
+				if (Need > One.Cycle * 2.5f)
+				{
+					// too far for a slow animal: it would sit for minutes. Its places move in towards its home instead.
+					const float Shrink = One.Cycle * 2.5f / Need;
+					for (FVector& Place : One.Way)
+					{
+						const FVector Home = bFloor ? One.Centre - FVector(0.0, 0.0, Half) : One.Centre;
+						Place = Home + (Place - Home) * Shrink;
+						if (bFloor)
+						{
+							Place.Z = FMath::Max(Place.Z, (double)W->GroundZ(Place.X, Place.Y));
+						}
+					}
+				}
+				One.Cycle = FMath::Clamp(Need, One.Cycle, One.Cycle * 2.5f);
+			}
+			if (Beh == DCLife::School)
+			{
+				Leader = Ambient.Num();
+			}
 			if (Row.Length >= 150.f && Row.Id != FString(TEXT("creature:lionsmane")))
 			{
 				AddSolid(One.Actor.Get()); // a big animal is in the way; small life and the soft bells are swum through
 			}
+			if (i == 0)
+			{
+				UE_LOG(LogMatchCut, Display, TEXT("DOC life %s: habit %d, home (%.0f,%.0f,%.0f), range %.0f x %.0f, cycle %.0f s"), Row.Id, Beh, One.Centre.X, One.Centre.Y, One.Centre.Z, One.Ra, One.Rb, One.Cycle);
+			}
 			Ambient.Add(One);
 			++Total;
+		}
+	}
+	// ---- the hunters: each one's loop is laid so that it touches the nearest school, at that school's height, and the
+	// loop must be clear of rock and wreck all the way round (smaller first, then higher)
+	FCollisionQueryParams Free = Query; // the animals themselves are not in the way of a loop: the big ones are solid
+	for (const FAmbient& Each : Ambient)
+	{
+		if (Each.Actor.IsValid())
+		{
+			Free.AddIgnoredActor(Each.Actor.Get());
+		}
+	}
+	auto Clear = [&](const FAmbient& One, bool bSay)
+	{
+		const float R = FMath::Clamp(One.Length * 0.3f, 30.f, 160.f);
+		const double Period = 2.0 * PI / FMath::Max(1.e-4, (double)FMath::Abs(One.Omega));
+		for (int32 k = 0; k < 40; ++k)
+		{
+			const FVector P = DCLife::LoopAt(One, Period * k / 40.0);
+			if (P.Z - R < W->Terrain(P.X, P.Y) + 20.0 || World->OverlapAnyTestByChannel(P, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(R), Free))
+			{
+				if (bSay)
+				{
+					TArray<FOverlapResult> Hits;
+					World->OverlapMultiByChannel(Hits, P, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(R), Free);
+					const UStaticMeshComponent* In = Hits.Num() > 0 ? Cast<UStaticMeshComponent>(Hits[0].GetComponent()) : nullptr;
+					UE_LOG(LogMatchCut, Display, TEXT("DOC life loop blocked at (%.0f,%.0f,%.0f), floor %.0f, by %s"), P.X, P.Y, P.Z, W->Terrain(P.X, P.Y),
+						In && In->GetStaticMesh() ? *In->GetStaticMesh()->GetName() : Hits.Num() > 0 ? TEXT("something") : TEXT("the floor"));
+				}
+				return false;
+			}
+		}
+		return true;
+	};
+	for (int32 i = 0; i < Ambient.Num(); ++i)
+	{
+		FAmbient& One = Ambient[i];
+		if ((One.Beh != DCLife::Cruise && One.Beh != DCLife::School) || One.Lead != INDEX_NONE || One.bFixed)
+		{
+			continue;
+		}
+		int32 Prey = INDEX_NONE;
+		if (One.Flags & DCLife::Hunter)
+		{
+			for (int32 j = 0; j < Ambient.Num(); ++j)
+			{
+				const FAmbient& S = Ambient[j];
+				if (S.Beh == DCLife::School && S.Lead == INDEX_NONE && !S.bFixed && (S.Flags & DCLife::Prey) && FVector::Dist2D(S.Centre, One.Centre) < 4500.0
+					&& (Prey == INDEX_NONE || FVector::Dist2D(S.Centre, One.Centre) < FVector::Dist2D(Ambient[Prey].Centre, One.Centre)))
+				{
+					Prey = j;
+				}
+			}
+		}
+		const FVector Home = One.Centre;
+		const float WasRa = One.Ra, WasRb = One.Rb, WasOmega = One.Omega, WasRot = One.Rot, WasDive = One.Dive;
+		// smaller, turned about the place where it meets its prey, then higher: the first loop that is clear all round
+		static const float Scales[] = { 1.f, 0.8f, 0.64f, 0.5f, 0.4f, 0.3f };
+		static const float Turns[] = { 0.f, 60.f, -60.f, 120.f, -120.f, 180.f };
+		bool bFits = false;
+		int32 Tries = 0;
+		for (int32 Up = 0; Up < 4 && !bFits; ++Up)
+		{
+			for (int32 s = 0; s < UE_ARRAY_COUNT(Scales) && !bFits; ++s)
+			{
+				for (int32 t = 0; t < UE_ARRAY_COUNT(Turns) && !bFits; ++t)
+				{
+					One.Ra = WasRa * Scales[s];
+					One.Rb = WasRb * Scales[s];
+					One.Omega = WasOmega / Scales[s];
+					One.Centre = Home + FVector(0.0, 0.0, 140.0 * Up);
+					if (Prey != INDEX_NONE)
+					{
+						const FVector At = Ambient[Prey].Centre;
+						One.Rot = FMath::Atan2(At.Y - Home.Y, At.X - Home.X) + FMath::DegreesToRadians(Turns[t]);
+						One.Dive = 0.f;
+						const FVector Touch = DCLife::LoopAt(One, -One.Phase / One.Omega); // where it is fastest
+						One.Centre += FVector(At.X - Touch.X, At.Y - Touch.Y, 0.0);
+						One.Dive = (float)(Home.Z - At.Z); // raised, the whole loop is raised: it passes that much over them
+					}
+					else
+					{
+						One.Rot = WasRot + FMath::DegreesToRadians(Turns[t]);
+					}
+					++Tries;
+					bFits = Clear(One, false);
+				}
+			}
+		}
+		if (!bFits)
+		{
+			// nothing fits: it keeps the loop it was given
+			One.Centre = Home;
+			One.Ra = WasRa;
+			One.Rb = WasRb;
+			One.Omega = WasOmega;
+			One.Rot = WasRot;
+			One.Dive = WasDive;
+			Prey = INDEX_NONE;
+			Clear(One, true);
+		}
+		UE_LOG(LogMatchCut, Display, TEXT("DOC life loop %d: centre (%.0f,%.0f,%.0f) %.0f x %.0f, prey %d, dive %.0f, %s after %d"), i, One.Centre.X, One.Centre.Y, One.Centre.Z, One.Ra, One.Rb, Prey, One.Dive,
+			bFits ? TEXT("clear") : TEXT("NOT CLEAR, kept as given"), Tries);
+		for (FAmbient& Other : Ambient)
+		{
+			if (Other.Lead == i)
+			{
+				Other.Centre = One.Centre;
+				Other.Ra = One.Ra;
+				Other.Rb = One.Rb;
+			}
 		}
 	}
 	UE_LOG(LogMatchCut, Display, TEXT("DOC ambient life: %d creatures"), Total);
@@ -812,7 +1196,16 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 		}
 	}
 
-	// ---- the rest of the sea: every one a loop in time
+	// ---- the rest of the sea: each lives its own way (DCLife), all of it a function of the clock
+	TArray<FVector4, TInlineAllocator<24>> Hunters; // where the hunters are (as of last frame), and how near is too near
+	for (const FAmbient& One : Ambient)
+	{
+		const AActor* A = One.Actor.Get();
+		if (A && !One.bAway && (One.Flags & DCLife::Hunter))
+		{
+			Hunters.Add(FVector4(A->GetActorLocation(), One.Length * 0.5f + 380.f));
+		}
+	}
 	for (FAmbient& One : Ambient)
 	{
 		if (AActor* A = One.Actor.Get())
@@ -828,15 +1221,111 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 			{
 				continue;
 			}
-			// a jet swimmer's speed swells and dies with its pulse (never backwards: the surge is less than the pace)
-			const double Th = One.Phase + One.Omega * (T + One.Surge * 0.9 * FMath::Sin(T * 1.1 + One.Phase * 5.0));
-			FVector P = One.Centre + FVector(One.Ra * FMath::Cos(Th), One.Rb * FMath::Sin(Th), One.Bob * FMath::Sin(T * 0.6 + One.Phase * 3.0));
-			if (One.Bob <= 0.f)
+			// where it is, and from a moment before and after: how fast it goes, which way, and how hard it turns
+			const double H = 0.06;
+			float Yaw0 = 0.f, Yaw = 0.f, Yaw2 = 0.f, Pitch = 0.f, Roll = 0.f;
+			const FVector P0 = DCLife::At(Ambient, W, One, T - H, Yaw0), P2 = DCLife::At(Ambient, W, One, T + H, Yaw2);
+			FVector P = DCLife::At(Ambient, W, One, T, Yaw);
+			const FVector V = (P2 - P0) / (2.0 * H);
+			const float Ratio = FMath::Clamp((float)V.Size() / FMath::Max(1.f, One.Speed), 0.f, 2.5f);
+			const bool bFloor = DCLife::OnFloor(One.Beh);
+			const bool bHop = DCLife::Hops(One.Beh) && One.Way.Num() >= 2;
+			const float Climb = FMath::Clamp(FMath::RadiansToDegrees((float)FMath::Atan2(V.Z, FMath::Max(V.Size2D(), 0.3 * One.Speed + 1.0))), -40.f, 40.f);
+			if (One.Beh == DCLife::Hang)
 			{
-				P.Z += W->GroundZ(P.X, P.Y); // a crawler walks over the mounds
+				Pitch = 74.f + 7.f * FMath::Sin((float)T * 0.09f + One.Seed); // head up, a little off the plumb
+				Roll = 4.f * FMath::Sin((float)T * 0.13f + One.Seed);
 			}
-			const FVector Dir = FVector(-One.Ra * FMath::Sin(Th), One.Rb * FMath::Cos(Th), 0.0) * (One.Omega < 0.f ? -1.0 : 1.0);
-			A->SetActorLocationAndRotation(P, FRotator(0.f, Dir.Rotation().Yaw + One.Wiggle * FMath::Sin(T * 4.0 + One.Phase * 7.0), One.Bob > 0.f ? 4.f * FMath::Sin(T * 0.9 + One.Phase) + FMath::Clamp(One.Omega * 70.f, -14.f, 14.f) : 0.f)); // it banks into its turn
+			else if (One.Beh == DCLife::Drift)
+			{
+				Yaw = One.Seed * 57.3f + 5.f * (float)T; // carried: it turns slowly about itself and tips a little
+				Pitch = 6.f * FMath::Sin((float)T * 0.5f + One.Seed);
+				Roll = 6.f * FMath::Cos((float)T * 0.4f + One.Seed);
+			}
+			else if (bHop)
+			{
+				if (!(One.Flags & DCLife::Upright) && One.Beh != DCLife::Crawl)
+				{
+					Pitch = Climb * (bFloor ? 0.6f : 0.8f);
+				}
+				if (One.Flags & DCLife::HeadDown)
+				{
+					// the coelacanth's headstand: some rests it tips nose down and hangs so
+					const double C = T / One.Cycle + One.Seed * 3.0;
+					const int32 N = FMath::FloorToInt32(C);
+					const float Start = One.Rest * (0.7f + 0.3f * DCLife::Hash(N, One.Seed + 1.f));
+					if (DCLife::Hash(N, One.Seed + 2.f) > 0.4f)
+					{
+						Pitch -= 38.f * FMath::Square(FMath::Sin(PI * FMath::Clamp((float)(C - N) / (Start * 0.9f), 0.f, 1.f)));
+					}
+				}
+			}
+			else
+			{
+				const FVector D0 = P - P0, D1 = P2 - P;
+				if (V.SizeSquared2D() > 4.0)
+				{
+					One.Yaw = (float)V.Rotation().Yaw;
+					// it banks into its turn, and tips with its climb
+					Roll = FMath::Clamp(FMath::FindDeltaAngleDegrees((float)D0.Rotation().Yaw, (float)D1.Rotation().Yaw) / (float)H * 2.2f, -26.f, 26.f);
+				}
+				Yaw = One.Yaw;
+				Roll += 3.f * FMath::Sin((float)T * 0.9f + One.Phase);
+				Pitch = (One.Flags & DCLife::Upright) ? 0.f : Climb * 0.8f;
+			}
+			// what is afraid keeps its distance: from the diver, and from whatever hunts
+			FVector Push = FVector::ZeroVector;
+			if (One.Flee > 0.f)
+			{
+				const FVector Away = P - HeroPos;
+				const double D = FMath::Max(1.0, Away.Size());
+				if (D < One.Flee)
+				{
+					Push += Away / D * (One.Flee - D) * 0.7;
+				}
+			}
+			if (One.Flags & DCLife::Prey)
+			{
+				for (const FVector4& Hn : Hunters)
+				{
+					const FVector Away = P - FVector(Hn);
+					const double D = FMath::Max(1.0, Away.Size());
+					if (D < Hn.W)
+					{
+						Push += Away / D * (Hn.W - D) * 0.8;
+					}
+				}
+			}
+			if (!Push.IsNearlyZero(1.0))
+			{
+				Push.Z *= bFloor ? 0.0 : 0.35;
+				P += Push;
+				Yaw += FMath::Clamp((float)Push.Size() / 220.f, 0.f, 0.75f) * FMath::FindDeltaAngleDegrees(Yaw, (float)Push.Rotation().Yaw);
+			}
+			if (!bFloor && One.Beh != DCLife::Far && One.Beh != DCLife::Hang)
+			{
+				P.Z = FMath::Max(P.Z, (double)W->GroundZ(P.X, P.Y) + One.Half + 15.0); // never into the sand
+			}
+			// the body's beat goes with its speed: slow fins at rest, a hard tail in a dart; legs stop when it stops
+			const bool bPulse = One.JetW > 0.f;
+			if (bPulse)
+			{
+				One.Beat = One.Beats * (float)T; // a jet's surges are timed by the clock (DCLife::LoopAt)
+			}
+			else
+			{
+				One.Beat += Dt * One.Beats * (One.Beh == DCLife::Crawl ? Ratio : 0.3f + 0.9f * Ratio);
+			}
+			const float Amp = bPulse || One.Beh == DCLife::Hang ? 0.f : FMath::Clamp(0.5f + 0.55f * Ratio, 0.5f, 1.45f) - 1.f;
+			for (const TWeakObjectPtr<UMaterialInstanceDynamic>& Skin : One.Skins)
+			{
+				if (UMaterialInstanceDynamic* MID = Skin.Get())
+				{
+					MID->SetVectorParameterValue(TEXT("SwimDrive"), FLinearColor(One.Beat, Amp, Amp, 0.f));
+				}
+			}
+			Yaw += One.Wiggle * 0.5f * FMath::Min(Ratio, 1.5f) * FMath::Sin(One.Beat); // the head answers the tail
+			A->SetActorLocationAndRotation(P, FRotator(Pitch, Yaw, Roll));
 		}
 	}
 	if (UPointLightComponent* L = ShoalLight.Get())
@@ -1641,7 +2130,9 @@ int32 FDCDoc::RunLine(const TArray<FString>& T)
 			TrackSub = 0;
 			TrackLeft = T.IsValidIndex(3) ? Num(3) : 5.f;
 		}
-		UE_LOG(LogMatchCut, Display, TEXT("DOC SUBJECT %s %s"), *Want, Best1 ? TEXT("found") : TEXT("missing"));
+		const FVector Where = Best1 ? Best1->GetActorLocation() : FVector::ZeroVector;
+		UE_LOG(LogMatchCut, Display, TEXT("DOC SUBJECT %s %s at (%.0f,%.0f,%.0f), %.0f cm over the floor, pitch %.0f"), *Want, Best1 ? TEXT("found") : TEXT("missing"), Where.X, Where.Y, Where.Z,
+			Where.Z - W->GroundZ(Where.X, Where.Y), Best1 ? Best1->GetActorRotation().Pitch : 0.0);
 		return 1;
 	}
 	if (Cmd == TEXT("solid3"))

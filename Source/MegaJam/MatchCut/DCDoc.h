@@ -10,6 +10,7 @@
 class AMatchCutGameMode;
 class AActor;
 class UInstancedStaticMeshComponent;
+class UMaterialInstanceDynamic;
 class UPointLightComponent;
 class USpotLightComponent;
 class UStaticMeshComponent;
@@ -206,6 +207,19 @@ struct FDCDoc
 		bool bAway = false; // far off in another zone: hidden and not moved
 		int32 Subject = INDEX_NONE;
 		float Radius = 50.f;
+		// how it lives (DCLife in DCDoc.cpp)
+		int32 Beh = 0, Flags = 0;
+		float Speed = 30.f, Length = 100.f, Half = 0.f; // its usual pace (cm/s), its size, half its height
+		float Seed = 0.f, Rot = 0.f, Warp = 0.f, Rise = 0.f, Dive = 0.f; // its loop: turned, uneven in speed, rising and falling, dipping to its prey
+		float JetW = 0.f;          // what swims by a jet: its pulses per second (radians)
+		TArray<FVector> Way;       // what rests: its resting places (floor life: the top of what lies there)
+		float Cycle = 10.f, Rest = 0.5f, Lift = 0.f, Flee = 0.f; // seconds from one rest to the next, the part of it spent resting, how high it lifts off, how near the diver may come
+		int32 Lead = INDEX_NONE;   // one of a school: the one whose path it follows
+		FVector Slot = FVector::ZeroVector; // its place in the school: seconds behind, cm to the side, cm above
+		bool bFixed = false;       // its loop is laid by hand (the trench)
+		float Yaw = 0.f;           // the last heading it had while moving
+		float Beat = 0.f, Beats = 0.f; // the phase of its body's swimming motion, and its rate
+		TArray<TWeakObjectPtr<UMaterialInstanceDynamic>> Skins;
 	};
 	TArray<FAmbient> Ambient;
 	TWeakObjectPtr<UPointLightComponent> ShoalLight, JellyLight;
