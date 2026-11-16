@@ -1,0 +1,14 @@
+# one at a time: the spider crab, then the maw worm
+wait 1.0
+money 99999
+buy 1
+buy 1
+buy 1
+lamp 1
+o2 999
+subject crab 260 11
+wait 10
+o2 999
+subject mawworm 1500 11
+wait 10
+quit

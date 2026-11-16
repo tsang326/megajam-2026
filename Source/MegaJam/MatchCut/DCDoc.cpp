@@ -85,7 +85,9 @@ namespace DCSwim
 		{ TEXT(" brittlestar "), 0, 0.f, 1.f, 1.f, 11.f, 0.10f, 0.5f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" seapig nudibranch "), 1, 0.025f, 1.0f, 1.5f, 2.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		// worms: the whole body throws S-waves from head to tail (power < 1 so the front moves too), the legs row along it
-		{ TEXT(" mawworm bobbit polychaete "), 0, 0.075f, 0.8f, 1.3f, 1.6f, 0.04f, 0.6f, 3.f, 0.015f, 1.5f, 1.4f },
+		{ TEXT(" bobbit polychaete "), 0, 0.075f, 0.8f, 1.3f, 1.6f, 0.04f, 0.6f, 3.f, 0.015f, 1.5f, 1.4f },
+		// the maw worm stands reared out of its hole: its sway and its rings are the Worm vector (DCSwim::Apply)
+		{ TEXT(" mawworm "), 0, 0.f, 1.f, 1.f, 3.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" urchin starfish "), 0, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" angler seatoad "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		// an ocean sunfish has no real tail: it flaps its tall dorsal and anal fins together, 0.3-0.6 strokes a second
@@ -147,15 +149,19 @@ namespace DCSwim
 	// Gaits: shore crabs walk an alternating tetrapod (neighbouring legs half a step apart), spider crabs underwater a
 	// 4-3-2-1 metachronal wave (each leg a fifth of a step after the one behind it). Jellyfish and squid squeeze fast
 	// and refill slowly (contraction ~ a third of the cycle).
+	// how far a walker's foot travels back while on the ground, each way from its middle, as a share of the body length
+	static constexpr float GaitStroke = 0.07f;
+	float StepPerCm(const FString& Id, float LengthCm);
+
 	static void Legs(const FString& Id, FLinearColor& Leg, FLinearColor& Leg2, FLinearColor& Shape)
 	{
 		Leg = Leg2 = Shape = FLinearColor(0.f, 0.f, 0.f, 0.f);
 		Leg2.B = -1.f;
 		const FString N = Id.RightChop(9);
-		if (N == TEXT("crab"))           { Leg = FLinearColor(5.f, 0.30f, 0.32f, 0.22f); Leg2 = FLinearColor(2.f * PI / 5.f, 0.5f, -1.f, 0.35f); }
-		else if (N == TEXT("yeticrab"))  { Leg = FLinearColor(5.f, 0.30f, 0.35f, 0.32f); Leg2 = FLinearColor(PI, 0.5f, -1.f, 0.5f); }
-		else if (N == TEXT("lobster"))   { Leg = FLinearColor(5.f, 0.22f, 0.30f, 0.30f); Leg2 = FLinearColor(PI, 0.5f, 0.f, 0.5f); }
-		else if (N == TEXT("isopod"))    { Leg = FLinearColor(7.f, 0.25f, 0.30f, 0.55f); Leg2 = FLinearColor(2.f * PI / 7.f, 0.5f, 0.2f, 0.6f); }
+		if (N == TEXT("crab"))           { Leg = FLinearColor(5.f, 0.55f, 0.32f, 0.22f); Leg2 = FLinearColor(2.f * PI / 5.f, 0.5f, -1.f, 1.f); }
+		else if (N == TEXT("yeticrab"))  { Leg = FLinearColor(5.f, 0.6f, 0.35f, 0.32f); Leg2 = FLinearColor(PI, 0.5f, -1.f, 1.f); }
+		else if (N == TEXT("lobster"))   { Leg = FLinearColor(5.f, 0.6f, 0.30f, 0.30f); Leg2 = FLinearColor(PI, 0.5f, 0.f, 1.f); }
+		else if (N == TEXT("isopod"))    { Leg = FLinearColor(7.f, 0.65f, 0.30f, 0.55f); Leg2 = FLinearColor(2.f * PI / 7.f, 0.5f, 0.2f, 1.f); }
 		if (N == TEXT("jelly") || N == TEXT("lionsmane") || N == TEXT("atolla") || N == TEXT("siphon")) { Shape.G = 0.3f; }
 		if (N == TEXT("squid") || N == TEXT("vampsquid") || N == TEXT("octopus") || N == TEXT("giantsquid")) { Shape.G = 0.35f; }
 		if (N == TEXT("manta") || N == TEXT("ribray")) { Shape.R = 0.35f; }
@@ -220,9 +226,22 @@ namespace DCSwim
 			MID->SetVectorParameterValue(TEXT("SwimLeg"), Leg);
 			MID->SetVectorParameterValue(TEXT("SwimLeg2"), Leg2);
 			MID->SetVectorParameterValue(TEXT("SwimShape"), Shape);
+			// a walker's foot goes back by Gait.w each way from its middle while it is on the ground
+			const bool bWalker = Leg.R > 0.5f;
+			MID->SetVectorParameterValue(TEXT("SwimGait"), bWalker ? FLinearColor(Nose.X, Nose.Y, Nose.Z, GaitStroke * Len) : FLinearColor(0.f, 0.f, 0.f, 0.f));
+			MID->SetVectorParameterValue(TEXT("SwimWorm"), Id == TEXT("creature:mawworm") ? FLinearColor(0.09f, 3.f, 0.16f, 2.5f) : FLinearColor(0.f, 0.f, 0.f, 0.f));
 			C->SetMaterial(m, MID);
 		}
 	}
+}
+
+// the step-cycle phase per cm walked: a foot on the ground goes back 2 * stroke while the body goes forward as much,
+// in the share Leg.G (duty) of the cycle, so one cycle carries the body 2 * stroke / duty
+float DCSwim::StepPerCm(const FString& Id, float LengthCm)
+{
+	FLinearColor Leg, Leg2, Shape;
+	Legs(Id, Leg, Leg2, Shape);
+	return Leg.R > 0.5f ? 2.f * PI * Leg.G / (2.f * GaitStroke * FMath::Max(LengthCm, 1.f)) : 0.f;
 }
 
 void DCApplySwim(UStaticMeshComponent* C, const FString& Id, const FQuat& Q, float Pace, float Phase)
@@ -774,7 +793,8 @@ void FDCDoc::SpawnAmbient()
 			One.Phase = Rand.FRandRange(0.f, 2.f * PI);
 			One.Omega = Row.Speed / FMath::Max(1.f, 0.5f * (One.Ra + One.Rb)) * (Rand.FRand() < 0.5f ? -1.f : 1.f);
 			One.Bob = bFloor ? 0.f : FMath::Min(40.f, Row.Length * 0.25f);
-			One.Wiggle = bFloor ? 2.f : 5.f;
+			One.StepPerCm = DCSwim::StepPerCm(Row.Id, Len);
+			One.Wiggle = One.StepPerCm > 0.f ? 0.f : bFloor ? 2.f : 5.f; // a walker turning on the spot would drag its feet
 			if (Beh == DCLife::School && Ambient.IsValidIndex(Leader))
 			{
 				// one more of the school: the leader's path, and a place of its own in the group
@@ -1418,6 +1438,10 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 			}
 			if (One.Flags & DCLife::Burrow)
 			{
+				// it never leaves its hole: a bobbit worm lives in one burrow and only rears out of it
+				P.X = One.Centre.X;
+				P.Y = One.Centre.Y;
+				P.Z = W->GroundZ(P.X, P.Y) + One.Half - 0.35f * One.Length;
 				// an ambush hunter: when the diver comes near it rears up and lunges at them, then sinks back
 				const FVector To = HeroPos - P;
 				const double D = To.Size();
@@ -1452,7 +1476,15 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 			{
 				// never quite still: legs and feelers fidget at rest, a worm writhes all the time
 				const bool bWorm = (One.Flags & DCLife::Burrow) != 0;
-				One.Beat += Dt * One.Beats * (bWorm ? 0.55f + 0.8f * Ratio : One.Beh == DCLife::Crawl ? 0.22f + Ratio : 0.35f + 0.9f * Ratio) * (1.f + One.Surge);
+				if (One.StepPerCm > 0.f)
+				{
+					// a walker: its legs step exactly as far as it goes, and stand when it stands (no sliding feet)
+					One.Beat += (float)(V.Size2D() * Dt) * One.StepPerCm;
+				}
+				else
+				{
+					One.Beat += Dt * One.Beats * (bWorm ? 0.55f + 0.8f * Ratio : One.Beh == DCLife::Crawl ? 0.22f + Ratio : 0.35f + 0.9f * Ratio) * (1.f + One.Surge);
+				}
 			}
 			float Amp = bPulse || One.Beh == DCLife::Hang ? 0.f : FMath::Clamp(0.6f + 0.55f * Ratio, 0.6f, 1.45f) - 1.f;
 			if (One.Surge > 0.f)

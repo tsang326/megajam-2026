@@ -99,7 +99,7 @@ mel.connect_material_property(eadd, "", unreal.MaterialProperty.MP_EMISSIVE_COLO
 
 # ---- the swim
 custom = node(unreal.MaterialExpressionCustom, -300, 1100)
-names = ["P", "T", "R", "Axis", "Side", "Lat", "Up", "Centre", "Tail", "Wing", "Pulse", "Drive", "Fin", "Leg", "Leg2", "Shape", "Pec"]
+names = ["P", "T", "R", "Axis", "Side", "Lat", "Up", "Centre", "Tail", "Wing", "Pulse", "Drive", "Fin", "Leg", "Leg2", "Shape", "Pec", "Gait", "Worm", "N"]
 ins = []
 for n in names:
     ci = unreal.CustomInput()
@@ -154,6 +154,21 @@ if (Pec.x > 0.0)
     off += Up.xyz * (k * sin(pph)) + Axis.xyz * (0.5 * k * cos(pph));
 }
 
+// Worm (a worm reared out of its burrow, like a bobbit worm): the base stays in the hole; the body sways more and
+// more towards the head, and rings of thickening and thinning run up it (peristalsis). x sway (of the height), y rings
+// along the body, z how much each ring swells (of the half width), w how fast the rings run.  N: the surface normal.
+if (Worm.x > 0.0)
+{
+    float hgt2 = 2.0 * max(Wing.w, 0.001);
+    float hh = saturate((dot(P - Centre.xyz, Up.xyz) + Wing.w) / hgt2);
+    float3 fwd2 = -Axis.xyz;
+    float sway = Worm.x * hgt2 * pow(hh, 1.6);
+    off += Lat.xyz * (sway * sin(w - hh * 2.4)) + fwd2 * (0.6 * sway * sin(0.7 * w - hh * 2.0 + 1.3));
+    float ring = sin(Worm.y * 6.2832 * hh - w * Worm.w);
+    off += N * (Worm.z * Up.w * ring * smoothstep(0.0, 0.1, hh));
+    off += Up.xyz * (0.25 * Worm.z * Up.w * cos(Worm.y * 6.2832 * hh - w * Worm.w)); // the rings bunch and stretch
+}
+
 // legs: each leg is a stiff lever on a hip, with a knee. It swings forward and back about the hip, lifts while it
 // swings forward, and the part past the knee folds back down so the foot points at the ground.
 if (Leg.x > 0.5)
@@ -177,16 +192,27 @@ if (Leg.x > 0.5)
         float mid = ((idx + 0.5) / n - 0.5) * 3.1416;
         float3 radial = normalize(fwd * sin(mid) + across * side * cos(mid));
         float3 hp = Centre.xyz + radial * hip;
+        // the step cycle runs on the distance walked (Drive.x), not on the clock: on the ground (the first Leg.y of
+        // the cycle) the foot goes back in a straight line exactly as fast as the body goes forward, so it stays put;
+        // then it lifts and swings forward quickly to its next hold.
         float lph = w * Leg2.w - idx * Leg2.x + (side > 0.0 ? 0.0 : 3.1416) + ph;
-        float swing = Leg.y * (1.0 + Drive.z) * sin(lph);
-        float lift = Leg.z * (1.0 + Drive.z) * max(0.0, cos(lph));
+        float cx = frac(lph / 6.2832);
+        float duty = clamp(Leg.y, 0.3, 0.9);
+        float s = 1.0 - 2.0 * cx / duty;
+        float lift = 0.0;
+        if (cx >= duty)
+        {
+            float t = (cx - duty) / (1.0 - duty);
+            s = -cos(3.1416 * t);
+            lift = Leg.z * sin(3.1416 * t);
+        }
         float3 v = P - hp;
-        // swing about the vertical through the hip
-        float cs = cos(swing), sn = sin(swing);
-        v = v * cs + cross(up, v) * sn + up * dot(up, v) * (1.0 - cs);
+        float3 rd0 = normalize(v - up * dot(v, up) + radial * 0.001);
+        float reach = saturate(dot(v, rd0) / max(span - hip, 0.001));
+        v += Gait.xyz * (s * Gait.w * reach);
         float3 rd = normalize(v - up * dot(v, up) + radial * 0.001);
         float3 tng = normalize(cross(rd, up));            // turning about this raises the outer part
-        cs = cos(lift); sn = sin(lift);
+        float cs = cos(lift), sn = sin(lift);
         float3 v1 = v * cs + cross(tng, v) * sn + tng * dot(tng, v) * (1.0 - cs);
         // the knee folds the outer part back down
         float kneeR = Leg2.y * (span - hip);
@@ -210,8 +236,16 @@ srcs = {
 }
 y = 1150
 for n in names[3:]:
+    if n == "N":
+        continue
     srcs[n] = vec4("Swim" + n, -900, y)
     y += 160
+nws = node(unreal.MaterialExpressionVertexNormalWS, -1200, y)
+nloc = node(unreal.MaterialExpressionTransform, -900, y)
+nloc.set_editor_property("transform_source_type", unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD)
+nloc.set_editor_property("transform_type", unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
+mel.connect_material_expressions(nws, "", nloc, "")
+srcs["N"] = nloc
 for n in names:
     ok = mel.connect_material_expressions(srcs[n], "", custom, n)
     unreal.log("DEEPCUT_MAT input %s connected: %s" % (n, ok))

@@ -207,6 +207,7 @@ struct FDCDoc
 		FVector Centre = FVector::ZeroVector;
 		float Ra = 0.f, Rb = 0.f, Phase = 0.f, Omega = 0.f, Bob = 0.f, Wiggle = 0.f;
 		float Surge = 0.f;
+		float StepPerCm = 0.f; // walkers: step-cycle phase per cm walked (0: the beat follows the clock)
 		bool bAway = false; // far off in another zone: hidden and not moved
 		int32 Subject = INDEX_NONE;
 		float Radius = 50.f;
