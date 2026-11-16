@@ -1,0 +1,48 @@
+# monster reel for the user: shape and motion of each, the camera tracks it
+wait 1.0
+lamp 1
+subject mawworm 900 8
+wait 7.0
+subject leviathan 2200 8
+wait 7.0
+subject warden 2600 6
+wait 5.5
+subject drowner 700 6
+wait 5.5
+subject widow 900 6
+wait 5.5
+subject hollowdiver 600 6
+wait 5.5
+subject crab 600 6
+wait 5.5
+subject isopod 500 6
+wait 5.5
+subject yeticrab 250 6
+wait 5.5
+subject eel 500 6
+wait 5.5
+subject oarfish 1100 6
+wait 5.5
+subject whale 3000 6
+wait 5.5
+subject ribray 1400 6
+wait 5.5
+subject sunfish 700 6
+wait 5.5
+subject parrotfish 250 6
+wait 5.5
+subject grouper 350 6
+wait 5.5
+subject seahorse 120 6
+wait 5.5
+subject barreleye 120 6
+wait 5.5
+subject coelacanth 500 6
+wait 5.5
+subject squid 400 6
+wait 5.5
+subject stingray 500 6
+wait 5.5
+subject manta 1200 6
+wait 5.5
+quit

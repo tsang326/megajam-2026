@@ -1,0 +1,73 @@
+# creature reel v5: hull bought, air refilled before each
+wait 1.0
+money 99999
+buy 1
+buy 1
+buy 1
+buy 0
+buy 0
+lamp 1
+o2 999
+subject mawworm 1300 6
+wait 5.5
+o2 999
+subject leviathan 2200 6
+wait 5.5
+o2 999
+subject warden 2600 6
+wait 5.5
+o2 999
+subject drowner 700 6
+wait 5.5
+o2 999
+subject widow 900 6
+wait 5.5
+o2 999
+subject hollowdiver 600 6
+wait 5.5
+o2 999
+subject crab 450 6
+wait 5.5
+o2 999
+subject isopod 300 6
+wait 5.5
+o2 999
+subject yeticrab 200 6
+wait 5.5
+o2 999
+subject eel 400 6
+wait 5.5
+o2 999
+subject oarfish 1100 6
+wait 5.5
+o2 999
+subject whale 3000 6
+wait 5.5
+o2 999
+subject ribray 1400 6
+wait 5.5
+o2 999
+subject sunfish 600 6
+wait 5.5
+o2 999
+subject parrotfish 220 6
+wait 5.5
+o2 999
+subject grouper 300 6
+wait 5.5
+o2 999
+subject seahorse 90 6
+wait 5.5
+o2 999
+subject barreleye 100 6
+wait 5.5
+o2 999
+subject coelacanth 450 6
+wait 5.5
+o2 999
+subject squid 350 6
+wait 5.5
+o2 999
+subject stingray 400 6
+wait 5.5
+quit

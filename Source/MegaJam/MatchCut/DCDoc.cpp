@@ -60,22 +60,41 @@ namespace DCSwim
 		float PulseAmp, PulseWaves, PulseRate;
 	};
 	static const FKind Kinds[] = {
-		{ TEXT(" shark goblin hammerhead barracuda "), 0, 0.055f, 1.8f, 0.7f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" eel frilled gulper dragonfish viperfish "), 0, 0.065f, 1.1f, 1.6f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// sharks: the tail sweeps about a fifth of the body length from side to side (Strouhal), the head hardly at all
+		{ TEXT(" shark goblin hammerhead barracuda "), 0, 0.08f, 2.0f, 0.75f, 3.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// eels swim with the whole body: about one and a half waves along it, small at the head, a tenth of the length at the tail
+		{ TEXT(" eel frilled gulper dragonfish viperfish "), 0, 0.08f, 0.7f, 1.5f, 4.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		// the oarfish holds its body nearly straight: a slow shallow wave in the trunk, the swimming is the fin along its back (Fin below)
 		{ TEXT(" oarfish "), 0, 0.008f, 1.0f, 1.3f, 2.2f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" whale dolphin "), 1, 0.035f, 1.8f, 0.6f, 1.5f, 0.10f, 0.2f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" manta stingray ribray "), 1, 0.02f, 2.0f, 0.5f, 2.4f, 0.30f, 0.30f, 1.f, 0.f, 0.f, 1.f },
+		// whales and dolphins: the fluke goes up and down 0.15-0.25 body lengths peak to peak; a 15 m whale beats every 4-6 s,
+		// a dolphin about twice a second. The flippers move a little with the stroke.
+		{ TEXT(" whale "), 1, 0.09f, 2.2f, 0.55f, 1.3f, 0.05f, 0.2f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" dolphin "), 1, 0.09f, 2.2f, 0.55f, 9.0f, 0.05f, 0.2f, 1.f, 0.f, 0.f, 1.f },
+		// mantas flap like wings, a stroke every ~3 s, tips 0.74 body lengths peak to peak; a stingray ripples its wing edge instead
+		{ TEXT(" manta ribray "), 1, 0.02f, 2.0f, 0.5f, 2.0f, 0.36f, 0.12f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" stingray "), 1, 0.02f, 2.0f, 0.5f, 3.5f, 0.12f, 0.0f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" cuttle "), 0, 0.01f, 2.0f, 0.5f, 6.0f, 0.10f, 1.4f, 1.f, 0.02f, 0.6f, 0.5f },
 		{ TEXT(" seaangel "), 0, 0.02f, 1.5f, 0.6f, 5.0f, 0.30f, 0.2f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" jelly lionsmane siphon atolla "), 2, 0.06f, 2.0f, 1.2f, 2.2f, 0.f, 0.f, 1.f, 0.07f, 0.5f, 1.f },
-		{ TEXT(" squid vampsquid octopus nautilus giantsquid drowner "), 0, 0.03f, 2.0f, 1.0f, 3.0f, 0.f, 0.f, 1.f, 0.05f, 0.7f, 1.f },
-		{ TEXT(" crab isopod lobster brittlestar yeticrab "), 0, 0.f, 1.f, 1.f, 11.f, 0.10f, 0.5f, 1.f, 0.f, 0.f, 1.f },
+		// squid and octopus: the mantle squeezes (the jet) and refills; the arms trail
+		{ TEXT(" squid vampsquid octopus giantsquid drowner "), 0, 0.03f, 2.0f, 1.0f, 3.0f, 0.f, 0.f, 1.f, 0.07f, 0.4f, 1.f },
+		// a nautilus is a hard shell: only the tentacles move
+		{ TEXT(" nautilus "), 0, 0.015f, 3.0f, 1.0f, 2.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// crabs walk on stiff jointed legs (DCSwim::Legs); a brittle star rows with its arms
+		{ TEXT(" crab isopod lobster yeticrab "), 0, 0.f, 1.f, 1.f, 11.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" brittlestar "), 0, 0.f, 1.f, 1.f, 11.f, 0.10f, 0.5f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" seapig nudibranch "), 1, 0.025f, 1.0f, 1.5f, 2.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		// worms: the whole body throws S-waves from head to tail (power < 1 so the front moves too), the legs row along it
 		{ TEXT(" mawworm bobbit polychaete "), 0, 0.075f, 0.8f, 1.3f, 1.6f, 0.04f, 0.6f, 3.f, 0.015f, 1.5f, 1.4f },
 		{ TEXT(" urchin starfish "), 0, 0.f, 1.f, 1.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
-		{ TEXT(" angler sunfish seahorse seadragon seatoad "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		{ TEXT(" angler seatoad "), 0, 0.04f, 1.8f, 0.8f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// an ocean sunfish has no real tail: it flaps its tall dorsal and anal fins together, 0.3-0.6 strokes a second
+		// (Watanabe & Sato 2008); the body itself stays stiff
+		{ TEXT(" sunfish "), 0, 0.006f, 1.0f, 0.5f, 2.8f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// seahorses and sea dragons hang upright and move by fluttering the small dorsal fin; the body barely bends
+		{ TEXT(" seahorse seadragon "), 0, 0.01f, 2.0f, 0.6f, 4.0f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
+		// parrotfish and groupers cruise by rowing with the pectoral fins (labriform) and use the tail to sprint
+		{ TEXT(" parrotfish grouper coelacanth barreleye "), 0, 0.025f, 1.8f, 0.8f, 3.5f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f },
 		{ TEXT(" turtle turtle2 giant "), 0, 0.f, 1.f, 1.f, 2.6f, 0.28f, 0.15f, 1.f, 0.f, 0.f, 1.f },
 		// Unit 0: the axis runs from the head down to the feet, the swing is forward and back: a fin kick in the legs,
 		// the arms paddle a little. The game turns the amounts up and down with the speed (FDC3D::Tick).
@@ -98,9 +117,49 @@ namespace DCSwim
 	}
 
 	// a ripple that runs along the body in whatever stands off its middle line (a ribbon fin): amount, waves, rate, where it starts
+	// the fins that stand off the middle line (dorsal and anal): amount, waves along the body, rate, where they start
 	static FLinearColor Fin(const FString& Id)
 	{
-		return Id == TEXT("creature:oarfish") ? FLinearColor(0.022f, 7.f, 2.6f, 0.45f) : FLinearColor(0.f, 0.f, 0.f, 0.f);
+		const FString N = Id.RightChop(9);
+		if (N == TEXT("oarfish"))    { return FLinearColor(0.022f, 7.f, 2.6f, 0.45f); } // the long dorsal fin ripples, the body stays straight
+		if (N == TEXT("sunfish"))    { return FLinearColor(0.07f, 0.f, 1.f, 0.35f); }   // both tall fins swing to the same side together
+		if (N == TEXT("seahorse") || N == TEXT("seadragon")) { return FLinearColor(0.012f, 2.f, 10.f, 0.25f); } // a fast flutter (real: 30-40 a second, shown slower)
+		if (N == TEXT("coelacanth")) { return FLinearColor(0.025f, 0.f, 0.8f, 0.5f); }  // the second dorsal and the anal fin sweep together
+		return FLinearColor(0.f, 0.f, 0.f, 0.f);
+	}
+
+	// the pectoral fins: amount (of the half span), where across the body they start, rate, how far back they reach.
+	// Sharks hold theirs stiff like wings, so they get none.
+	static FLinearColor Pec(const FString& Id)
+	{
+		const FString N = Id.RightChop(9);
+		if (N == TEXT("parrotfish")) { return FLinearColor(0.28f, 0.55f, 3.f, 0.45f); }
+		if (N == TEXT("grouper"))    { return FLinearColor(0.22f, 0.55f, 1.6f, 0.45f); }
+		if (N == TEXT("barreleye"))  { return FLinearColor(0.30f, 0.50f, 1.5f, 0.50f); } // hovers on its big pectorals
+		if (N == TEXT("coelacanth")) { return FLinearColor(0.25f, 0.50f, 0.8f, 0.60f); }
+		if (N == TEXT("seatoad") || N == TEXT("angler")) { return FLinearColor(0.18f, 0.55f, 1.f, 0.50f); }
+		if (N == TEXT("lantern") || N == TEXT("hatchet") || N == TEXT("dragonfish") || N == TEXT("viperfish")) { return FLinearColor(0.12f, 0.60f, 2.f, 0.40f); }
+		if (N == TEXT("seahorse") || N == TEXT("seadragon")) { return FLinearColor(0.15f, 0.55f, 6.f, 0.35f); }
+		return FLinearColor(0.f, 0.f, 0.f, 0.f);
+	}
+
+	// jointed legs and the shape of the beat (the Leg, Leg2 and Shape vectors of M_DC_Creature).
+	// Gaits: shore crabs walk an alternating tetrapod (neighbouring legs half a step apart), spider crabs underwater a
+	// 4-3-2-1 metachronal wave (each leg a fifth of a step after the one behind it). Jellyfish and squid squeeze fast
+	// and refill slowly (contraction ~ a third of the cycle).
+	static void Legs(const FString& Id, FLinearColor& Leg, FLinearColor& Leg2, FLinearColor& Shape)
+	{
+		Leg = Leg2 = Shape = FLinearColor(0.f, 0.f, 0.f, 0.f);
+		Leg2.B = -1.f;
+		const FString N = Id.RightChop(9);
+		if (N == TEXT("crab"))           { Leg = FLinearColor(5.f, 0.30f, 0.32f, 0.22f); Leg2 = FLinearColor(2.f * PI / 5.f, 0.5f, -1.f, 0.35f); }
+		else if (N == TEXT("yeticrab"))  { Leg = FLinearColor(5.f, 0.30f, 0.35f, 0.32f); Leg2 = FLinearColor(PI, 0.5f, -1.f, 0.5f); }
+		else if (N == TEXT("lobster"))   { Leg = FLinearColor(5.f, 0.22f, 0.30f, 0.30f); Leg2 = FLinearColor(PI, 0.5f, 0.f, 0.5f); }
+		else if (N == TEXT("isopod"))    { Leg = FLinearColor(7.f, 0.25f, 0.30f, 0.55f); Leg2 = FLinearColor(2.f * PI / 7.f, 0.5f, 0.2f, 0.6f); }
+		if (N == TEXT("jelly") || N == TEXT("lionsmane") || N == TEXT("atolla") || N == TEXT("siphon")) { Shape.G = 0.3f; }
+		if (N == TEXT("squid") || N == TEXT("vampsquid") || N == TEXT("octopus") || N == TEXT("giantsquid")) { Shape.G = 0.35f; }
+		if (N == TEXT("manta") || N == TEXT("ribray")) { Shape.R = 0.35f; }
+		if (N == TEXT("stingray")) { Shape.R = 1.0f; }
 	}
 
 	// models that came with the nose at the other end (seen in the parade, Content/Data/tests/d5_facing.txt)
@@ -154,7 +213,13 @@ namespace DCSwim
 			MID->SetVectorParameterValue(TEXT("SwimTail"), FLinearColor(K.TailAmp, K.TailPow, K.TailWaves, K.Beats * Pace));
 			MID->SetVectorParameterValue(TEXT("SwimWing"), FLinearColor(K.WingAmp, K.WingWaves, K.WingRate, Ext(Up, E)));
 			MID->SetVectorParameterValue(TEXT("SwimFin"), Fin(Id));
+			MID->SetVectorParameterValue(TEXT("SwimPec"), Pec(Id));
 			MID->SetVectorParameterValue(TEXT("SwimPulse"), FLinearColor(K.PulseAmp, K.PulseWaves, K.PulseRate, 0.f));
+			FLinearColor Leg, Leg2, Shape;
+			Legs(Id, Leg, Leg2, Shape);
+			MID->SetVectorParameterValue(TEXT("SwimLeg"), Leg);
+			MID->SetVectorParameterValue(TEXT("SwimLeg2"), Leg2);
+			MID->SetVectorParameterValue(TEXT("SwimShape"), Shape);
 			C->SetMaterial(m, MID);
 		}
 	}
@@ -553,41 +618,41 @@ void FDCDoc::SpawnAmbient()
 	static const FRow Rows[] = {
 		// ---- the station's site
 		{ TEXT("creature:squid"), 0, 3, 110.f, FVector(2600.0, -600.0, 0.0), 1300.f, 150.f, 380.f, 70.f, 210.f, 60.f }, // by day, close over the bottom
-		{ TEXT("creature:nautilus"), 0, 3, 60.f, FVector(-3000.0, 2200.0, 0.0), 1200.f, 120.f, 300.f, 150.f, 500.f, 14.f }, // along the reef's face
+		{ TEXT("creature:nautilus"), 0, 3, 22.f, FVector(-3000.0, 2200.0, 0.0), 1200.f, 120.f, 300.f, 150.f, 500.f, 14.f }, // along the reef's face
 		{ TEXT("creature:crab"), 1, 3, 230.f, FVector(1300.0, -2600.0, 0.0), 1500.f, 150.f, 400.f, 0.f, 0.f, 14.f },
-		{ TEXT("creature:isopod"), 1, 4, 55.f, FVector(900.0, 2300.0, 0.0), 1100.f, 80.f, 260.f, 0.f, 0.f, 9.f },
-		{ TEXT("creature:lantern"), 0, 12, 26.f, FVector(2400.0, 2390.0, 0.0), 1300.f, 60.f, 150.f, 140.f, 420.f, 45.f }, // one school, in the dark of the trench
-		{ TEXT("creature:whale"), 2, 1, 1500.f, FVector(0.0, 0.0, 0.0), 0.f, 5600.f, 6000.f, 1900.f, 2200.f, 160.f },
-		{ TEXT("creature:hatchet"), 0, 10, 22.f, FVector(-800.0, -1800.0, 0.0), 700.f, 120.f, 300.f, 450.f, 800.f, 50.f }, // a midwater school (before the shark: it hunts them)
+		{ TEXT("creature:isopod"), 1, 4, 40.f, FVector(900.0, 2300.0, 0.0), 1100.f, 80.f, 260.f, 0.f, 0.f, 9.f },
+		{ TEXT("creature:lantern"), 0, 12, 12.f, FVector(2400.0, 2390.0, 0.0), 1300.f, 60.f, 150.f, 140.f, 420.f, 45.f }, // one school, in the dark of the trench
+		{ TEXT("creature:whale"), 2, 1, 1450.f, FVector(0.0, 0.0, 0.0), 0.f, 3600.f, 4000.f, 1500.f, 1800.f, 150.f }, // a humpback, ~14.5 m at ~1.5 m/s: close enough that its size reads
+		{ TEXT("creature:hatchet"), 0, 10, 10.f, FVector(-800.0, -1800.0, 0.0), 700.f, 120.f, 300.f, 450.f, 800.f, 50.f }, // a midwater school (before the shark: it hunts them)
 		{ TEXT("creature:shark"), 0, 1, 400.f, FVector(900.0, -2900.0, 0.0), 300.f, 1100.f, 1500.f, 260.f, 460.f, 95.f }, // low, slow, wide
 		{ TEXT("creature:eel"), 1, 1, 220.f, FVector(3900.0, -100.0, 0.0), 200.f, 70.f, 160.f, 0.f, 0.f, 30.f }, // a moray keeps to its hole
-		{ TEXT("creature:vampsquid"), 0, 2, 90.f, FVector(3200.0, 1300.0, 0.0), 900.f, 200.f, 500.f, 300.f, 700.f, 20.f },
-		{ TEXT("creature:frilled"), 0, 1, 330.f, FVector(-1200.0, 2600.0, 0.0), 300.f, 800.f, 1200.f, 130.f, 260.f, 45.f }, // close over the bottom
-		{ TEXT("creature:seapig"), 1, 5, 40.f, FVector(-2500.0, -2700.0, 0.0), 1300.f, 60.f, 200.f, 0.f, 0.f, 5.f },
-		{ TEXT("creature:barreleye"), 0, 3, 45.f, FVector(400.0, 1200.0, 0.0), 900.f, 120.f, 300.f, 400.f, 900.f, 25.f }, // hangs still in midwater
+		{ TEXT("creature:vampsquid"), 0, 2, 30.f, FVector(3200.0, 1300.0, 0.0), 900.f, 200.f, 500.f, 300.f, 700.f, 20.f },
+		{ TEXT("creature:frilled"), 0, 1, 180.f, FVector(-1200.0, 2600.0, 0.0), 300.f, 800.f, 1200.f, 130.f, 260.f, 45.f }, // close over the bottom
+		{ TEXT("creature:seapig"), 1, 5, 15.f, FVector(-2500.0, -2700.0, 0.0), 1300.f, 60.f, 200.f, 0.f, 0.f, 5.f },
+		{ TEXT("creature:barreleye"), 0, 3, 15.f, FVector(400.0, 1200.0, 0.0), 900.f, 120.f, 300.f, 400.f, 900.f, 25.f }, // hangs still in midwater
 		{ TEXT("creature:coelacanth"), 0, 1, 190.f, FVector(-2600.0, 600.0, 0.0), 300.f, 250.f, 500.f, 110.f, 280.f, 30.f },
 		{ TEXT("creature:oarfish"), 0, 1, 700.f, FVector(-900.0, 3600.0, 0.0), 600.f, 150.f, 300.f, 800.f, 950.f, 12.f }, // upright in open water
 		{ TEXT("creature:stingray"), 1, 2, 190.f, FVector(-400.0, -2200.0, 0.0), 900.f, 300.f, 700.f, 0.f, 0.f, 55.f }, // on the sand
-		{ TEXT("creature:cuttle"), 0, 2, 70.f, FVector(-3300.0, 2700.0, 0.0), 700.f, 120.f, 300.f, 50.f, 170.f, 30.f },
+		{ TEXT("creature:cuttle"), 0, 2, 50.f, FVector(-3300.0, 2700.0, 0.0), 700.f, 120.f, 300.f, 50.f, 170.f, 30.f },
 		{ TEXT("creature:brittlestar"), 1, 6, 45.f, FVector(-3300.0, 2400.0, 0.0), 1300.f, 20.f, 60.f, 0.f, 0.f, 3.f },
 		{ TEXT("creature:siphon"), 0, 4, 60.f, FVector(-2500.0, -2700.0, 0.0), 800.f, 100.f, 300.f, 900.f, 1500.f, 10.f },
-		{ TEXT("creature:seaangel"), 0, 5, 30.f, FVector(-1800.0, -300.0, 0.0), 1100.f, 60.f, 200.f, 400.f, 1100.f, 12.f },
+		{ TEXT("creature:seaangel"), 0, 5, 8.f, FVector(-1800.0, -300.0, 0.0), 1100.f, 60.f, 200.f, 400.f, 1100.f, 12.f },
 		{ TEXT("creature:octopus"), 1, 2, 60.f, FVector(2600.0, -2300.0, 0.0), 900.f, 120.f, 320.f, 0.f, 0.f, 45.f }, // on the bottom and the rocks
 		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(3600.0, 1000.0, 0.0), 300.f, 900.f, 1300.f, 220.f, 400.f, 55.f },
-		{ TEXT("creature:gulper"), 0, 1, 170.f, FVector(4300.0, -2300.0, 0.0), 500.f, 250.f, 500.f, 400.f, 800.f, 25.f },
-		{ TEXT("creature:sunfish"), 2, 1, 420.f, FVector(300.0, 300.0, 0.0), 0.f, 3300.f, 3700.f, 1500.f, 1900.f, 55.f },
+		{ TEXT("creature:gulper"), 0, 1, 80.f, FVector(4300.0, -2300.0, 0.0), 500.f, 250.f, 500.f, 400.f, 800.f, 25.f },
+		{ TEXT("creature:sunfish"), 2, 1, 250.f, FVector(300.0, 300.0, 0.0), 0.f, 3300.f, 3700.f, 1500.f, 1900.f, 55.f },
 		{ TEXT("creature:seadragon"), 0, 3, 45.f, FVector(-3000.0, 2300.0, 0.0), 800.f, 60.f, 160.f, 80.f, 300.f, 8.f },
 		{ TEXT("creature:seahorse"), 0, 4, 24.f, FVector(-3500.0, 2600.0, 0.0), 800.f, 20.f, 60.f, 60.f, 260.f, 4.f },
 		{ TEXT("creature:grouper"), 0, 1, 190.f, FVector(2700.0, -200.0, 0.0), 300.f, 200.f, 420.f, 120.f, 280.f, 30.f }, // by the wreck, near the bottom
 		{ TEXT("creature:lobster"), 1, 3, 50.f, FVector(1800.0, -1900.0, 0.0), 1200.f, 60.f, 200.f, 0.f, 0.f, 8.f },
 		{ TEXT("creature:lionsmane"), 0, 2, 150.f, FVector(-900.0, -3500.0, 0.0), 1100.f, 150.f, 400.f, 700.f, 1300.f, 9.f },
 		{ TEXT("creature:nudibranch"), 1, 5, 22.f, FVector(-3200.0, 2000.0, 0.0), 1200.f, 15.f, 50.f, 0.f, 0.f, 2.f },
-		{ TEXT("creature:krill"), 0, 10, 12.f, FVector(-200.0, 1100.0, 0.0), 500.f, 60.f, 180.f, 500.f, 900.f, 22.f }, // a swarm
+		{ TEXT("creature:krill"), 0, 10, 6.f, FVector(-200.0, 1100.0, 0.0), 500.f, 60.f, 180.f, 500.f, 900.f, 22.f }, // a swarm
 		{ TEXT("creature:turtle2"), 0, 1, 170.f, FVector(-1700.0, -1500.0, 0.0), 400.f, 900.f, 1300.f, 600.f, 900.f, 50.f },
 		// ---- the wider sea (brief 08): each zone its own life (centres as in FDC3D::SetupZones)
 		// the kelp forest
 		{ TEXT("creature:parrotfish"), 0, 5, 70.f, FVector(-13000.0, 7500.0, 0.0), 2000.f, 200.f, 500.f, 90.f, 300.f, 40.f }, // a grazing group, low
-		{ TEXT("creature:krill"), 0, 8, 12.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 60.f, 180.f, 400.f, 1000.f, 22.f },
+		{ TEXT("creature:krill"), 0, 8, 6.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 60.f, 180.f, 400.f, 1000.f, 22.f },
 		{ TEXT("creature:turtle2"), 0, 2, 170.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 900.f, 1600.f, 500.f, 1000.f, 50.f },
 		{ TEXT("creature:dolphin"), 0, 3, 260.f, FVector(-13000.0, 7500.0, 0.0), 1500.f, 1400.f, 2400.f, 1100.f, 1700.f, 240.f }, // a pod, high and fast
 		{ TEXT("creature:barracuda"), 0, 4, 150.f, FVector(-12000.0, 8500.0, 0.0), 2000.f, 500.f, 900.f, 350.f, 700.f, 55.f }, // a slow school
@@ -602,34 +667,34 @@ void FDCDoc::SpawnAmbient()
 		{ TEXT("creature:lobster"), 1, 5, 50.f, FVector(14500.0, -3900.0, 0.0), 3500.f, 60.f, 200.f, 0.f, 0.f, 8.f },
 		{ TEXT("creature:octopus"), 1, 2, 60.f, FVector(14500.0, -3900.0, 0.0), 3000.f, 120.f, 320.f, 0.f, 0.f, 45.f },
 		// the drowned city
-		{ TEXT("creature:sunfish"), 0, 2, 380.f, FVector(6800.0, 14500.0, 0.0), 1500.f, 1200.f, 2000.f, 900.f, 1500.f, 40.f },
+		{ TEXT("creature:sunfish"), 0, 2, 250.f, FVector(6800.0, 14500.0, 0.0), 1500.f, 1200.f, 2000.f, 900.f, 1500.f, 40.f },
 		{ TEXT("creature:stingray"), 1, 4, 190.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 300.f, 700.f, 0.f, 0.f, 55.f },
-		{ TEXT("creature:cuttle"), 0, 3, 70.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 120.f, 300.f, 50.f, 170.f, 30.f },
+		{ TEXT("creature:cuttle"), 0, 3, 50.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 120.f, 300.f, 50.f, 170.f, 30.f },
 		{ TEXT("creature:coelacanth"), 0, 2, 190.f, FVector(6800.0, 14500.0, 0.0), 2500.f, 250.f, 500.f, 110.f, 300.f, 30.f },
-		{ TEXT("creature:nautilus"), 0, 4, 60.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 120.f, 300.f, 150.f, 600.f, 14.f },
+		{ TEXT("creature:nautilus"), 0, 4, 22.f, FVector(6800.0, 14500.0, 0.0), 3000.f, 120.f, 300.f, 150.f, 600.f, 14.f },
 		{ TEXT("creature:oarfish"), 0, 1, 600.f, FVector(6800.0, 14500.0, 0.0), 1800.f, 150.f, 300.f, 900.f, 1300.f, 12.f },
 		// the whale fall
-		{ TEXT("creature:isopod"), 1, 8, 55.f, FVector(-7500.0, -13000.0, 0.0), 3000.f, 80.f, 260.f, 0.f, 0.f, 9.f },
+		{ TEXT("creature:isopod"), 1, 8, 40.f, FVector(-7500.0, -13000.0, 0.0), 3000.f, 80.f, 260.f, 0.f, 0.f, 9.f },
 		{ TEXT("creature:crab"), 1, 4, 230.f, FVector(-7500.0, -13000.0, 0.0), 3500.f, 150.f, 400.f, 0.f, 0.f, 14.f },
-		{ TEXT("creature:seapig"), 1, 8, 40.f, FVector(-7500.0, -13000.0, 0.0), 3500.f, 60.f, 200.f, 0.f, 0.f, 5.f },
-		{ TEXT("creature:hatchet"), 0, 10, 22.f, FVector(-7500.0, -13000.0, 0.0), 2000.f, 120.f, 300.f, 400.f, 900.f, 50.f },
-		{ TEXT("creature:frilled"), 0, 1, 330.f, FVector(-7500.0, -13000.0, 0.0), 1000.f, 1000.f, 1500.f, 130.f, 280.f, 45.f },
+		{ TEXT("creature:seapig"), 1, 8, 15.f, FVector(-7500.0, -13000.0, 0.0), 3500.f, 60.f, 200.f, 0.f, 0.f, 5.f },
+		{ TEXT("creature:hatchet"), 0, 10, 10.f, FVector(-7500.0, -13000.0, 0.0), 2000.f, 120.f, 300.f, 400.f, 900.f, 50.f },
+		{ TEXT("creature:frilled"), 0, 1, 180.f, FVector(-7500.0, -13000.0, 0.0), 1000.f, 1000.f, 1500.f, 130.f, 280.f, 45.f },
 		// the black smokers
-		{ TEXT("creature:yeticrab"), 1, 10, 45.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 30.f, 120.f, 0.f, 0.f, 4.f },
-		{ TEXT("creature:ventshrimp"), 0, 6, 40.f, FVector(6800.0, -14500.0, 0.0), 2000.f, 60.f, 160.f, 60.f, 260.f, 12.f }, // a swarm close to the vents
+		{ TEXT("creature:yeticrab"), 1, 10, 15.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 30.f, 120.f, 0.f, 0.f, 4.f },
+		{ TEXT("creature:ventshrimp"), 0, 6, 8.f, FVector(6800.0, -14500.0, 0.0), 2000.f, 60.f, 160.f, 60.f, 260.f, 12.f }, // a swarm close to the vents
 		{ TEXT("creature:lobster"), 1, 4, 50.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 60.f, 200.f, 0.f, 0.f, 8.f },
 		{ TEXT("creature:nudibranch"), 1, 6, 22.f, FVector(6800.0, -14500.0, 0.0), 3000.f, 15.f, 50.f, 0.f, 0.f, 2.f },
 		{ TEXT("creature:octopus"), 1, 2, 60.f, FVector(6800.0, -14500.0, 0.0), 2500.f, 120.f, 320.f, 0.f, 0.f, 45.f },
 		// the abyss
 		{ TEXT("creature:giantsquid"), 0, 1, 900.f, FVector(-5500.0, 19500.0, 0.0), 800.f, 2000.f, 2800.f, 900.f, 1400.f, 60.f },
-		{ TEXT("creature:dragonfish"), 0, 5, 50.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 35.f },
-		{ TEXT("creature:viperfish"), 0, 5, 45.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 40.f },
-		{ TEXT("creature:atolla"), 0, 6, 70.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 500.f, 1500.f, 9.f },
-		{ TEXT("creature:seatoad"), 1, 5, 40.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 40.f, 140.f, 0.f, 0.f, 3.f },
-		{ TEXT("creature:vampsquid"), 0, 3, 90.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 200.f, 500.f, 300.f, 900.f, 20.f },
-		{ TEXT("creature:gulper"), 0, 2, 170.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 250.f, 500.f, 400.f, 1000.f, 25.f },
+		{ TEXT("creature:dragonfish"), 0, 5, 40.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 35.f },
+		{ TEXT("creature:viperfish"), 0, 5, 30.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 300.f, 1100.f, 40.f },
+		{ TEXT("creature:atolla"), 0, 6, 20.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 100.f, 300.f, 500.f, 1500.f, 9.f },
+		{ TEXT("creature:seatoad"), 1, 5, 30.f, FVector(-5500.0, 19500.0, 0.0), 3500.f, 40.f, 140.f, 0.f, 0.f, 3.f },
+		{ TEXT("creature:vampsquid"), 0, 3, 30.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 200.f, 500.f, 300.f, 900.f, 20.f },
+		{ TEXT("creature:gulper"), 0, 2, 80.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 250.f, 500.f, 400.f, 1000.f, 25.f },
 		{ TEXT("creature:goblin"), 0, 1, 380.f, FVector(-5500.0, 19500.0, 0.0), 1000.f, 1500.f, 2200.f, 300.f, 600.f, 55.f },
-		{ TEXT("creature:barreleye"), 0, 4, 45.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 120.f, 300.f, 400.f, 1000.f, 25.f },
+		{ TEXT("creature:barreleye"), 0, 4, 15.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 120.f, 300.f, 400.f, 1000.f, 25.f },
 		{ TEXT("creature:siphon"), 0, 5, 60.f, FVector(-5500.0, 19500.0, 0.0), 3000.f, 100.f, 300.f, 600.f, 1500.f, 10.f },
 		// the things the official film says are not there: one place each, deeper is worse
 		{ TEXT("creature:ribray"), 0, 1, 520.f, FVector(-13000.0, 7500.0, 0.0), 2500.f, 900.f, 1400.f, 400.f, 900.f, 90.f },
@@ -1165,15 +1230,20 @@ void FDCDoc::TickCreatures(float Dt, const FVector& HeroPos, bool bLive)
 		{
 			const double Ph = i * 0.9;
 			const double Rad = 110.0 + 55.0 * (i % 4);
+			// a medusa's stroke: the bell squeezes in about a third of the cycle (it shoots up), then slowly refills
+			// while it coasts and sinks a little; each one on its own beat
+			const double Cyc = (T * 2.2 + Ph * 2.0) / (2.0 * PI);
+			const double X = Cyc - FMath::FloorToDouble(Cyc);
+			const double Squeeze = X < 0.3 ? FMath::Sin(0.5 * PI * X / 0.3) : FMath::Cos(0.5 * PI * (X - 0.3) / 0.7);
+			const double Surge = X < 0.3 ? FMath::Sin(0.5 * PI * X / 0.3) : 1.0 - FMath::Square((X - 0.3) / 0.7);
 			const FVector P = DCD::Shaft + FVector(Rad * FMath::Cos(i * 2.4 + T * 0.05), Rad * FMath::Sin(i * 2.4 + T * 0.05),
-				330.0 + 42.0 * i + 200.0 * (0.5 + 0.5 * FMath::Sin(T * 0.22 + Ph)));
+				330.0 + 42.0 * i + 200.0 * (0.5 + 0.5 * FMath::Sin(T * 0.22 + Ph)) + 14.0 * Surge);
 			JellyPos[i] = P;
 			Sum += P;
 			if (AActor* A = Jellies[i].Get())
 			{
-				const float Pulse = FMath::Sin(T * 2.2 + Ph * 2.0);
 				A->SetActorLocationAndRotation(P, FRotator(6.f * FMath::Sin(T * 0.6 + Ph), 40.f * i + 6.f * T, 6.f * FMath::Cos(T * 0.5 + Ph)));
-				A->SetActorScale3D(FVector(1.0 + 0.07 * Pulse, 1.0 + 0.07 * Pulse, 1.0 - 0.10 * Pulse)); // the bell's own beat
+				A->SetActorScale3D(FVector(1.0 - 0.12 * Squeeze, 1.0 - 0.12 * Squeeze, 1.0 + 0.10 * Squeeze)); // narrower and taller when squeezed
 			}
 		}
 		SubPos[DCSub::Jelly] = Jellies.Num() > 0 ? Sum / Jellies.Num() : DCD::Shaft;
